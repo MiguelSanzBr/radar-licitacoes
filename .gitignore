@@ -1,0 +1,18 @@
+# Maven
+target/
+.mvn/wrapper/maven-wrapper.jar
+dependency-reduced-pom.xml
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.classpath
+.project
+.settings/
+*.swp
+
+# Local data and secrets
+tools/pncp-probe/out/
+data/
+.env
