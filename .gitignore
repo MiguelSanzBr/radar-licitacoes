@@ -16,3 +16,4 @@ dependency-reduced-pom.xml
 tools/pncp-probe/out/
 data/
 .env
+.jqwik-database

@@ -180,8 +180,6 @@
             <mutationThreshold>85</mutationThreshold>
             <coverageThreshold>100</coverageThreshold>
             <timestampedReports>false</timestampedReports>
-            <!-- shortcut: o esqueleto so tem main(), sem mutantes possiveis; remover no PR que adiciona a primeira classe de dominio (PR 1.1). -->
-            <failWhenNoMutations>false</failWhenNoMutations>
           </configuration>
         </plugin>
 
