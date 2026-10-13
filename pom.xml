@@ -26,6 +26,7 @@
   </licenses>
 
   <modules>
+    <module>contracts</module>
     <module>core</module>
   </modules>
 
@@ -41,6 +42,7 @@
     <wiremock.version>3.13.2</wiremock.version>
     <togglz.version>4.6.4</togglz.version>
     <openapi-generator.version>7.26.0</openapi-generator.version>
+    <openapi-request-validator.version>3.0.0</openapi-request-validator.version>
 
     <jacoco.version>0.8.15</jacoco.version>
     <pitest-maven.version>1.30.1</pitest-maven.version>

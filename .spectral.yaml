@@ -1,0 +1,29 @@
+extends: ["spectral:oas"]
+rules:
+  operation-operationId: error
+  operation-tags: error
+  radar-operation-has-4xx:
+    description: Toda operacao declara ao menos uma resposta 4xx.
+    severity: error
+    given: "$.paths[*][get,post,put,patch,delete]"
+    then:
+      field: responses
+      function: schema
+      functionOptions:
+        schema:
+          anyOf:
+            - required: ["400"]
+            - required: ["401"]
+            - required: ["403"]
+            - required: ["404"]
+  radar-4xx-is-problem-json:
+    description: Toda resposta 4xx usa application/problem+json.
+    severity: error
+    given: "$.paths[*][*].responses[?(@property.match(/^4/))]"
+    then:
+      field: content
+      function: schema
+      functionOptions:
+        schema:
+          type: object
+          required: ["application/problem+json"]

@@ -11,7 +11,7 @@ Um número de cobertura só tem valor se não puder ser contornado. Exclusões a
 
 - JaCoCo em modo agregado (`report-aggregate` e `check`): 100% de linha e de ramo no agregado do projeto.
 - Unidade e integração contam juntas. Código de adapter é coberto pelos testes de integração com Testcontainers, não excluído.
-- Exclusões só para código gerado (openapi-generator, jOOQ codegen e Avro) marcado com a anotação `@Generated` do próprio gerador. Não há exclusão de pacote escrito à mão.
+- Exclusões só para código gerado (openapi-generator, jOOQ codegen e Avro). Quando a anotação `@Generated` do gerador sobrevive à compilação, o JaCoCo a respeita sozinho; quando não sobrevive (retenção `SOURCE`, caso do openapi-generator), a exclusão é por caminho do pacote gerado. Não há exclusão de pacote escrito à mão.
 - `scripts/check-coverage-policy.sh` falha se o `pom.xml` tiver um `<exclude>` que não esteja listado em `docs/coverage-exclusions.md` com justificativa. Toda exclusão exige entrada com justificativa em `docs/coverage-exclusions.md`, e `scripts/check-coverage-policy.sh` falha sem ela; a mudança passa pelo PR como qualquer outra.
 - O `main()` da aplicação é coberto por teste que chama `RadarApplication.main` com `--spring.main.web-application-type=none --spring.profiles.active=noop`.
 - PIT com limiar de mutação de 85% nas primeiras 4 semanas e 90% depois. O PIT é o contrapeso da cobertura morta: teste que passa pelo código sem assert não mata mutante.

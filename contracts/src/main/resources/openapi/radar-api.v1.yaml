@@ -1,0 +1,1236 @@
+openapi: 3.1.0
+info:
+  title: Radar de Licitações API
+  version: 1.0.0
+  summary: Busca pública de licitações a partir dos dados do PNCP.
+  description: |
+    Contrato REST v1 do Radar de Licitações. O contrato é a fonte da verdade: as interfaces
+    Java do servidor são geradas a partir deste arquivo e todo teste de MockMvc valida a
+    resposta contra ele.
+
+    **Erros.** Toda resposta 4xx usa `application/problem+json` (RFC 9457). O campo `type`
+    aponta para uma página em `docs/problems/` do repositório.
+
+    **Limites de uso.** Respostas trazem `RateLimit-Limit`, `RateLimit-Remaining` e
+    `RateLimit-Reset`. O 429 traz também `Retry-After`. Uma chave de API em `X-Api-Key`
+    eleva o limite das rotas públicas.
+
+    **Versionamento.** Por caminho (`/api/v1`). Os cabeçalhos `Deprecation` e `Sunset` estão
+    reservados: só serão enviados quando existir uma v2.
+
+    **Identificador da licitação.** `id` é o `numeroControlePNCP` com a barra trocada por
+    hífen (por exemplo `12345678000190-1-000123-2026`), para caber em segmento de caminho.
+    Só o último hífen volta a ser `/` na conversão inversa.
+  contact:
+    name: Miguel Sanz
+    url: https://github.com/miguelsanzbr/radar-licitacoes
+  license:
+    name: MIT
+    identifier: MIT
+
+servers:
+  - url: http://localhost:8080
+    description: Ambiente local
+
+tags:
+  - name: procurements
+    description: Busca, detalhe e histórico de licitações.
+  - name: stats
+    description: Agregados sobre as licitações.
+  - name: organs
+    description: Busca de órgãos tolerante a erro de digitação.
+  - name: saved-searches
+    description: Buscas salvas com alerta por e-mail.
+  - name: me
+    description: Dados do próprio usuário.
+  - name: api-keys
+    description: Chaves de API.
+  - name: ops
+    description: Operação. Exige o papel operator.
+
+paths:
+  /api/v1/procurements:
+    get:
+      operationId: searchProcurements
+      tags: [procurements]
+      summary: Busca licitações
+      description: |
+        Busca textual com filtros combináveis e paginação por cursor (keyset). Sem `q` a
+        ordem é por `publishedAt` decrescente; com `q` a ordem é por relevância. O `ETag` é
+        fraco e vale para a página.
+      security:
+        - {}
+        - apiKey: []
+      x-required-role: none
+      parameters:
+        - name: q
+          in: query
+          description: Texto livre, sintaxe de busca na web (aspas, `-`, `or`).
+          schema:
+            type: string
+            maxLength: 200
+        - name: uf
+          in: query
+          description: Sigla da unidade federativa.
+          schema:
+            $ref: '#/components/schemas/Uf'
+        - name: ibge
+          in: query
+          description: Código IBGE do município (7 dígitos).
+          schema:
+            $ref: '#/components/schemas/IbgeCode'
+        - name: modality
+          in: query
+          description: Identificador da modalidade de contratação no PNCP.
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+        - name: minValue
+          in: query
+          description: Valor estimado mínimo, decimal em texto.
+          schema:
+            $ref: '#/components/schemas/Decimal'
+        - name: maxValue
+          in: query
+          description: Valor estimado máximo, decimal em texto.
+          schema:
+            $ref: '#/components/schemas/Decimal'
+        - name: open
+          in: query
+          description: Quando `true`, só licitações com propostas abertas agora.
+          schema:
+            type: boolean
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/ProcurementStatus'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/IfNoneMatch'
+      responses:
+        '200':
+          description: Página de resultados.
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+            Link:
+              $ref: '#/components/headers/Link'
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+            Deprecation:
+              $ref: '#/components/headers/Deprecation'
+            Sunset:
+              $ref: '#/components/headers/Sunset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProcurementPage'
+        '304':
+          $ref: '#/components/responses/NotModified'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /api/v1/procurements/{id}:
+    get:
+      operationId: getProcurement
+      tags: [procurements]
+      summary: Detalhe de uma licitação
+      description: O `ETag` é forte. Com `If-None-Match` igual, responde 304 sem corpo.
+      security:
+        - {}
+        - apiKey: []
+      x-required-role: none
+      parameters:
+        - $ref: '#/components/parameters/ProcurementId'
+        - $ref: '#/components/parameters/IfNoneMatch'
+      responses:
+        '200':
+          description: Licitação com histórico de situação.
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+            Deprecation:
+              $ref: '#/components/headers/Deprecation'
+            Sunset:
+              $ref: '#/components/headers/Sunset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProcurementDetail'
+        '304':
+          $ref: '#/components/responses/NotModified'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /api/v1/procurements/{id}/history:
+    get:
+      operationId: getProcurementHistory
+      tags: [procurements]
+      summary: Histórico de situação de uma licitação
+      description: Lista as mudanças de situação registradas para a licitação.
+      security:
+        - {}
+        - apiKey: []
+      x-required-role: none
+      parameters:
+        - $ref: '#/components/parameters/ProcurementId'
+      responses:
+        '200':
+          description: Mudanças de situação, da mais antiga para a mais recente.
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SituationHistory'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /api/v1/stats:
+    get:
+      operationId: getStats
+      tags: [stats]
+      summary: Contagem e valor estimado agrupados
+      description: Soma a contagem e o valor estimado por dimensão, a partir da visão agregada.
+      security:
+        - {}
+        - apiKey: []
+      x-required-role: none
+      parameters:
+        - name: groupBy
+          in: query
+          required: true
+          description: Dimensão do agrupamento.
+          schema:
+            type: string
+            enum: [uf, modality, month, valueBand]
+      responses:
+        '200':
+          description: Um bucket por valor da dimensão.
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatsResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /api/v1/organs:
+    get:
+      operationId: searchOrgans
+      tags: [organs]
+      summary: Busca órgãos por nome aproximado
+      description: Usa similaridade de trigramas, então tolera erro de digitação.
+      security:
+        - {}
+        - apiKey: []
+      x-required-role: none
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: Parte do nome do órgão.
+          schema:
+            type: string
+            minLength: 2
+            maxLength: 100
+      responses:
+        '200':
+          description: Órgãos ordenados por similaridade decrescente.
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrganList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /api/v1/saved-searches:
+    post:
+      operationId: createSavedSearch
+      tags: [saved-searches]
+      summary: Cria uma busca salva
+      description: |
+        Exige `Idempotency-Key`. Repetir a chave com o mesmo corpo devolve a resposta original.
+        Repetir com corpo diferente é 422 (`idempotency-mismatch`); repetir enquanto a primeira
+        chamada ainda roda é 409.
+      security:
+        - bearerAuth: []
+      x-required-role: supplier
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SavedSearchRequest'
+      responses:
+        '201':
+          description: Busca salva criada.
+          headers:
+            Location:
+              description: URL da busca salva criada.
+              schema:
+                type: string
+                format: uri-reference
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SavedSearch'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /api/v1/saved-searches/{id}:
+    parameters:
+      - $ref: '#/components/parameters/SavedSearchId'
+    get:
+      operationId: getSavedSearch
+      tags: [saved-searches]
+      summary: Consulta uma busca salva
+      description: Devolve a busca salva se ela pertence ao usuário autenticado.
+      security:
+        - bearerAuth: []
+      x-required-role: supplier
+      responses:
+        '200':
+          description: Busca salva do usuário autenticado.
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SavedSearch'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+    delete:
+      operationId: deleteSavedSearch
+      tags: [saved-searches]
+      summary: Remove uma busca salva
+      description: Remove a busca salva do usuário autenticado e cancela seus alertas.
+      security:
+        - bearerAuth: []
+      x-required-role: supplier
+      responses:
+        '204':
+          description: Removida.
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /api/v1/me:
+    delete:
+      operationId: deleteMe
+      tags: [me]
+      summary: Apaga os dados do usuário (LGPD)
+      description: Anonimiza o e-mail e desativa as buscas salvas.
+      security:
+        - bearerAuth: []
+      x-required-role: supplier
+      responses:
+        '204':
+          description: Dados apagados.
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /api/v1/api-keys:
+    post:
+      operationId: createApiKey
+      tags: [api-keys]
+      summary: Cria uma chave de API
+      description: A chave completa aparece só nesta resposta. Depois resta o prefixo.
+      security:
+        - bearerAuth: []
+      x-required-role: supplier
+      responses:
+        '201':
+          description: Chave criada.
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiKeyCreated'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /ops/health-panel:
+    get:
+      operationId: getHealthPanel
+      tags: [ops]
+      summary: Painel de saúde
+      description: Resume o estado da coleta, dos consumidores, das filas e dos bancos.
+      security:
+        - bearerAuth: []
+      x-required-role: operator
+      responses:
+        '200':
+          description: Estado dos componentes.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthPanel'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /ops/replay:
+    post:
+      operationId: startReplay
+      tags: [ops]
+      summary: Reconstrói uma projeção a partir dos eventos
+      description: Reaplica os eventos para reconstruir a projeção escolhida.
+      security:
+        - bearerAuth: []
+      x-required-role: operator
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReplayRequest'
+      responses:
+        '202':
+          description: Reprocessamento aceito.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationAccepted'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /ops/dlq/{topic}/reprocess:
+    post:
+      operationId: reprocessDlq
+      tags: [ops]
+      summary: Reprocessa as mensagens de uma fila de mensagens mortas
+      description: Reenvia ao tópico original as mensagens da fila de mensagens mortas.
+      security:
+        - bearerAuth: []
+      x-required-role: operator
+      parameters:
+        - name: topic
+          in: path
+          required: true
+          description: Tópico da DLQ.
+          schema:
+            type: string
+            pattern: '^radar\.[a-z]+\.v[0-9]+\.dlq$'
+      responses:
+        '202':
+          description: Reprocessamento aceito.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationAccepted'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /ops/backfill:
+    post:
+      operationId: startBackfill
+      tags: [ops]
+      summary: Inicia uma coleta histórica
+      description: Coleta o intervalo de datas de uma modalidade, com retomada.
+      security:
+        - bearerAuth: []
+      x-required-role: operator
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BackfillRequest'
+      responses:
+        '202':
+          description: Coleta aceita.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationAccepted'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Token JWT emitido pelo provedor de identidade. O papel vem da claim de papéis.
+    apiKey:
+      type: apiKey
+      in: header
+      name: X-Api-Key
+      description: Opcional nas rotas públicas. Eleva o limite de requisições.
+
+  parameters:
+    Cursor:
+      name: cursor
+      in: query
+      description: Cursor opaco devolvido em `nextCursor`. Cursor adulterado é 400 (`invalid-cursor`).
+      schema:
+        type: string
+        maxLength: 512
+    Limit:
+      name: limit
+      in: query
+      description: Itens por página.
+      schema:
+        type: integer
+        format: int32
+        minimum: 1
+        maximum: 50
+        default: 20
+    IfNoneMatch:
+      name: If-None-Match
+      in: header
+      description: ETag recebido antes. Se ainda valer, a resposta é 304.
+      schema:
+        type: string
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: Valor único por operação (UUID recomendado), escolhido pelo cliente.
+      schema:
+        type: string
+        minLength: 8
+        maxLength: 128
+    ProcurementId:
+      name: id
+      in: path
+      required: true
+      description: Identificador da licitação (ver descrição da API).
+      schema:
+        type: string
+        pattern: '^[A-Za-z0-9._-]{1,64}$'
+    SavedSearchId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  headers:
+    ETag:
+      description: Validador de cache. Fraco (`W/"..."`) na lista, forte no detalhe.
+      schema:
+        type: string
+    Link:
+      description: Próxima página no formato `<url>; rel="next"`. Ausente na última página.
+      schema:
+        type: string
+    RateLimitLimit:
+      description: Requisições permitidas na janela atual.
+      schema:
+        type: integer
+        format: int32
+    RateLimitRemaining:
+      description: Requisições restantes na janela atual.
+      schema:
+        type: integer
+        format: int32
+    RateLimitReset:
+      description: Segundos até a janela renovar.
+      schema:
+        type: integer
+        format: int32
+    RetryAfter:
+      description: Segundos até uma nova tentativa ser aceita.
+      schema:
+        type: integer
+        format: int32
+    Deprecation:
+      description: Reservado. Só será enviado quando a rota for descontinuada por uma v2.
+      schema:
+        type: string
+    Sunset:
+      description: Reservado. Data de desligamento da rota, enviada junto com `Deprecation`.
+      schema:
+        type: string
+
+  responses:
+    NotModified:
+      description: O `ETag` enviado ainda vale. Sem corpo.
+      headers:
+        ETag:
+          $ref: '#/components/headers/ETag'
+    BadRequest:
+      description: Requisição malformada, incluindo parâmetro inválido e cursor adulterado.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          examples:
+            invalidCursor:
+              summary: Cursor adulterado
+              value:
+                type: https://github.com/miguelsanzbr/radar-licitacoes/blob/main/docs/problems/invalid-cursor.md
+                title: Cursor inválido
+                status: 400
+                detail: O cursor não pôde ser decodificado.
+                instance: /api/v1/procurements
+            validation:
+              summary: Parâmetro inválido
+              value:
+                type: https://github.com/miguelsanzbr/radar-licitacoes/blob/main/docs/problems/validation.md
+                title: Requisição inválida
+                status: 400
+                detail: Um ou mais parâmetros são inválidos.
+                instance: /api/v1/procurements
+                errors:
+                  - field: limit
+                    message: deve ser no máximo 50
+    Unauthorized:
+      description: Credencial ausente, inválida ou expirada.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: https://github.com/miguelsanzbr/radar-licitacoes/blob/main/docs/problems/unauthorized.md
+            title: Não autenticado
+            status: 401
+            detail: Token ausente ou inválido.
+            instance: /api/v1/saved-searches
+    Forbidden:
+      description: Autenticado, mas sem o papel exigido pela rota.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: https://github.com/miguelsanzbr/radar-licitacoes/blob/main/docs/problems/forbidden.md
+            title: Acesso negado
+            status: 403
+            detail: A rota exige o papel operator.
+            instance: /ops/replay
+    NotFound:
+      description: Recurso inexistente ou de outro usuário.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: https://github.com/miguelsanzbr/radar-licitacoes/blob/main/docs/problems/not-found.md
+            title: Não encontrado
+            status: 404
+            detail: Licitação inexistente.
+            instance: /api/v1/procurements/12345678000190-1-000123-2026
+    Conflict:
+      description: Conflito com o estado atual, como operação idêntica ainda em andamento.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: https://github.com/miguelsanzbr/radar-licitacoes/blob/main/docs/problems/conflict.md
+            title: Conflito
+            status: 409
+            detail: Já existe uma operação em andamento com esta chave.
+            instance: /api/v1/saved-searches
+    UnprocessableEntity:
+      description: Sintaxe correta, mas regra de negócio violada ou `Idempotency-Key` reutilizada com outro corpo.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          examples:
+            validation:
+              summary: Faixa de valor invertida
+              value:
+                type: https://github.com/miguelsanzbr/radar-licitacoes/blob/main/docs/problems/validation.md
+                title: Requisição inválida
+                status: 422
+                detail: minValue não pode ser maior que maxValue.
+                instance: /api/v1/procurements
+                errors:
+                  - field: minValue
+                    message: maior que maxValue
+            idempotencyMismatch:
+              summary: Chave reutilizada com outro corpo
+              value:
+                type: https://github.com/miguelsanzbr/radar-licitacoes/blob/main/docs/problems/idempotency-mismatch.md
+                title: Chave de idempotência reutilizada
+                status: 422
+                detail: A Idempotency-Key já foi usada com um corpo diferente.
+                instance: /api/v1/saved-searches
+    TooManyRequests:
+      description: Limite de requisições excedido.
+      headers:
+        Retry-After:
+          $ref: '#/components/headers/RetryAfter'
+        RateLimit-Limit:
+          $ref: '#/components/headers/RateLimitLimit'
+        RateLimit-Remaining:
+          $ref: '#/components/headers/RateLimitRemaining'
+        RateLimit-Reset:
+          $ref: '#/components/headers/RateLimitReset'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: https://github.com/miguelsanzbr/radar-licitacoes/blob/main/docs/problems/rate-limited.md
+            title: Limite excedido
+            status: 429
+            detail: Tente novamente em 30 segundos.
+            instance: /api/v1/procurements
+
+  schemas:
+    Uf:
+      type: string
+      pattern: '^[A-Z]{2}$'
+      description: Sigla da unidade federativa.
+    IbgeCode:
+      type: string
+      pattern: '^[0-9]{7}$'
+      description: Código IBGE do município.
+    Decimal:
+      type: string
+      pattern: '^[0-9]+(\.[0-9]{1,2})?$'
+      description: Decimal em texto, para não perder precisão. Exemplo `1500000.00`.
+    ProcurementStatus:
+      type: string
+      enum: [PUBLISHED, SUSPENDED, REVOKED, ANNULLED]
+    ProposalPhase:
+      type: string
+      description: Derivada da janela de propostas e do relógio, não armazenada.
+      enum: [UPCOMING, OPEN, CLOSED, UNKNOWN]
+    Frequency:
+      type: string
+      enum: [INSTANT, DAILY]
+
+    ProcurementSummary:
+      type: object
+      required: [id, objectDescription, organName, modalityId, status, proposalPhase, publishedAt]
+      properties:
+        id:
+          type: string
+          pattern: '^[A-Za-z0-9._-]{1,64}$'
+          description: >-
+            Identificador da licitação: o numeroControlePNCP com a barra trocada por hífen.
+            É esta forma, com hífen, que vai no caminho das rotas `/procurements/{id}`.
+        objectDescription:
+          type: string
+        snippet:
+          type: [string, 'null']
+          description: Trecho do objeto com os termos da busca entre `<b>` e `</b>`. Nulo sem `q`.
+        organName:
+          type: string
+        unitName:
+          type: [string, 'null']
+        uf:
+          type: [string, 'null']
+          pattern: '^[A-Z]{2}$'
+        municipalityName:
+          type: [string, 'null']
+        ibgeCode:
+          type: [string, 'null']
+          pattern: '^[0-9]{7}$'
+        modalityId:
+          type: integer
+          format: int32
+        status:
+          $ref: '#/components/schemas/ProcurementStatus'
+        estimatedValue:
+          type: [string, 'null']
+          pattern: '^[0-9]+(\.[0-9]{1,2})?$'
+          description: Decimal em texto. Nulo quando o órgão não informou.
+        proposalOpeningAt:
+          type: [string, 'null']
+          format: date-time
+        proposalClosingAt:
+          type: [string, 'null']
+          format: date-time
+        proposalPhase:
+          $ref: '#/components/schemas/ProposalPhase'
+        publishedAt:
+          type: string
+          format: date-time
+        rank:
+          type: [number, 'null']
+          description: Relevância (`ts_rank_cd`). Nulo sem `q`.
+
+    ProcurementPage:
+      type: object
+      required: [items, limit]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProcurementSummary'
+        nextCursor:
+          type: [string, 'null']
+          description: Nulo na última página.
+        limit:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 50
+
+    SituationChange:
+      type: object
+      required: [to, pncpUpdatedAt, unexpected]
+      properties:
+        from:
+          type: [string, 'null']
+          description: Situação anterior. Nula na primeira observação.
+        to:
+          type: string
+        pncpUpdatedAt:
+          type: string
+          format: date-time
+        unexpected:
+          type: boolean
+          description: Verdadeiro quando a transição não existe na máquina de estados.
+
+    SituationHistory:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/SituationChange'
+
+    ProcurementDetail:
+      type: object
+      required:
+        - id
+        - objectDescription
+        - organCnpj
+        - organName
+        - modalityId
+        - modalityName
+        - srp
+        - status
+        - proposalPhase
+        - publishedAt
+        - pncpUpdatedAt
+        - history
+        - etag
+      properties:
+        id:
+          type: string
+          pattern: '^[A-Za-z0-9._-]{1,64}$'
+          description: >-
+            Identificador da licitação: o numeroControlePNCP com a barra trocada por hífen.
+            É esta forma, com hífen, que vai no caminho das rotas `/procurements/{id}`.
+        objectDescription:
+          type: string
+        organCnpj:
+          type: string
+          pattern: '^[0-9]{14}$'
+        organName:
+          type: string
+        unitCode:
+          type: [string, 'null']
+        unitName:
+          type: [string, 'null']
+        uf:
+          type: [string, 'null']
+          pattern: '^[A-Z]{2}$'
+        municipalityName:
+          type: [string, 'null']
+        ibgeCode:
+          type: [string, 'null']
+          pattern: '^[0-9]{7}$'
+        modalityId:
+          type: integer
+          format: int32
+        modalityName:
+          type: string
+        disputeMode:
+          type: [string, 'null']
+        legalBasis:
+          type: [string, 'null']
+        srp:
+          type: boolean
+          description: Sistema de registro de preços.
+        status:
+          $ref: '#/components/schemas/ProcurementStatus'
+        estimatedValue:
+          type: [string, 'null']
+          pattern: '^[0-9]+(\.[0-9]{1,2})?$'
+        awardedValue:
+          type: [string, 'null']
+          pattern: '^[0-9]+(\.[0-9]{1,2})?$'
+        proposalOpeningAt:
+          type: [string, 'null']
+          format: date-time
+        proposalClosingAt:
+          type: [string, 'null']
+          format: date-time
+        proposalPhase:
+          $ref: '#/components/schemas/ProposalPhase'
+        publishedAt:
+          type: string
+          format: date-time
+        pncpUpdatedAt:
+          type: string
+          format: date-time
+        history:
+          type: array
+          items:
+            $ref: '#/components/schemas/SituationChange'
+        etag:
+          type: string
+          description: Mesmo valor do cabeçalho `ETag`, sem aspas.
+
+    StatsBucket:
+      type: object
+      required: [key, count, estimatedSum]
+      properties:
+        key:
+          type: string
+          description: Valor da dimensão (sigla, id da modalidade, mês `AAAA-MM` ou faixa).
+        count:
+          type: integer
+          format: int64
+          minimum: 0
+        estimatedSum:
+          $ref: '#/components/schemas/Decimal'
+
+    StatsResponse:
+      type: object
+      required: [groupBy, buckets]
+      properties:
+        groupBy:
+          type: string
+          enum: [uf, modality, month, valueBand]
+        buckets:
+          type: array
+          items:
+            $ref: '#/components/schemas/StatsBucket'
+
+    Organ:
+      type: object
+      required: [name, similarity]
+      properties:
+        name:
+          type: string
+        similarity:
+          type: number
+          minimum: 0
+          maximum: 1
+
+    OrganList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Organ'
+
+    SavedSearchFilters:
+      type: object
+      properties:
+        uf:
+          $ref: '#/components/schemas/Uf'
+        ibge:
+          $ref: '#/components/schemas/IbgeCode'
+        modality:
+          type: integer
+          format: int32
+          minimum: 1
+        minValue:
+          $ref: '#/components/schemas/Decimal'
+        maxValue:
+          $ref: '#/components/schemas/Decimal'
+        open:
+          type: boolean
+
+    SavedSearchRequest:
+      type: object
+      required: [name, query, frequency]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+        query:
+          type: string
+          maxLength: 200
+          description: Texto da busca, mesma sintaxe de `q`.
+        filters:
+          $ref: '#/components/schemas/SavedSearchFilters'
+        frequency:
+          $ref: '#/components/schemas/Frequency'
+
+    SavedSearch:
+      type: object
+      required: [id, name, query, frequency, active, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        query:
+          type: string
+        filters:
+          $ref: '#/components/schemas/SavedSearchFilters'
+        frequency:
+          $ref: '#/components/schemas/Frequency'
+        active:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    ApiKeyCreated:
+      type: object
+      required: [prefix, key]
+      properties:
+        prefix:
+          type: string
+          minLength: 8
+          maxLength: 8
+          description: Oito caracteres visíveis, para identificar a chave depois.
+        key:
+          type: string
+          description: Chave completa. Mostrada uma única vez.
+
+    HealthComponent:
+      type: object
+      required: [name, status]
+      properties:
+        name:
+          type: string
+        status:
+          type: string
+          enum: [UP, DEGRADED, DOWN]
+        detail:
+          type: [string, 'null']
+
+    HealthPanel:
+      type: object
+      required: [status, components]
+      properties:
+        status:
+          type: string
+          enum: [UP, DEGRADED, DOWN]
+        components:
+          type: array
+          items:
+            $ref: '#/components/schemas/HealthComponent'
+
+    ReplayRequest:
+      type: object
+      required: [projection]
+      properties:
+        projection:
+          type: string
+          enum: [searchView, detailView, statsView]
+
+    BackfillRequest:
+      type: object
+      required: [modalityId, from, to]
+      properties:
+        modalityId:
+          type: integer
+          format: int32
+          minimum: 1
+        from:
+          type: string
+          format: date
+        to:
+          type: string
+          format: date
+
+    OperationAccepted:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [ACCEPTED]
+        detail:
+          type: [string, 'null']
+
+    ProblemError:
+      type: object
+      required: [field, message]
+      properties:
+        field:
+          type: string
+          description: Nome do parâmetro ou caminho do campo do corpo.
+        message:
+          type: string
+
+    Problem:
+      type: object
+      description: Detalhes do problema, conforme a RFC 9457.
+      required: [type, title, status]
+      properties:
+        type:
+          type: string
+          format: uri
+          description: Aponta para `docs/problems/<código>.md` do repositório.
+        title:
+          type: string
+        status:
+          type: integer
+          format: int32
+          minimum: 400
+          maximum: 599
+        detail:
+          type: string
+        instance:
+          type: string
+          format: uri-reference
+        errors:
+          type: array
+          description: Presente em erros de validação.
+          items:
+            $ref: '#/components/schemas/ProblemError'

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Somente codigo gerado a partir do contrato OpenAPI; ver docs/coverage-exclusions.md. -->
+<FindBugsFilter>
+  <Match>
+    <Class name="~br\.dev\.miguelsanzbr\.radar\.api\.generated\..*"/>
+  </Match>
+</FindBugsFilter>

@@ -1,4 +1,4 @@
-.PHONY: verify mutation check-coverage-policy audit-repo up down backfill replay bench slo synth probe deploy rollback profile
+.PHONY: verify mutation check-coverage-policy lint-openapi audit-repo up down backfill replay bench slo synth probe deploy rollback profile
 
 verify:
 	./mvnw verify
@@ -9,6 +9,9 @@ mutation:
 check-coverage-policy:
 	scripts/check-coverage-policy.sh --self-test
 	scripts/check-coverage-policy.sh
+
+lint-openapi:
+	npx --yes @stoplight/spectral-cli@6 lint contracts/src/main/resources/openapi/radar-api.v1.yaml --fail-severity=warn
 
 # Os termos proibidos ficam num arquivo local, nao versionado, no diretorio de hooks do git.
 audit-repo:

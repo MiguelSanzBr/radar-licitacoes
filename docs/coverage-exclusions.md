@@ -1,8 +1,16 @@
 # Exclusões de cobertura
 
-Regra: somente código gerado anotado com `@Generated` pode ser excluído do gate de cobertura (JaCoCo e PIT). Nenhuma exclusão manual de pacote ou classe.
+Regra: somente código gerado pode ser excluído do gate de cobertura (JaCoCo e PIT), com exclusão por caminho quando a anotação `@Generated` do gerador não sobrevive à compilação (retenção `SOURCE`). Nenhuma exclusão de código escrito à mão.
 
 Toda `<exclude>` em `pom.xml` precisa constar nesta tabela, com o motivo. O script `scripts/check-coverage-policy.sh` falha o build se houver exclusão fora da lista.
 
 | padrão | motivo |
 |---|---|
+| `br/dev/miguelsanzbr/radar/api/generated/**` | JaCoCo: interfaces e modelos gerados pelo openapi-generator a partir de `radar-api.v1.yaml`. A anotação `@Generated` do gerador é `jakarta.annotation.Generated`, que tem retenção `SOURCE` (verificado com `javap` nas classes compiladas: não há `RuntimeVisibleAnnotations` com ela), então o filtro automático do JaCoCo não a enxerga e a exclusão é por caminho. O código vive só em `target/generated-sources/openapi`. |
+| `br.dev.miguelsanzbr.radar.api.generated.*` | PIT: mesmo código gerado, mesmo motivo. Mutar getters e `equals` de DTO gerado não testa nada escrito à mão. |
+
+## Filtros do SpotBugs
+
+Não são exclusões de cobertura e o script de política não os verifica.
+
+- `core/spotbugs-exclude.xml`: cobre só `br.dev.miguelsanzbr.radar.api.generated.*`. Os DTOs gerados expõem listas mutáveis (`EI_EXPOSE_REP`, 27 achados, todos nesse pacote). Código escrito à mão continua sob a análise completa.
