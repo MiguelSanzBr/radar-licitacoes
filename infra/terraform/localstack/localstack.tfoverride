@@ -1,0 +1,19 @@
+# Override de provider usado só por scripts/terraform.sh (plan contra LocalStack).
+# O script copia este arquivo, com o nome localstack_override.tf, para um diretório temporário.
+# Nunca entra no envs/demo versionado.
+provider "aws" {
+  access_key                  = "test"
+  secret_key                  = "test"
+  skip_credentials_validation = true
+  skip_requesting_account_id  = true
+  skip_metadata_api_check     = "true"
+  s3_use_path_style           = true
+
+  endpoints {
+    ec2 = "http://localstack:4566"
+    iam = "http://localstack:4566"
+    rds = "http://localstack:4566"
+    s3  = "http://localstack:4566"
+    sts = "http://localstack:4566"
+  }
+}

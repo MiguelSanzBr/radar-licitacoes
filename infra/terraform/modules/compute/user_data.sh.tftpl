@@ -1,0 +1,15 @@
+#!/bin/bash
+# Sobe o stack de containers na primeira inicialização. A versão do Compose é fixada pela variável.
+set -euxo pipefail
+
+dnf install -y docker git
+systemctl enable --now docker
+
+mkdir -p /usr/local/lib/docker/cli-plugins
+curl -fsSL -o /usr/local/lib/docker/cli-plugins/docker-compose \
+  "https://github.com/docker/compose/releases/download/${compose_version}/docker-compose-linux-aarch64"
+chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+
+git clone --depth 1 "${app_repo_url}" /opt/radar
+cd /opt/radar
+docker compose -f infra/compose/docker-compose.yml up -d

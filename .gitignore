@@ -17,3 +17,13 @@ tools/pncp-probe/out/
 data/
 .env
 .jqwik-database
+
+# Terraform
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+*.tfplan
+crash.log
+.terraform/

@@ -48,3 +48,17 @@ jobs:
           cache: maven
       - name: Mutation testing
         run: ./mvnw -B -Pmutation verify
+
+  infra:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Terraform fmt
+        run: make tf-fmt
+      - name: Terraform validate
+        run: make tf-validate
+      - name: tflint
+        run: make tf-lint
+      - name: Terraform plan contra LocalStack
+        run: make tf-plan

@@ -1,0 +1,5 @@
+# Copie para terraform.tfvars e ajuste. Valores de exemplo: nenhum é real.
+region             = "us-east-1"
+ssh_cidr           = "203.0.113.10/32"
+backup_bucket_name = "radar-demo-backups-exemplo"
+app_repo_url       = "https://github.com/exemplo/radar-licitacoes.git"
