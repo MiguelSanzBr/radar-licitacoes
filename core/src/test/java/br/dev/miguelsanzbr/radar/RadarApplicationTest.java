@@ -7,9 +7,17 @@ import org.junit.jupiter.api.Test;
 class RadarApplicationTest {
 
   @Test
-  void mainStartsTheApplicationContext() {
+  void mainStartsTheApplicationContextAgainstPostgres() {
+    var postgres = SharedPostgres.INSTANCE;
+
     RadarApplication.main(
-        new String[] {"--spring.main.web-application-type=none", "--spring.profiles.active=noop"});
+        new String[] {
+          "--spring.main.web-application-type=none",
+          "--spring.profiles.active=noop",
+          "--spring.datasource.url=" + postgres.getJdbcUrl(),
+          "--spring.datasource.username=" + postgres.getUsername(),
+          "--spring.datasource.password=" + postgres.getPassword()
+        });
 
     assertThat(StartupProbe.STARTED).isTrue();
   }
