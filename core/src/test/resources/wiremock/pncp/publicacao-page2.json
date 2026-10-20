@@ -1,0 +1,62 @@
+{
+  "data": [
+    {
+      "valorTotalHomologado": null,
+      "orgaoEntidade": {
+        "cnpj": "05139464000105",
+        "poderId": "N",
+        "razaoSocial": "MUNICIPIO DE ALMEIRIM",
+        "esferaId": "M"
+      },
+      "dataInclusao": "2026-10-20T02:24:39",
+      "dataAtualizacao": "2026-10-20T02:24:39",
+      "valorTotalEstimado": 499320.00,
+      "modalidadeId": 6,
+      "modalidadeNome": "Pregão - Eletrônico",
+      "modoDisputaId": 3,
+      "modoDisputaNome": "Aberto-Fechado",
+      "tipoInstrumentoConvocatorioCodigo": 1,
+      "tipoInstrumentoConvocatorioNome": "Edital",
+      "fontesOrcamentarias": [],
+      "situacaoCompraId": 1,
+      "situacaoCompraNome": "Divulgada no PNCP",
+      "usuarioNome": "Licitanet Licitações Eletrônicas LTDA",
+      "anoCompra": 2026,
+      "srp": false,
+      "sequencialCompra": 17,
+      "emendaParlamentar": null,
+      "numeroCompra": "020",
+      "processo": "20260720.01-PMA",
+      "objetoCompra": "[LICITANET] - CONTRATAÇÃO DE PESSOA JURÍDICA PARA A AQUISIÇÃO DE COMBUSTÍVEL (ÓLEO DIESEL S10) DESTINADO AO ABASTECIMENTO DA FROTA DE VEÍCULOS, MÁQUINAS E EQUIPAMENTOS EMPREGADOS NA ABERTURA, RECUPERAÇÃO, CONSERVAÇÃO E MANUTENÇÃO DAS ESTRADAS VICINAIS DO MUNICÍPIO DE ALMEIRIM/PA, NO ÂMBITO DO PLANO DE AÇÃO Nº 09032026-093075.",
+      "informacaoComplementar": "",
+      "dataAberturaProposta": "2026-10-20T02:24:14",
+      "dataEncerramentoProposta": "2026-10-30T10:00:00",
+      "dataPublicacaoPncp": "2026-10-20T02:24:39",
+      "dataAtualizacaoGlobal": "2026-10-20T02:24:39",
+      "unidadeOrgao": {
+        "ufNome": "Pará",
+        "ufSigla": "PA",
+        "municipioNome": "Almeirim",
+        "codigoUnidade": "3127",
+        "nomeUnidade": "MUNICIPIO DE ALMEIRIM/ PA",
+        "codigoIbge": "1500503"
+      },
+      "orgaoSubRogado": null,
+      "unidadeSubRogada": null,
+      "amparoLegal": {
+        "nome": "Lei 14.133/2021, Art. 28, I",
+        "descricao": "pregão: modalidade de licitação obrigatória para aquisição de bens e serviços comuns",
+        "codigo": 1
+      },
+      "linkSistemaOrigem": "https://licitanet.com.br/sessao/205277",
+      "linkProcessoEletronico": null,
+      "justificativaPresencial": "",
+      "numeroControlePNCP": "05139464000105-1-000017/2026"
+    }
+  ],
+  "totalRegistros": 4,
+  "totalPaginas": 2,
+  "numeroPagina": 2,
+  "paginasRestantes": 0,
+  "empty": false
+}
