@@ -1,0 +1,7 @@
+# Allowlist: so entra no contexto o que o Maven precisa para compilar.
+**
+!mvnw
+!.mvn
+!pom.xml
+!**/pom.xml
+!**/src/main

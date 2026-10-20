@@ -268,6 +268,13 @@
 
   <profiles>
     <profile>
+      <!-- ./mvnw -Pimage verify: exige a imagem radar-licitacoes:local (make image); fora do build padrao. -->
+      <id>image</id>
+      <modules>
+        <module>it-image</module>
+      </modules>
+    </profile>
+    <profile>
       <!--
         O check do JaCoCo passa em silencio quando jacoco.exec nao existe. Todo modulo com codigo
         de producao precisa ter rodado testes, a menos que -DskipTests ou -Dmaven.test.skip=true.

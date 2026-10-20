@@ -1,7 +1,34 @@
-.PHONY: verify mutation check-coverage-policy lint-openapi audit-repo tf-fmt tf-validate tf-lint tf-plan up down backfill replay bench slo synth probe deploy rollback profile
+.PHONY: verify mutation check-coverage-policy lint-openapi audit-repo tf-fmt tf-validate tf-lint tf-plan up down backfill replay bench slo synth probe deploy rollback profile image image-size image-scan image-test
 
 verify:
 	./mvnw verify
+
+TRIVY_IMAGE := aquasec/trivy:0.76.0@sha256:2416d1f74045b57274df1a340eee6b510cacd73c66a6ccb8da092b117eb7d222
+
+image:
+	docker build -t radar-licitacoes:local .
+
+image-size:
+	scripts/image-size.sh
+
+# Teste de container contra radar-licitacoes:local (rode `make image` antes).
+image-test:
+	./mvnw -Pimage -pl it-image verify
+
+# Falha em CRITICAL ou HIGH com correcao disponivel, na imagem final e na imagem de build (JDK
+# fixado no Dockerfile). O tar evita montar o socket do Docker. O Trivy nao confere o JDK dentro
+# do runtime jlink (ver ADR-0022): a mitigacao e acompanhar os avisos do Temurin e subir o digest.
+JDK_BUILD_IMAGE = $(shell sed -n 's/^FROM \(eclipse-temurin[^ ]*\) AS build$$/\1/p' Dockerfile)
+
+TRIVY = docker run --rm -v "$$HOME/.cache/trivy":/root/.cache/trivy $(TRIVY_IMAGE)
+TRIVY_FLAGS = --severity CRITICAL,HIGH --ignore-unfixed --exit-code 1 --skip-version-check
+
+image-scan:
+	@tar="$$(mktemp -u).tar"; trap 'rm -f "$$tar"' EXIT; \
+	docker save -o "$$tar" radar-licitacoes:local; \
+	docker run --rm -v "$$tar":/image.tar:ro -v "$$HOME/.cache/trivy":/root/.cache/trivy $(TRIVY_IMAGE) \
+	  image --input /image.tar $(TRIVY_FLAGS) && \
+	$(TRIVY) image $(JDK_BUILD_IMAGE) $(TRIVY_FLAGS)
 
 mutation:
 	./mvnw -Pmutation verify

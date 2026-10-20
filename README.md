@@ -20,6 +20,8 @@ make verify
 
 É preciso JDK 25 e Docker (os testes de integração sobem containers com Testcontainers).
 
+Imagem: 256 MB (medido por scripts/image-size.sh em 2026-10-19).
+
 ## Números
 
 <!-- bench:start -->
