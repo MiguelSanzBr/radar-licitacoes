@@ -1,0 +1,273 @@
+# Testes unitários das regras de SLO (promtool test rules).
+# Cada grupo de séries sintetiza uma condição; os alertas esperados são checados no minuto 70.
+rule_files:
+  - slo.yml
+
+evaluation_interval: 1m
+
+tests:
+  - name: erro 5xx de 10% dispara queima rápida e lenta de disponibilidade
+    interval: 1m
+    input_series:
+      - series: 'http_server_requests_seconds_count{uri="/api/v1/procurements",method="GET",status="200",outcome="SUCCESS"}'
+        values: '0+90x120'
+      - series: 'http_server_requests_seconds_count{uri="/api/v1/procurements",method="GET",status="500",outcome="SERVER_ERROR"}'
+        values: '0+10x120'
+      - series: 'http_server_requests_seconds_bucket{uri="/api/v1/procurements",method="GET",status="200",outcome="SUCCESS",le="0.2"}'
+        values: '0+100x120'
+    alert_rule_test:
+      - eval_time: 70m
+        alertname: SearchErrorBudgetFastBurn
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              slo: busca-disponibilidade
+            exp_annotations:
+              summary: "Busca com erro 5xx consumindo o orçamento de erro 14,4 vezes mais rápido que o aceito"
+              runbook_url: docs/runbook.md#busca-indisponivel
+      - eval_time: 70m
+        alertname: SearchErrorBudgetSlowBurn
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              slo: busca-disponibilidade
+            exp_annotations:
+              summary: "Busca com erro 5xx consumindo o orçamento de erro 6 vezes mais rápido que o aceito"
+              runbook_url: docs/runbook.md#busca-indisponivel
+
+  - name: 80% acima de 200 ms dispara queima rápida e lenta de latência
+    interval: 1m
+    input_series:
+      - series: 'http_server_requests_seconds_count{uri="/api/v1/procurements",method="GET",status="200",outcome="SUCCESS"}'
+        values: '0+100x120'
+      - series: 'http_server_requests_seconds_bucket{uri="/api/v1/procurements",method="GET",status="200",outcome="SUCCESS",le="0.2"}'
+        values: '0+20x120'
+    alert_rule_test:
+      - eval_time: 70m
+        alertname: SearchLatencyFastBurn
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              slo: busca-latencia
+            exp_annotations:
+              summary: "Busca com menos de 95% das respostas abaixo de 200 ms na janela de 1 h e 5 min"
+              runbook_url: docs/runbook.md#busca-lenta
+      - eval_time: 70m
+        alertname: SearchLatencySlowBurn
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              slo: busca-latencia
+            exp_annotations:
+              summary: "Busca com menos de 95% das respostas abaixo de 200 ms na janela de 6 h e 30 min"
+              runbook_url: docs/runbook.md#busca-lenta
+
+  - name: outbox com mais de 5 s por 10 min dispara alerta de atraso
+    interval: 1m
+    input_series:
+      - series: 'outbox_oldest_age_seconds{application="radar"}'
+        values: '10x120'
+    alert_rule_test:
+      - eval_time: 70m
+        alertname: OutboxOldestAgeHigh
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              slo: frescor-outbox
+            exp_annotations:
+              summary: "Mensagens do outbox esperando mais de 5 s para sair"
+              runbook_url: docs/runbook.md#outbox-atrasado
+
+  - name: projeção com p95 acima de 30 s dispara alerta de atraso
+    interval: 1m
+    input_series:
+      - series: 'projection_lag_seconds_bucket{le="30"}'
+        values: '0+5x120'
+      - series: 'projection_lag_seconds_bucket{le="60"}'
+        values: '0+5x120'
+      - series: 'projection_lag_seconds_bucket{le="+Inf"}'
+        values: '0+100x120'
+    alert_rule_test:
+      - eval_time: 70m
+        alertname: ProjectionLagHigh
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              slo: frescor-projecao
+            exp_annotations:
+              summary: "Projeção com p95 acima de 30 s entre coleta e busca"
+              runbook_url: docs/runbook.md#projecao-atrasada
+
+  - name: entrega de alerta com p95 acima de 60 s dispara alerta de atraso
+    interval: 1m
+    input_series:
+      - series: 'alert_delivery_latency_seconds_bucket{le="60"}'
+        values: '0+5x120'
+      - series: 'alert_delivery_latency_seconds_bucket{le="120"}'
+        values: '0+5x120'
+      - series: 'alert_delivery_latency_seconds_bucket{le="+Inf"}'
+        values: '0+100x120'
+    alert_rule_test:
+      - eval_time: 70m
+        alertname: AlertDeliveryLatencyHigh
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              slo: alerta-entrega
+            exp_annotations:
+              summary: "Entrega de alerta com p95 acima de 60 s após a projeção"
+              runbook_url: docs/runbook.md#alerta-atrasado
+
+  - name: 5% de erro 5xx dispara só a queima lenta de disponibilidade
+    interval: 1m
+    input_series:
+      - series: 'http_server_requests_seconds_count{uri="/api/v1/procurements",method="GET",status="200",outcome="SUCCESS"}'
+        values: '0+95x120'
+      - series: 'http_server_requests_seconds_count{uri="/api/v1/procurements",method="GET",status="500",outcome="SERVER_ERROR"}'
+        values: '0+5x120'
+      - series: 'http_server_requests_seconds_bucket{uri="/api/v1/procurements",method="GET",status="200",outcome="SUCCESS",le="0.2"}'
+        values: '0+100x120'
+    alert_rule_test:
+      - eval_time: 70m
+        alertname: SearchErrorBudgetFastBurn
+        exp_alerts: []
+      - eval_time: 70m
+        alertname: SearchErrorBudgetSlowBurn
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              slo: busca-disponibilidade
+            exp_annotations:
+              summary: "Busca com erro 5xx consumindo o orçamento de erro 6 vezes mais rápido que o aceito"
+              runbook_url: docs/runbook.md#busca-indisponivel
+
+  - name: 1 h ruim com 10 min saudáveis não dispara queima rápida (gating do and)
+    interval: 1m
+    input_series:
+      - series: 'http_server_requests_seconds_count{uri="/api/v1/procurements",method="GET",status="200",outcome="SUCCESS"}'
+        values: '0+50x120'
+      - series: 'http_server_requests_seconds_count{uri="/api/v1/procurements",method="GET",status="500",outcome="SERVER_ERROR"}'
+        values: '0+50x60 3000x60'
+    alert_rule_test:
+      - eval_time: 70m
+        alertname: SearchErrorBudgetFastBurn
+        exp_alerts: []
+
+  - name: 50% de latência acima de 200 ms dispara só a queima lenta de latência
+    interval: 1m
+    input_series:
+      - series: 'http_server_requests_seconds_count{uri="/api/v1/procurements",method="GET",status="200",outcome="SUCCESS"}'
+        values: '0+100x120'
+      - series: 'http_server_requests_seconds_bucket{uri="/api/v1/procurements",method="GET",status="200",outcome="SUCCESS",le="0.2"}'
+        values: '0+50x120'
+    alert_rule_test:
+      - eval_time: 70m
+        alertname: SearchLatencyFastBurn
+        exp_alerts: []
+      - eval_time: 70m
+        alertname: SearchLatencySlowBurn
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              slo: busca-latencia
+            exp_annotations:
+              summary: "Busca com menos de 95% das respostas abaixo de 200 ms na janela de 6 h e 30 min"
+              runbook_url: docs/runbook.md#busca-lenta
+
+  - name: 1 h lenta com 10 min saudáveis não dispara queima rápida de latência (gating do and)
+    interval: 1m
+    input_series:
+      - series: 'http_server_requests_seconds_count{uri="/api/v1/procurements",method="GET",status="200",outcome="SUCCESS"}'
+        values: '0+100x120'
+      - series: 'http_server_requests_seconds_bucket{uri="/api/v1/procurements",method="GET",status="200",outcome="SUCCESS",le="0.2"}'
+        values: '0x60 100+100x10'
+    alert_rule_test:
+      - eval_time: 70m
+        alertname: SearchLatencyFastBurn
+        exp_alerts: []
+
+  - name: aplicação fora do scrape dispara alvo fora
+    interval: 1m
+    input_series:
+      - series: 'up{job="radar"}'
+        values: '0x120'
+    alert_rule_test:
+      - eval_time: 70m
+        alertname: RadarTargetDown
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              job: radar
+            exp_annotations:
+              summary: "Scrape do radar falhou por 2 min: o app não responde a /actuator/prometheus"
+              runbook_url: docs/runbook.md#alvo-fora
+
+  - name: sem requisições à busca por 15 min dispara alerta de tráfego
+    interval: 1m
+    input_series:
+      - series: 'up{job="radar"}'
+        values: '1x120'
+    alert_rule_test:
+      - eval_time: 70m
+        alertname: RadarSemTrafego
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              uri: /api/v1/procurements
+            exp_annotations:
+              summary: "Nenhuma requisição à busca registrada por 15 min"
+              runbook_url: docs/runbook.md#sem-trafego
+
+  - name: tráfego saudável não dispara nenhum alerta
+    interval: 1m
+    input_series:
+      - series: 'http_server_requests_seconds_count{uri="/api/v1/procurements",method="GET",status="200",outcome="SUCCESS"}'
+        values: '0+100x120'
+      - series: 'http_server_requests_seconds_count{uri="/api/v1/procurements",method="GET",status="500",outcome="SERVER_ERROR"}'
+        values: '0+0x120'
+      - series: 'http_server_requests_seconds_bucket{uri="/api/v1/procurements",method="GET",status="200",outcome="SUCCESS",le="0.2"}'
+        values: '0+99x120'
+      - series: 'outbox_oldest_age_seconds{application="radar"}'
+        values: '2x120'
+      - series: 'up{job="radar"}'
+        values: '1x120'
+      - series: 'projection_lag_seconds_bucket{le="30"}'
+        values: '0+100x120'
+      - series: 'projection_lag_seconds_bucket{le="60"}'
+        values: '0+100x120'
+      - series: 'projection_lag_seconds_bucket{le="+Inf"}'
+        values: '0+100x120'
+      - series: 'alert_delivery_latency_seconds_bucket{le="60"}'
+        values: '0+100x120'
+      - series: 'alert_delivery_latency_seconds_bucket{le="120"}'
+        values: '0+100x120'
+      - series: 'alert_delivery_latency_seconds_bucket{le="+Inf"}'
+        values: '0+100x120'
+    alert_rule_test:
+      - eval_time: 70m
+        alertname: SearchErrorBudgetFastBurn
+        exp_alerts: []
+      - eval_time: 70m
+        alertname: SearchErrorBudgetSlowBurn
+        exp_alerts: []
+      - eval_time: 70m
+        alertname: SearchLatencyFastBurn
+        exp_alerts: []
+      - eval_time: 70m
+        alertname: SearchLatencySlowBurn
+        exp_alerts: []
+      - eval_time: 70m
+        alertname: OutboxOldestAgeHigh
+        exp_alerts: []
+      - eval_time: 70m
+        alertname: ProjectionLagHigh
+        exp_alerts: []
+      - eval_time: 70m
+        alertname: AlertDeliveryLatencyHigh
+        exp_alerts: []
+      - eval_time: 70m
+        alertname: RadarTargetDown
+        exp_alerts: []
+      - eval_time: 70m
+        alertname: RadarSemTrafego
+        exp_alerts: []

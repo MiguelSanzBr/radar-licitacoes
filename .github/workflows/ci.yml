@@ -36,6 +36,14 @@ jobs:
       - name: Lint OpenAPI
         run: npx --yes @stoplight/spectral-cli@6 lint contracts/src/main/resources/openapi/radar-api.v1.yaml --fail-severity=warn
 
+  observability:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Lint observability
+        run: make lint-observability
+
   mutation:
     runs-on: ubuntu-latest
     timeout-minutes: 60

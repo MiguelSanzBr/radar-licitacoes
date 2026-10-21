@@ -1,4 +1,4 @@
-.PHONY: verify mutation check-coverage-policy lint-openapi audit-repo tf-fmt tf-validate tf-lint tf-plan up down backfill replay bench slo synth probe deploy rollback profile image image-size image-scan image-test
+.PHONY: verify mutation check-coverage-policy lint-openapi audit-repo tf-fmt tf-validate tf-lint tf-plan up down backfill replay bench slo synth probe deploy rollback profile image image-size image-scan image-test lint-observability
 
 verify:
 	./mvnw verify
@@ -36,6 +36,9 @@ mutation:
 check-coverage-policy:
 	scripts/check-coverage-policy.sh --self-test
 	scripts/check-coverage-policy.sh
+
+lint-observability:
+	scripts/lint-observability.sh
 
 lint-openapi:
 	npx --yes @stoplight/spectral-cli@6 lint contracts/src/main/resources/openapi/radar-api.v1.yaml --fail-severity=warn

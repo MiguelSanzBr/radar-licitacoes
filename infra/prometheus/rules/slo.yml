@@ -1,0 +1,132 @@
+# SLOs do radar (ADR-0025). Os alvos sao propostos e ainda nao medidos: ajustar pelo valor medido em make slo.
+# Latencia usa o bucket le="0.2" de http_server_requests_seconds. Ele so existe com
+# management.metrics.distribution.slo.http.server.requests=50ms,200ms,500ms (core/src/main/resources/application.properties).
+# Para p95 por histogram_quantile, o app tambem precisa de management.metrics.distribution.percentiles-histogram.http.server.requests=true.
+# Projecao e entrega de alerta dependem de histogramas (projection_lag_seconds, alert_delivery_latency_seconds)
+# que entram com a tarefa 4.1 e precisam dos mesmos buckets de distribuicao.
+# Burn rate = taxa de erro observada / orcamento de erro. 14,4 em 1 h e 5 min, 6 em 6 h e 30 min (SRE workbook).
+groups:
+  - name: slo-burn-rate
+    rules:
+      - record: slo:busca_erro_5xx:burn_rate5m
+        expr: |
+          sum(rate(http_server_requests_seconds_count{uri="/api/v1/procurements",status=~"5.."}[5m]))
+          / sum(rate(http_server_requests_seconds_count{uri="/api/v1/procurements"}[5m]))
+          / (1 - 0.995)
+      - record: slo:busca_erro_5xx:burn_rate30m
+        expr: |
+          sum(rate(http_server_requests_seconds_count{uri="/api/v1/procurements",status=~"5.."}[30m]))
+          / sum(rate(http_server_requests_seconds_count{uri="/api/v1/procurements"}[30m]))
+          / (1 - 0.995)
+      - record: slo:busca_erro_5xx:burn_rate1h
+        expr: |
+          sum(rate(http_server_requests_seconds_count{uri="/api/v1/procurements",status=~"5.."}[1h]))
+          / sum(rate(http_server_requests_seconds_count{uri="/api/v1/procurements"}[1h]))
+          / (1 - 0.995)
+      - record: slo:busca_erro_5xx:burn_rate6h
+        expr: |
+          sum(rate(http_server_requests_seconds_count{uri="/api/v1/procurements",status=~"5.."}[6h]))
+          / sum(rate(http_server_requests_seconds_count{uri="/api/v1/procurements"}[6h]))
+          / (1 - 0.995)
+      - record: slo:busca_latencia:burn_rate5m
+        expr: |
+          (1 - sum(rate(http_server_requests_seconds_bucket{uri="/api/v1/procurements",le="0.2"}[5m]))
+          / sum(rate(http_server_requests_seconds_count{uri="/api/v1/procurements"}[5m])))
+          / (1 - 0.95)
+      - record: slo:busca_latencia:burn_rate30m
+        expr: |
+          (1 - sum(rate(http_server_requests_seconds_bucket{uri="/api/v1/procurements",le="0.2"}[30m]))
+          / sum(rate(http_server_requests_seconds_count{uri="/api/v1/procurements"}[30m])))
+          / (1 - 0.95)
+      - record: slo:busca_latencia:burn_rate1h
+        expr: |
+          (1 - sum(rate(http_server_requests_seconds_bucket{uri="/api/v1/procurements",le="0.2"}[1h]))
+          / sum(rate(http_server_requests_seconds_count{uri="/api/v1/procurements"}[1h])))
+          / (1 - 0.95)
+      - record: slo:busca_latencia:burn_rate6h
+        expr: |
+          (1 - sum(rate(http_server_requests_seconds_bucket{uri="/api/v1/procurements",le="0.2"}[6h]))
+          / sum(rate(http_server_requests_seconds_count{uri="/api/v1/procurements"}[6h])))
+          / (1 - 0.95)
+
+  - name: slo-alerts
+    rules:
+      - alert: SearchErrorBudgetFastBurn
+        expr: slo:busca_erro_5xx:burn_rate1h > 14.4 and slo:busca_erro_5xx:burn_rate5m > 14.4
+        for: 2m
+        labels:
+          severity: critical
+          slo: busca-disponibilidade
+        annotations:
+          summary: "Busca com erro 5xx consumindo o orçamento de erro 14,4 vezes mais rápido que o aceito"
+          runbook_url: docs/runbook.md#busca-indisponivel
+      - alert: SearchErrorBudgetSlowBurn
+        expr: slo:busca_erro_5xx:burn_rate6h > 6 and slo:busca_erro_5xx:burn_rate30m > 6
+        for: 15m
+        labels:
+          severity: warning
+          slo: busca-disponibilidade
+        annotations:
+          summary: "Busca com erro 5xx consumindo o orçamento de erro 6 vezes mais rápido que o aceito"
+          runbook_url: docs/runbook.md#busca-indisponivel
+      - alert: SearchLatencyFastBurn
+        expr: slo:busca_latencia:burn_rate1h > 14.4 and slo:busca_latencia:burn_rate5m > 14.4
+        for: 2m
+        labels:
+          severity: critical
+          slo: busca-latencia
+        annotations:
+          summary: "Busca com menos de 95% das respostas abaixo de 200 ms na janela de 1 h e 5 min"
+          runbook_url: docs/runbook.md#busca-lenta
+      - alert: SearchLatencySlowBurn
+        expr: slo:busca_latencia:burn_rate6h > 6 and slo:busca_latencia:burn_rate30m > 6
+        for: 15m
+        labels:
+          severity: warning
+          slo: busca-latencia
+        annotations:
+          summary: "Busca com menos de 95% das respostas abaixo de 200 ms na janela de 6 h e 30 min"
+          runbook_url: docs/runbook.md#busca-lenta
+      - alert: OutboxOldestAgeHigh
+        expr: max(outbox_oldest_age_seconds) > 5
+        for: 10m
+        labels:
+          severity: warning
+          slo: frescor-outbox
+        annotations:
+          summary: "Mensagens do outbox esperando mais de 5 s para sair"
+          runbook_url: docs/runbook.md#outbox-atrasado
+      - alert: ProjectionLagHigh
+        expr: histogram_quantile(0.95, sum by (le) (rate(projection_lag_seconds_bucket[5m]))) > 30
+        for: 10m
+        labels:
+          severity: warning
+          slo: frescor-projecao
+        annotations:
+          summary: "Projeção com p95 acima de 30 s entre coleta e busca"
+          runbook_url: docs/runbook.md#projecao-atrasada
+      - alert: AlertDeliveryLatencyHigh
+        expr: histogram_quantile(0.95, sum by (le) (rate(alert_delivery_latency_seconds_bucket[5m]))) > 60
+        for: 10m
+        labels:
+          severity: warning
+          slo: alerta-entrega
+        annotations:
+          summary: "Entrega de alerta com p95 acima de 60 s após a projeção"
+          runbook_url: docs/runbook.md#alerta-atrasado
+      - alert: RadarTargetDown
+        expr: up{job="radar"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Scrape do radar falhou por 2 min: o app não responde a /actuator/prometheus"
+          runbook_url: docs/runbook.md#alvo-fora
+      - alert: RadarSemTrafego
+        expr: absent(http_server_requests_seconds_count{uri="/api/v1/procurements"})
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Nenhuma requisição à busca registrada por 15 min"
+          runbook_url: docs/runbook.md#sem-trafego
