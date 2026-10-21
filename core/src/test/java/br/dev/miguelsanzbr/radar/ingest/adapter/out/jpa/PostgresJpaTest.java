@@ -1,5 +1,6 @@
 package br.dev.miguelsanzbr.radar.ingest.adapter.out.jpa;
 
+import br.dev.miguelsanzbr.radar.PostgresTestConfig;
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

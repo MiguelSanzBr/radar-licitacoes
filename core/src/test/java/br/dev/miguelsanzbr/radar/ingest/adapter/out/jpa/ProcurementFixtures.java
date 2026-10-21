@@ -19,19 +19,19 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 
 /** Test data for the persistence tests: a fully populated notice published in October 2026. */
-final class ProcurementFixtures {
+public final class ProcurementFixtures {
 
-  static final Instant T0 = Instant.parse("2026-10-22T12:00:00Z");
-  static final Instant PUBLISHED_AT = Instant.parse("2026-10-21T12:00:00Z");
-  static final String RAW = "{\"b\": [1, 2], \"a\": {\"x\": null}}";
+  public static final Instant T0 = Instant.parse("2026-10-22T12:00:00Z");
+  public static final Instant PUBLISHED_AT = Instant.parse("2026-10-21T12:00:00Z");
+  public static final String RAW = "{\"b\": [1, 2], \"a\": {\"x\": null}}";
 
   private ProcurementFixtures() {}
 
-  static ProcurementId id(int sequence) {
+  public static ProcurementId id(int sequence) {
     return new ProcurementId("83021808000182-1-%06d/2026".formatted(sequence));
   }
 
-  static PncpSnapshot snapshot(ProcurementId id, int situationId, String objectDescription) {
+  public static PncpSnapshot snapshot(ProcurementId id, int situationId, String objectDescription) {
     return new PncpSnapshot(
         id,
         new PncpSituation(situationId, "Situacao " + situationId),
@@ -50,11 +50,11 @@ final class ProcurementFixtures {
         RAW);
   }
 
-  static PncpSnapshot snapshot(ProcurementId id) {
+  public static PncpSnapshot snapshot(ProcurementId id) {
     return snapshot(id, 1, "Aquisicao de material de escritorio");
   }
 
-  static PncpSnapshot withPublishedAt(PncpSnapshot s, Instant publishedAt) {
+  public static PncpSnapshot withPublishedAt(PncpSnapshot s, Instant publishedAt) {
     return new PncpSnapshot(
         s.id(),
         s.situation(),
@@ -74,7 +74,7 @@ final class ProcurementFixtures {
   }
 
   /** Same notice with every optional field absent. */
-  static PncpSnapshot bare(ProcurementId id) {
+  public static PncpSnapshot bare(ProcurementId id) {
     var full = snapshot(id);
     return new PncpSnapshot(
         id,
@@ -94,11 +94,11 @@ final class ProcurementFixtures {
         "{}");
   }
 
-  static Procurement discovered(PncpSnapshot snapshot) {
+  public static Procurement discovered(PncpSnapshot snapshot) {
     return Procurement.discover(snapshot, clockAt(T0)).procurement();
   }
 
-  static Clock clockAt(Instant instant) {
+  public static Clock clockAt(Instant instant) {
     return Clock.fixed(instant, ZoneOffset.UTC);
   }
 }
