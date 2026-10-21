@@ -1,12 +1,13 @@
 package br.dev.miguelsanzbr.radar.ingest.adapter.out.pncp;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.math.BigDecimal;
 
 /** The fields of a PNCP procurement item the domain uses; datetimes stay text until mapped. */
 @JsonIgnoreProperties(ignoreUnknown = true)
 record PncpItem(
-    String numeroControlePNCP,
+    @JsonProperty("numeroControlePNCP") String numeroControlePncp,
     int situacaoCompraId,
     String situacaoCompraNome,
     Organ orgaoEntidade,

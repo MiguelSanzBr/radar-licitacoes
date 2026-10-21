@@ -69,7 +69,7 @@ final class PncpMapper {
     try {
       var item = json.treeToValue(node, PncpItem.class);
       return new PncpSnapshot(
-          new ProcurementId(item.numeroControlePNCP()),
+          new ProcurementId(item.numeroControlePncp()),
           new PncpSituation(item.situacaoCompraId(), item.situacaoCompraNome()),
           new Organ(item.orgaoEntidade().cnpj(), item.orgaoEntidade().razaoSocial()),
           unit(item.unidadeOrgao()),
