@@ -11,27 +11,41 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.containers.Network;
 import org.testcontainers.containers.wait.strategy.Wait;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 
 /**
  * Sobe a imagem construida por {@code make image}; o perfil image mantem o build padrao sem ela.
  */
 class RadarImageIT {
 
+  private static final Network NETWORK = Network.newNetwork();
+
+  private static final PostgreSQLContainer DB =
+      new PostgreSQLContainer("postgres:18").withNetwork(NETWORK).withNetworkAliases("db");
+
   private static final GenericContainer<?> APP =
       new GenericContainer<>("radar-licitacoes:local")
+          .withNetwork(NETWORK)
           .withEnv("SPRING_PROFILES_ACTIVE", "noop")
+          .withEnv("SPRING_DATASOURCE_URL", "jdbc:postgresql://db:5432/" + DB.getDatabaseName())
+          .withEnv("SPRING_DATASOURCE_USERNAME", DB.getUsername())
+          .withEnv("SPRING_DATASOURCE_PASSWORD", DB.getPassword())
           .withExposedPorts(8080)
           .waitingFor(Wait.forHttp("/actuator/health/liveness").forPort(8080).forStatusCode(200));
 
   @BeforeAll
   static void start() {
+    DB.start();
     APP.start();
   }
 
   @AfterAll
   static void stop() {
     APP.stop();
+    DB.stop();
+    NETWORK.close();
   }
 
   private static HttpResponse<String> get(String path) throws IOException, InterruptedException {
