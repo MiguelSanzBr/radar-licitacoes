@@ -13,7 +13,6 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.Arrays;
-import java.util.stream.Collectors;
 
 /** One WireMock acting as the PNCP for every backfill integration test of the JVM. */
 final class BackfillTestSupport {
@@ -26,6 +25,7 @@ final class BackfillTestSupport {
   }
 
   static final String PUBLICATION = "/api/consulta/v1/contratacoes/publicacao";
+  static final String UPDATE = "/api/consulta/v1/contratacoes/atualizacao";
 
   private BackfillTestSupport() {}
 
@@ -58,25 +58,43 @@ final class BackfillTestSupport {
   }
 
   static String itemJson(int n) {
+    return itemJson(n, 1, "2026-10-20T10:00:00", null);
+  }
+
+  /** Update times are Sao Paulo local; {@code closingAt} null leaves the proposal window out. */
+  static String itemJson(int n, int situation, String updatedAt, String closingAt) {
     return """
-    {"numeroControlePNCP":"%s","situacaoCompraId":1,"situacaoCompraNome":"Divulgada no PNCP",
+    {"numeroControlePNCP":"%s","situacaoCompraId":%d,"situacaoCompraNome":"Situacao %d",
      "orgaoEntidade":{"cnpj":"83021808000182","razaoSocial":"Prefeitura de Exemplo"},
      "unidadeOrgao":{"codigoUnidade":"1010","nomeUnidade":"Compras","ufSigla":"SC",
        "municipioNome":"Exemplo","codigoIbge":"4205407"},
      "modalidadeId":6,"modalidadeNome":"Pregao Eletronico","srp":false,
-     "dataPublicacaoPncp":"2026-10-20T09:00:00","dataAtualizacaoGlobal":"2026-10-20T10:00:00",
+     "dataPublicacaoPncp":"2026-10-20T09:00:00","dataAtualizacaoGlobal":"%s",
+     "dataEncerramentoProposta":%s,
      "objetoCompra":"objeto %d"}
     """
-        .formatted(id(n), n);
+        .formatted(
+            id(n),
+            situation,
+            situation,
+            updatedAt,
+            closingAt == null ? "null" : "\"" + closingAt + "\"",
+            n);
   }
 
   static String pageJson(int page, int totalPages, int... ids) {
-    var items =
-        Arrays.stream(ids).mapToObj(BackfillTestSupport::itemJson).collect(Collectors.joining(","));
+    return pageJsonOf(
+        page,
+        totalPages,
+        Arrays.stream(ids).mapToObj(BackfillTestSupport::itemJson).toArray(String[]::new));
+  }
+
+  static String pageJsonOf(int page, int totalPages, String... itemJsons) {
+    var items = String.join(",", itemJsons);
     return """
     {"data":[%s],"totalRegistros":%d,"totalPaginas":%d,"numeroPagina":%d,"paginasRestantes":%d,"empty":false}
     """
-        .formatted(items, ids.length, totalPages, page, totalPages - page);
+        .formatted(items, itemJsons.length, totalPages, page, totalPages - page);
   }
 
   /** A request for one page of one day, in the PNCP's yyyyMMdd form. */
@@ -93,5 +111,20 @@ final class BackfillTestSupport {
                 aResponse()
                     .withHeader("Content-Type", "application/json")
                     .withBody(pageJson(page, totalPages, ids))));
+  }
+
+  /**
+   * One single-page answer of the updates listing for a date range, in the PNCP's yyyyMMdd form.
+   */
+  static void stubUpdates(String from, String to, String... itemJsons) {
+    PNCP.stubFor(
+        get(urlPathEqualTo(UPDATE))
+            .withQueryParam("dataInicial", equalTo(from))
+            .withQueryParam("dataFinal", equalTo(to))
+            .withQueryParam("pagina", equalTo("1"))
+            .willReturn(
+                aResponse()
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(pageJsonOf(1, 1, itemJsons))));
   }
 }

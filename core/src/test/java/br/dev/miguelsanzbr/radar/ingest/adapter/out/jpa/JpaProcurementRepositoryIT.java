@@ -231,4 +231,26 @@ class JpaProcurementRepositoryIT {
         Integer.class,
         id.value());
   }
+
+  @Test
+  void closingCandidatesAreTheExpiredPublishedNoticesNotYetClosedOldestFirstUpToTheLimit() {
+    var afterClosing = T0.plus(Duration.ofDays(6));
+    repository.save(discovered(snapshot(id(70))));
+    repository.save(discovered(snapshot(id(71))));
+    repository.save(discovered(snapshot(id(72))));
+    repository.save(discovered(snapshot(id(73), 2, "revogada")));
+    var alreadyClosed = discovered(snapshot(id(74)));
+    alreadyClosed.closeIfExpired(clockAt(afterClosing));
+    repository.save(alreadyClosed);
+    repository.save(discovered(bare(id(75))));
+    entityManager.flush();
+    entityManager.clear();
+
+    var all = repository.findClosingCandidates(afterClosing, 10);
+    var limited = repository.findClosingCandidates(afterClosing, 2);
+
+    assertThat(all).extracting(Procurement::id).containsExactlyInAnyOrder(id(70), id(71), id(72));
+    assertThat(limited).hasSize(2);
+    assertThat(repository.findClosingCandidates(T0.plus(Duration.ofDays(5)), 10)).isEmpty();
+  }
 }

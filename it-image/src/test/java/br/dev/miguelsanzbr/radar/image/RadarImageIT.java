@@ -32,6 +32,11 @@ class RadarImageIT {
           .withEnv("SPRING_DATASOURCE_URL", "jdbc:postgresql://db:5432/" + DB.getDatabaseName())
           .withEnv("SPRING_DATASOURCE_USERNAME", DB.getUsername())
           .withEnv("SPRING_DATASOURCE_PASSWORD", DB.getPassword())
+          // the schedulers are on by default: keep them off and the PNCP client unroutable, so this
+          // test can never reach the real PNCP
+          .withEnv("RADAR_INGEST_INCREMENTAL_ENABLED", "false")
+          .withEnv("RADAR_INGEST_CLOSE_EXPIRED_ENABLED", "false")
+          .withEnv("RADAR_PNCP_BASE_URL", "http://127.0.0.1:9")
           .withExposedPorts(8080)
           .waitingFor(Wait.forHttp("/actuator/health/liveness").forPort(8080).forStatusCode(200));
 

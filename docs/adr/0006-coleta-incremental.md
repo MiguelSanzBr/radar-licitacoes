@@ -3,7 +3,7 @@
 - Status: proposta
 - Data: 2026-10-22
 
-Esta versão traz só a seção sobre retomada e idempotência do backfill. O restante (estratégia incremental, janela de sobreposição, redescoberta) será completado com os números da sonda.
+Esta versão traz as seções sobre retomada e idempotência do backfill e sobre janela, sobreposição e cursor do incremental. O restante (redescoberta dos abertos) será completado com os números da sonda.
 
 ## Retomada e idempotência
 
@@ -18,3 +18,30 @@ O backfill percorre um dia por vez (janela de 1 dia no fuso America/Sao_Paulo, c
 - Agendamento: o agendador percorre o intervalo configurado dia a dia, pula os dias que já têm run `DONE`, confere a janela noturna antes de cada dia e para quando ela fecha. O endpoint ops não pula dias `DONE`: repetir o intervalo percorre tudo de novo e é idempotente.
 
 Prova: `BackfillIT` (retomada na página 3, idempotência e paginação instável) e `BackfillUseCaseTest`.
+
+## Janela, sobreposição e cursor
+
+A sonda de 24 horas ainda não terminou, então os valores abaixo são os padrões do plano e **a sonda pode revisá-los**: intervalo, sobreposição e estratégia ficam em propriedades, sem mudança de código.
+
+| Parâmetro | Valor usado | Propriedade |
+|---|---|---|
+| Estratégia | `/contratacoes/atualizacao` por janela de data de atualização (a confirmar pela S5) | n/a |
+| Intervalo do polling | 5 minutos (`fixedDelay`, o próximo ciclo só começa 5 min depois do fim do anterior) | `radar.ingest.incremental.interval` |
+| Sobreposição | 15 minutos para trás a partir do watermark | `radar.ingest.incremental.overlap` |
+| Olhar para trás sem cursor | 1 dia | `radar.ingest.incremental.initial-lookback` |
+| Modalidades | 6 | `radar.ingest.modalities` |
+| Fechamento de propostas vencidas | a cada 10 minutos, páginas de 500 | `radar.ingest.close-expired.interval` |
+
+- **Cursor.** `ingest.ingestion_cursor` guarda uma linha por modalidade: `watermark` (maior `dataAtualizacaoGlobal` já processado), `overlap` e `updated_at`. A janela de cada coleta é `[watermark - overlap, agora]`. O watermark nunca anda para trás (`IngestionCursor.advance` recusa um instante anterior) e nunca passa de `agora`: um relógio adiantado do lado do PNCP não pode pular o que ainda falta ler.
+- **Datas inteiras.** O endpoint de atualização só aceita datas (`yyyyMMdd`). A janela vira o intervalo de dias de São Paulo que ela toca e todos os itens desses dias são aplicados, inclusive os anteriores ao início da janela. Isso é inofensivo pela idempotência (hash igual conta como `unchanged` e não gera evento) e evita decidir descartar um item por causa de um fuso ainda não confirmado pela sonda. O custo é reler, a cada ciclo, o que o dia já tem. Se a sonda mostrar volume alto, a saída é descartar no cliente os itens anteriores ao início da janela.
+- **Decisão sobre reler o dia (aplicar tudo).** Reler o dia inteiro protege contra atraso da listagem maior que a sobreposição (um item que o PNCP só publica na listagem depois de mais de 15 minutos ainda é pego enquanto o dia estiver na janela). Por isso fica valendo aplicar tudo por ora. Descartar no cliente os itens anteriores ao início da janela menos uma margem de segurança será decidido depois das sondas S5 e S7, que medem o fuso e o volume.
+- **Janela vazia e crescimento do intervalo de datas.** Sem itens novos o watermark não anda, então o início da janela (`watermark - overlap`) fica parado enquanto o fim é sempre `agora`: o intervalo de datas cresce com os dias sem atualização e cada ciclo relê tudo desde o último item. A revisão desse comportamento (por exemplo, andar o watermark até `agora - overlap` quando a listagem responde vazia) fica para depois da sonda.
+- **Relógio para trás.** O watermark gravado é `max(watermark atual, min(maior atualização vista, agora))`: um relógio que volta não recua o cursor nem faz o avanço falhar.
+- **Sucesso e falha.** Cada coleta é uma `IngestionRun` do tipo `INCREMENTAL`, com a janela em `window_start` e `window_end`, e cada página confirma numa transação (a mesma do backfill, num colaborador compartilhado). O watermark só avança depois da última página confirmada, para o maior `pncpUpdatedAt` visto (ou fica onde estava sem itens). Se qualquer página falha, a run vira `FAILED`, o cursor não anda e o próximo ciclo lê a mesma janela de novo, que a idempotência absorve. Uma queda entre a última página e a gravação do cursor tem o mesmo efeito.
+- **Sobreposição não duplica evento.** Um item que aparece em duas janelas seguidas chega com o mesmo conteúdo: o hash é igual e nenhum evento sai. Só um item cujo hash mudou emite `ProcurementUpdated` (e `ProcurementSituationChanged` se a situação mudou), uma vez, mesmo se a janela seguinte o trouxer de novo.
+- **Fechamento.** `CloseExpiredUseCase` lê, pelo índice parcial de `proposal_closing_at`, os avisos `PUBLISHED` sem `closed_emitted_at` e com encerramento vencido, em páginas de 500, e chama `closeIfExpired`. Salvar o aviso e registrar `ProcurementClosed` no outbox acontecem numa transação por página. Como o aviso fechado sai da consulta, rodar de novo (ou duas instâncias ao mesmo tempo) não emite nada a mais.
+- **Interruptores.** Até o PR 4.3 trazer o Togglz, o liga/desliga é a propriedade `radar.ingest.incremental.enabled` e `radar.ingest.close-expired.enabled`: ligadas no perfil padrão da aplicação e desligadas nos testes.
+- **Métrica.** O contador `ingest_items_total{kind, outcome}` (`kind` = `backfill` ou `incremental`; `outcome` = `discovered`, `updated` ou `unchanged`) é incrementado pelo colaborador de página depois da confirmação, então uma página desfeita não conta.
+- **Limites conhecidos.** Não há trava entre instâncias: duas coletas da mesma modalidade ao mesmo tempo só gastam leitura, porque a idempotência e o `@Version` protegem os dados. Um advisory lock do Postgres resolveria e não foi implementado.
+
+Prova: `IngestionCursorTest`, `IncrementalSyncUseCaseTest`, `CloseExpiredUseCaseTest` e `IncrementalSyncIT` (sobreposição sem duplicar, item alterado, fechamento três vezes e contadores).

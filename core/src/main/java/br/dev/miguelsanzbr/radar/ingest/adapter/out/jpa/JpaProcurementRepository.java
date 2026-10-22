@@ -4,12 +4,14 @@ import br.dev.miguelsanzbr.radar.ingest.application.port.ProcurementRepository;
 import br.dev.miguelsanzbr.radar.ingest.domain.Procurement;
 import br.dev.miguelsanzbr.radar.shared.ProcurementId;
 import java.sql.SQLException;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.OptimisticLockingFailureException;
+import org.springframework.data.domain.Limit;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -48,6 +50,18 @@ public class JpaProcurementRepository implements ProcurementRepository {
               procurements.findByNumeroControlePncpIn(batch), history.findAllOrdered(batch)));
     }
     return found;
+  }
+
+  /** Two statements: the candidates, then all their history rows. */
+  @Override
+  @Transactional(readOnly = true)
+  public List<Procurement> findClosingCandidates(Instant now, int limit) {
+    var found = procurements.findClosingCandidates(now, Limit.of(limit));
+    if (found.isEmpty()) {
+      return List.of();
+    }
+    var numbers = found.stream().map(e -> e.numeroControlePncp).toList();
+    return ProcurementEntityMapper.toDomain(found, history.findAllOrdered(numbers));
   }
 
   /**

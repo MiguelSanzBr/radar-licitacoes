@@ -3,6 +3,7 @@ package br.dev.miguelsanzbr.radar.ingest.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import br.dev.miguelsanzbr.radar.ingest.application.port.IngestMetrics;
 import br.dev.miguelsanzbr.radar.ingest.application.port.IngestionRunRepository;
 import br.dev.miguelsanzbr.radar.ingest.application.port.OutboxAppender;
 import br.dev.miguelsanzbr.radar.ingest.application.port.PncpGateway;
@@ -18,6 +19,7 @@ import br.dev.miguelsanzbr.radar.ingest.domain.OrganUnit;
 import br.dev.miguelsanzbr.radar.ingest.domain.PncpSituation;
 import br.dev.miguelsanzbr.radar.ingest.domain.PncpSnapshot;
 import br.dev.miguelsanzbr.radar.ingest.domain.Procurement;
+import br.dev.miguelsanzbr.radar.ingest.domain.ProcurementStatus;
 import br.dev.miguelsanzbr.radar.ingest.domain.RunStatus;
 import br.dev.miguelsanzbr.radar.shared.DomainEvent;
 import br.dev.miguelsanzbr.radar.shared.IbgeCode;
@@ -109,7 +111,7 @@ class BackfillUseCaseTest {
     }
   }
 
-  static final class InMemoryProcurements implements ProcurementRepository {
+  static class InMemoryProcurements implements ProcurementRepository {
     final Map<ProcurementId, Procurement> store = new HashMap<>();
 
     @Override
@@ -126,6 +128,28 @@ class BackfillUseCaseTest {
     public Procurement save(Procurement procurement) {
       store.put(procurement.id(), procurement);
       return procurement;
+    }
+
+    @Override
+    public List<Procurement> findClosingCandidates(Instant now, int limit) {
+      return store.values().stream()
+          .filter(p -> p.status() instanceof ProcurementStatus.Published)
+          .filter(p -> p.closedEmittedAt() == null)
+          .filter(p -> p.proposalWindow() != null && p.proposalWindow().closingAt() != null)
+          .filter(p -> p.proposalWindow().closingAt().isBefore(now))
+          .limit(limit)
+          .toList();
+    }
+  }
+
+  record Counted(IngestionKind kind, int discovered, int updated, int unchanged) {}
+
+  static final class RecordingMetrics implements IngestMetrics {
+    final List<Counted> calls = new ArrayList<>();
+
+    @Override
+    public void itemsProcessed(IngestionKind kind, int discovered, int updated, int unchanged) {
+      calls.add(new Counted(kind, discovered, updated, unchanged));
     }
   }
 
@@ -216,14 +240,36 @@ class BackfillUseCaseTest {
   private final InMemoryProcurements procurements = new InMemoryProcurements();
   private final InMemoryRuns runs = new InMemoryRuns();
   private final RecordingOutbox outbox = new RecordingOutbox();
+  private final RecordingMetrics metrics = new RecordingMetrics();
+  private final Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
   private final BackfillUseCase useCase =
       new BackfillUseCase(
           gateway,
-          procurements,
           runs,
-          outbox,
-          TransactionOperations.withoutTransaction(),
-          Clock.fixed(NOW, ZoneOffset.UTC));
+          new PageProcessor(
+              procurements,
+              runs,
+              outbox,
+              TransactionOperations.withoutTransaction(),
+              metrics,
+              clock),
+          clock);
+
+  @Test
+  void eachPageCountsItsOutcomesUnderTheBackfillKind() {
+    gateway.stub(D20, 1, page(1, 2, snapshot(1), snapshot(2)));
+    gateway.stub(D20, 2, page(2, 2, snapshot(3)));
+
+    useCase.run(D20, D20, 6);
+    useCase.run(D20, D20, 6);
+
+    assertThat(metrics.calls)
+        .containsExactly(
+            new Counted(IngestionKind.BACKFILL, 2, 0, 0),
+            new Counted(IngestionKind.BACKFILL, 1, 0, 0),
+            new Counted(IngestionKind.BACKFILL, 0, 0, 2),
+            new Counted(IngestionKind.BACKFILL, 0, 0, 1));
+  }
 
   @Test
   void aTwoPageDayDiscoversEveryNoticeAndEmitsOneEventEach() {
@@ -433,6 +479,8 @@ class BackfillUseCaseTest {
     assertThat(run.status()).isEqualTo(RunStatus.FAILED);
     assertThat(run.cursorPage()).isEqualTo(1);
     assertThat(run.fetched()).isEqualTo(1);
+    // only the committed page is counted
+    assertThat(metrics.calls).containsExactly(new Counted(IngestionKind.BACKFILL, 1, 0, 0));
   }
 
   @Test
