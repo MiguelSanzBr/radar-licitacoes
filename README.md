@@ -22,6 +22,15 @@ make verify
 
 Imagem: 393 MB (medido por scripts/image-size.sh em 2026-10-20).
 
+### Sonda do PNCP
+
+A sonda (`tools/pncp-probe`) mede por 24 h o comportamento real da API pública antes de congelar taxa, intervalo de polling e recorte de dados. Ela se identifica com `User-Agent` próprio e mantém 0,5 req/s (1 requisição a cada 2 s). Só a rampa única S3, às 3h, sobe até 4 req/s por cerca de 60 s, e nada passa de 4 req/s. Para na primeira resposta 429 ou 403 da API de dados (o `robots.txt` só é registrado).
+
+```
+make probe          # constrói o jar e roda em segundo plano (log e PID em tools/pncp-probe/out)
+make probe-report   # gera docs/benchmarks/probe/<data>.md a partir do JSONL gravado
+```
+
 ## Números
 
 <!-- bench:start -->

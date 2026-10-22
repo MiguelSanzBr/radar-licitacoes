@@ -1,4 +1,4 @@
-.PHONY: verify mutation check-coverage-policy lint-openapi audit-repo tf-fmt tf-validate tf-lint tf-plan up down backfill replay bench slo synth probe deploy rollback profile image image-size image-scan image-test lint-observability
+.PHONY: verify mutation check-coverage-policy lint-openapi audit-repo tf-fmt tf-validate tf-lint tf-plan up down backfill replay bench slo synth probe deploy rollback profile image image-size image-scan image-test lint-observability probe-report
 
 verify:
 	./mvnw verify
@@ -66,6 +66,24 @@ tf-lint:
 tf-plan:
 	scripts/terraform.sh plan
 
-up down backfill replay bench slo synth probe deploy rollback profile:
+# Sonda do PNCP: `make probe` roda em segundo plano (PROBE_DURATION, PROBE_OUT sobrescrevem os padroes).
+# Precisa de JDK 25 no PATH ou em JAVA_HOME.
+PROBE_DURATION ?= PT24H
+PROBE_OUT ?= tools/pncp-probe/out
+PROBE_JAR := tools/pncp-probe/target/pncp-probe.jar
+PROBE_JAVA := $(if $(JAVA_HOME),$(JAVA_HOME)/bin/java,java)
+
+probe:
+	@if [ -f $(PROBE_OUT)/probe.pid ] && kill -0 $$(cat $(PROBE_OUT)/probe.pid) 2>/dev/null; then \
+		echo "probe: ja em execucao (PID $$(cat $(PROBE_OUT)/probe.pid))" >&2; exit 1; fi
+	./mvnw -q -pl tools/pncp-probe -am package -DskipTests
+	mkdir -p $(PROBE_OUT)
+	nohup $(PROBE_JAVA) -jar $(PROBE_JAR) run --duration=$(PROBE_DURATION) --out=$(PROBE_OUT) >> $(PROBE_OUT)/probe.log 2>&1 & echo $$! > $(PROBE_OUT)/probe.pid
+	@echo "probe: PID $$(cat $(PROBE_OUT)/probe.pid), log em $(PROBE_OUT)/probe.log"
+
+probe-report:
+	$(PROBE_JAVA) -jar $(PROBE_JAR) report --in=$(PROBE_OUT) --to=docs/benchmarks/probe/$$(date +%F).md
+
+up down backfill replay bench slo synth deploy rollback profile:
 	@echo "$@: not implemented yet" >&2
 	@exit 1
