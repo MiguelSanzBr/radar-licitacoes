@@ -41,10 +41,11 @@ public class RegisterSubscriberUseCase {
   }
 
   /**
-   * An address that never verified keeps its row and gets a fresh token (so a lost mail can be
-   * asked for again); a verified one is a conflict.
+   * Consent of the identity provider account {@code subject}, with the e-mail of that account. An
+   * address that never verified keeps its row and gets a fresh token (so a lost mail can be asked
+   * for again), unless another account holds it; a verified one is a conflict.
    */
-  public Subscriber register(String email, boolean consent) {
+  public Subscriber register(String email, boolean consent, String subject) {
     var now = clock.instant();
     var candidate =
         Subscriber.register(
@@ -54,20 +55,25 @@ public class RegisterSubscriberUseCase {
         unitOfWork.inTransaction(
             () -> {
               var existing = subscribers.lockByEmail(candidate.email());
-              if (existing.isPresent() && existing.get().verifiedAt() != null) {
+              if (existing.isPresent() && !reusableBy(existing.get(), subject)) {
                 throw new EmailAlreadyRegisteredException();
               }
-              var target = existing.orElse(candidate);
+              var target = existing.orElse(candidate).withSubject(subject);
               if (existing.isPresent()) {
                 tokens.deleteBySubscriber(target.id());
-              } else {
-                subscribers.save(target);
               }
+              subscribers.save(target);
               tokens.save(Sha256.hash(rawToken), target.id(), now.plus(VerificationToken.TTL));
               return target;
             });
     // After commit: a mail failure must not roll back the registration.
     mailer.send(subscriber.email(), rawToken);
     return subscriber;
+  }
+
+  /** A pending row is reused only by its own account or, if it has none, by any account. */
+  private static boolean reusableBy(Subscriber existing, String subject) {
+    return existing.verifiedAt() == null
+        && (existing.externalSubject() == null || existing.externalSubject().equals(subject));
   }
 }

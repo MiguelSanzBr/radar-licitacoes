@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Assinar alertas | Radar de Licitações</title>
+  <link rel="stylesheet" href="/css/alertas.css">
+</head>
+<body>
+  <main>
+  <h1>Receber alertas por e-mail</h1>
+  <form id="form" method="post" action="/assinatura">
+    <input type="hidden" name="_csrf" value="">
+    <p>Os alertas vão para o e-mail da sua conta. Enviaremos um link para confirmá-lo.</p>
+    <label>
+      <input type="checkbox" name="consent" required>
+      concordo em receber e-mails
+    </label>
+    <p>Veja <a href="/privacidade">quais dados guardamos e como apagá-los</a>.</p>
+    <button type="submit">Enviar link de confirmação</button>
+  </form>
+  <p id="resultado" role="status"></p>
+  </main>
+  <script src="/js/csrf.js"></script>
+  <script src="/js/assinatura.js"></script>
+</body>
+</html>

@@ -5,6 +5,7 @@ import br.dev.miguelsanzbr.radar.alerts.application.port.SubscriberRepository;
 import br.dev.miguelsanzbr.radar.alerts.domain.Subscriber;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Types;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
@@ -16,7 +17,8 @@ import org.springframework.stereotype.Repository;
 class JdbcSubscriberRepository implements SubscriberRepository {
 
   private static final String SELECT =
-      "SELECT id, email, consent_at, verified_at, deleted_at, created_at FROM alerts.subscriber";
+      "SELECT id, email, consent_at, verified_at, deleted_at, created_at, external_subject"
+          + " FROM alerts.subscriber";
 
   private final JdbcClient jdbc;
 
@@ -29,14 +31,16 @@ class JdbcSubscriberRepository implements SubscriberRepository {
     var sql =
         jdbc.sql(
                 """
-                INSERT INTO alerts.subscriber (id, email, consent_at, verified_at, deleted_at, created_at)
-                VALUES (:id, :email, :consentAt, :verifiedAt, :deletedAt, :createdAt)
+                INSERT INTO alerts.subscriber
+                  (id, email, consent_at, verified_at, deleted_at, created_at, external_subject)
+                VALUES (:id, :email, :consentAt, :verifiedAt, :deletedAt, :createdAt, :subject)
                 ON CONFLICT (id) DO UPDATE SET
                   email = EXCLUDED.email, verified_at = EXCLUDED.verified_at,
-                  deleted_at = EXCLUDED.deleted_at
+                  deleted_at = EXCLUDED.deleted_at, external_subject = EXCLUDED.external_subject
                 """)
             .param("id", s.id())
-            .param("email", s.email());
+            .param("email", s.email())
+            .param("subject", s.externalSubject(), Types.VARCHAR);
     sql = Db.timestamp(sql, "consentAt", s.consentAt());
     sql = Db.timestamp(sql, "verifiedAt", s.verifiedAt());
     sql = Db.timestamp(sql, "deletedAt", s.deletedAt());
@@ -44,7 +48,9 @@ class JdbcSubscriberRepository implements SubscriberRepository {
     try {
       sql.update();
     } catch (DuplicateKeyException e) {
-      throw new EmailAlreadyRegisteredException();
+      throw String.valueOf(e.getMessage()).contains("subscriber_external_subject_key")
+          ? EmailAlreadyRegisteredException.accountAlreadySubscribed()
+          : new EmailAlreadyRegisteredException();
     }
   }
 
@@ -53,6 +59,14 @@ class JdbcSubscriberRepository implements SubscriberRepository {
     return jdbc.sql(SELECT + " WHERE id = :id FOR UPDATE")
         .param("id", id)
         .query(this::map)
+        .optional();
+  }
+
+  @Override
+  public Optional<UUID> findIdBySubject(String subject) {
+    return jdbc.sql("SELECT id FROM alerts.subscriber WHERE external_subject = :s")
+        .param("s", subject)
+        .query(UUID.class)
         .optional();
   }
 
@@ -71,7 +85,8 @@ class JdbcSubscriberRepository implements SubscriberRepository {
         Db.instant(rs, "consent_at"),
         Db.instant(rs, "verified_at"),
         Db.instant(rs, "deleted_at"),
-        Db.instant(rs, "created_at"));
+        Db.instant(rs, "created_at"),
+        rs.getString("external_subject"));
   }
 
   @Override

@@ -1,5 +1,6 @@
 package br.dev.miguelsanzbr.radar.alerts.adapter.in.web;
 
+import br.dev.miguelsanzbr.radar.alerts.application.ConsentRequiredException;
 import br.dev.miguelsanzbr.radar.alerts.application.EraseSubscriberUseCase;
 import br.dev.miguelsanzbr.radar.alerts.application.port.CurrentSubscriber;
 import br.dev.miguelsanzbr.radar.api.generated.api.MeApi;
@@ -19,7 +20,11 @@ class MeController implements MeApi {
 
   @Override
   public ResponseEntity<Void> deleteMe() {
-    erase.erase(current.require());
+    try {
+      erase.erase(current.require());
+    } catch (ConsentRequiredException e) {
+      // The account never consented or was already erased: nothing is stored for it.
+    }
     return ResponseEntity.noContent().build();
   }
 }

@@ -106,6 +106,31 @@ class JdbcAdaptersIT extends PostgresIT {
   }
 
   @Test
+  void subjectIsStoredUpdatedAndFound() {
+    var subscriber = newSubscriber("fulano@example.com");
+    assertThat(subscribers.findIdBySubject("kc-1")).isEmpty();
+
+    subscribers.save(subscriber.withSubject("kc-1"));
+    assertThat(subscribers.findIdBySubject("kc-1")).contains(subscriber.id());
+    assertThat(subscribers.lockById(subscriber.id()).orElseThrow().externalSubject())
+        .isEqualTo("kc-1");
+
+    subscribers.save(subscriber.withSubject("kc-2"));
+    assertThat(subscribers.findIdBySubject("kc-1")).isEmpty();
+    assertThat(subscribers.findIdBySubject("kc-2")).contains(subscriber.id());
+  }
+
+  @Test
+  void oneSubjectLinksAtMostOneSubscriber() {
+    subscribers.save(newSubscriber("fulano@example.com").withSubject("kc-1"));
+    var other = Subscriber.register(new Email("ciclano@example.com"), Instant.now(), CLOCK, IDS);
+
+    assertThatThrownBy(() -> subscribers.save(other.withSubject("kc-1")))
+        .isInstanceOf(EmailAlreadyRegisteredException.class)
+        .hasMessage("this account already has a subscriber");
+  }
+
+  @Test
   void emailsThatDifferOnlyByCaseCollideInTheDatabase() {
     jdbc.sql(
             "INSERT INTO alerts.subscriber (id, email, consent_at, created_at)"
@@ -114,7 +139,8 @@ class JdbcAdaptersIT extends PostgresIT {
         .update();
 
     assertThatThrownBy(() -> newSubscriber("fulano@example.com"))
-        .isInstanceOf(EmailAlreadyRegisteredException.class);
+        .isInstanceOf(EmailAlreadyRegisteredException.class)
+        .hasMessage("e-mail already registered");
   }
 
   @Test

@@ -43,7 +43,7 @@ O que permanece e por quê: a linha anônima de `subscriber`, as buscas desativa
 
 - A tabela `subscriber` cresce com linhas anônimas; o volume esperado é pequeno e a linha é leve.
 - O link de confirmação é uma requisição `GET` com efeito. Ferramentas de leitura de e-mail que pré-visitam links podem consumir o token; o usuário se cadastra de novo. Uma página com botão `POST` fica como melhoria se isso aparecer na prática.
-- Até a PR 5.1 a identidade vem do cabeçalho `X-Debug-Subscriber`, ativo só nos perfis `dev` e `test`. Fora deles, as rotas autenticadas respondem 401.
+- Desde a PR 5.1 a identidade vem do login no Keycloak (ADR-0019): o cadastro em `/assinatura` exige sessão, usa o e-mail da conta e liga o assinante ao `sub` do token. A exclusão também desfaz esse vínculo.
 
 ## Prova
 

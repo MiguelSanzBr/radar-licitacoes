@@ -7,11 +7,17 @@ import java.util.UUID;
 
 public interface SubscriberRepository {
 
-  /** Inserts or updates; throws {@code EmailAlreadyRegisteredException} on an e-mail clash. */
+  /**
+   * Inserts or updates; throws {@code EmailAlreadyRegisteredException} when the e-mail or the
+   * account already belongs to another subscriber.
+   */
   void save(Subscriber subscriber);
 
   /** Loads the subscriber and holds its row lock until the transaction ends. */
   Optional<Subscriber> lockById(UUID id);
+
+  /** Subscriber linked to the identity provider account, without locking. */
+  Optional<UUID> findIdBySubject(String subject);
 
   /** Same lock, found by e-mail (case-insensitive). */
   Optional<Subscriber> lockByEmail(String email);

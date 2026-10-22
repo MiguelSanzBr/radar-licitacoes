@@ -30,7 +30,18 @@ class SubscriberTest {
     assertThat(subscriber.createdAt()).isEqualTo(NOW);
     assertThat(subscriber.verifiedAt()).isNull();
     assertThat(subscriber.deletedAt()).isNull();
+    assertThat(subscriber.externalSubject()).isNull();
     assertThat(subscriber.id().version()).isEqualTo(7);
+  }
+
+  @Test
+  void withSubjectLinksTheAccountAndKeepsEverythingElse() {
+    var subscriber = registered().verify(CLOCK);
+
+    var linked = subscriber.withSubject("kc-1");
+
+    assertThat(linked.externalSubject()).isEqualTo("kc-1");
+    assertThat(linked.withSubject(null)).isEqualTo(subscriber);
   }
 
   @Test
@@ -55,6 +66,7 @@ class SubscriberTest {
     assertThat(erased.deletedAt()).isEqualTo(NOW);
     assertThat(erased.id()).isEqualTo(subscriber.id());
     assertThat(erased.erased()).isTrue();
+    assertThat(subscriber.withSubject("kc-1").erase(CLOCK).externalSubject()).isNull();
     assertThat(subscriber.erased()).isFalse();
   }
 

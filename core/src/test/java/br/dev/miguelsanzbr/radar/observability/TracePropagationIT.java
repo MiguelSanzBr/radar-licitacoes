@@ -6,6 +6,7 @@ import static br.dev.miguelsanzbr.radar.ingest.adapter.out.jpa.ProcurementFixtur
 import static br.dev.miguelsanzbr.radar.ingest.adapter.out.jpa.ProcurementFixtures.snapshot;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
+import static org.mockito.Mockito.when;
 
 import br.dev.miguelsanzbr.radar.PostgresTestConfig;
 import br.dev.miguelsanzbr.radar.ingest.application.port.OutboxAppender;
@@ -24,6 +25,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.junit.jupiter.api.AfterEach;
@@ -38,6 +40,9 @@ import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -96,7 +101,7 @@ class TracePropagationIT {
       this.transaction = tx;
     }
 
-    @PostMapping("/test/procurement")
+    @PostMapping("/ops/test/procurement")
     Map<String, String> write() {
       transaction.executeWithoutResult(
           status -> {
@@ -112,9 +117,22 @@ class TracePropagationIT {
   }
 
   @LocalServerPort int port;
+  // why: /ops needs the operator role (ADR-0019); this stub decodes the test's bearer token
+  @MockitoBean JwtDecoder decoder;
   @Autowired InMemorySpanExporter exporter;
   @Autowired OutboxRelay relay;
   @Autowired JdbcTemplate jdbc;
+
+  @BeforeEach
+  void operatorToken() {
+    when(decoder.decode("operator"))
+        .thenReturn(
+            Jwt.withTokenValue("operator")
+                .header("alg", "RS256")
+                .subject("ops")
+                .claim("realm_access", Map.of("roles", List.of("operator")))
+                .build());
+  }
 
   @BeforeEach
   @AfterEach
@@ -131,7 +149,8 @@ class TracePropagationIT {
   private HttpResponse<String> post(String correlationId) throws Exception {
     return HttpClient.newHttpClient()
         .send(
-            HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/test/procurement"))
+            HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/ops/test/procurement"))
+                .header("Authorization", "Bearer operator")
                 .header("X-Correlation-Id", correlationId)
                 .POST(HttpRequest.BodyPublishers.noBody())
                 .build(),

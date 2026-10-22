@@ -37,6 +37,7 @@
 
     <spring-modulith.version>2.1.2</spring-modulith.version>
     <testcontainers.version>2.0.5</testcontainers.version>
+    <testcontainers-keycloak.version>4.4.0</testcontainers-keycloak.version>
     <resilience4j.version>2.4.0</resilience4j.version>
     <jqwik.version>1.10.2</jqwik.version>
     <archunit.version>1.5.1</archunit.version>

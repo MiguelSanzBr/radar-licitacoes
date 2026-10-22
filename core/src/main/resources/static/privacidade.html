@@ -4,12 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Privacidade | Radar de Licitações</title>
-  <style>
-    body { font: 16px/1.5 system-ui, sans-serif; max-width: 42rem; margin: 2rem auto; padding: 0 1rem; }
-    code { background: #f3f3f3; padding: 0 .25rem; }
-  </style>
+  <link rel="stylesheet" href="/css/alertas.css">
 </head>
-<body>
+<body class="texto">
   <main>
   <h1>Privacidade</h1>
   <p>O Radar de Licitações guarda o mínimo para enviar os alertas que você pediu.</p>
@@ -18,6 +15,7 @@
   <ul>
     <li>Seu e-mail e o momento em que você concordou em receber mensagens.</li>
     <li>Quando você confirmou o e-mail pelo link que enviamos.</li>
+    <li>O identificador da sua conta no provedor de login, para ligar a assinatura a você.</li>
     <li>As buscas salvas (nome, texto, filtros e frequência) e quais licitações já casaram com elas.</li>
     <li>Chaves de idempotência das chamadas à API, por 24 horas.</li>
   </ul>
@@ -26,7 +24,7 @@
   <p>A base legal é o seu consentimento. Cadastros que não confirmam o e-mail são apagados em 7 dias. O link de confirmação vale 48 horas e só pode ser usado uma vez.</p>
 
   <h2>Como apagar seus dados</h2>
-  <p>Envie <code>DELETE /api/v1/me</code> autenticado. Seu e-mail é anonimizado, suas buscas são desativadas e perdem o nome e o texto, e os alertas ainda não enviados, as chaves de idempotência e os links de confirmação são removidos. Mantemos apenas o registro anônimo, as buscas já vazias (só com os filtros e a frequência) e o histórico de entregas já feitas, para não reenviar o mesmo alerta por engano. Nenhum dado pessoal permanece nesses registros.</p>
+  <p>Envie <code>DELETE /api/v1/me</code> autenticado. Seu e-mail é anonimizado, o vínculo com a sua conta é desfeito, suas buscas são desativadas e perdem o nome e o texto, e os alertas ainda não enviados, as chaves de idempotência e os links de confirmação são removidos. Mantemos apenas o registro anônimo, as buscas já vazias (só com os filtros e a frequência) e o histórico de entregas já feitas, para não reenviar o mesmo alerta por engano. Nenhum dado pessoal permanece nesses registros.</p>
 
   <p><a href="/assinatura">Voltar ao cadastro</a></p>
   </main>

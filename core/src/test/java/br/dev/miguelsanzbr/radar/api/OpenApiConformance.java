@@ -2,6 +2,9 @@ package br.dev.miguelsanzbr.radar.api;
 
 import static com.atlassian.oai.validator.mockmvc.OpenApiValidationMatchers.openApi;
 
+import com.atlassian.oai.validator.OpenApiInteractionValidator;
+import com.atlassian.oai.validator.report.LevelResolver;
+import com.atlassian.oai.validator.report.ValidationReport;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
@@ -22,7 +25,18 @@ public final class OpenApiConformance {
 
   // O YAML entra como conteudo: o validador nao le URL jar: (classpath de verify, com o jar de
   // contracts).
-  private static final ResultMatcher CONFORMS = openApi().isValid(readSpec());
+  // Os testes autenticam com jwt()/oidcLogin(), sem cabecalho Authorization; a cadeia de
+  // seguranca tem testes proprios (SecurityConfigTest e a matriz de autorizacao).
+  private static final ResultMatcher CONFORMS =
+      openApi()
+          .isValid(
+              OpenApiInteractionValidator.createForInlineApiSpecification(readSpec())
+                  .withLevelResolver(
+                      LevelResolver.create()
+                          .withLevel(
+                              "validation.request.security.missing", ValidationReport.Level.IGNORE)
+                          .build())
+                  .build());
 
   private static String readSpec() {
     try (InputStream in = OpenApiConformance.class.getResourceAsStream(SPEC)) {

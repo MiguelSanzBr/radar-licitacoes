@@ -46,10 +46,11 @@ class RegisterSubscriberUseCaseTest {
 
   @Test
   void storesSubscriberAndOnlyTheHashOfTheTokenThenMailsTheRawToken() {
-    var subscriber = useCase.register("Fulano@Example.com", true);
+    var subscriber = useCase.register("Fulano@Example.com", true, "kc-1");
 
     assertThat(subscriber.email()).isEqualTo("fulano@example.com");
     assertThat(subscriber.consentAt()).isEqualTo(NOW);
+    assertThat(subscriber.externalSubject()).isEqualTo("kc-1");
     verify(subscribers).save(subscriber);
     var raw = ArgumentCaptor.forClass(String.class);
     verify(mailer).send(eq("fulano@example.com"), raw.capture());
@@ -62,7 +63,7 @@ class RegisterSubscriberUseCaseTest {
 
   @Test
   void withoutConsentNothingIsStoredOrSent() {
-    assertThatThrownBy(() -> useCase.register("fulano@example.com", false))
+    assertThatThrownBy(() -> useCase.register("fulano@example.com", false, "kc-1"))
         .isInstanceOf(InvalidInputException.class)
         .hasMessageContaining("consent");
 
@@ -71,7 +72,7 @@ class RegisterSubscriberUseCaseTest {
 
   @Test
   void invalidEmailIsRejectedBeforeStoring() {
-    assertThatThrownBy(() -> useCase.register("not-an-email", true))
+    assertThatThrownBy(() -> useCase.register("not-an-email", true, "kc-1"))
         .isInstanceOf(InvalidInputException.class)
         .hasMessageContaining("not-an-email");
 
@@ -84,21 +85,21 @@ class RegisterSubscriberUseCaseTest {
         .when(subscribers)
         .save(any(Subscriber.class));
 
-    assertThatThrownBy(() -> useCase.register("fulano@example.com", true))
+    assertThatThrownBy(() -> useCase.register("fulano@example.com", true, "kc-1"))
         .isInstanceOf(EmailAlreadyRegisteredException.class);
 
     verifyNoInteractions(mailer);
   }
 
   @Test
-  void unverifiedAddressKeepsItsRowReplacesTheTokenAndIsMailedAgain() {
+  void unverifiedAddressKeepsItsRowLinksTheCallerReplacesTheTokenAndIsMailedAgain() {
     var existing = Fixtures.subscriber();
     when(subscribers.lockByEmail("fulano@example.com")).thenReturn(Optional.of(existing));
 
-    var result = useCase.register("Fulano@Example.com", true);
+    var result = useCase.register("Fulano@Example.com", true, "kc-1");
 
-    assertThat(result).isEqualTo(existing);
-    verify(subscribers, never()).save(any(Subscriber.class));
+    assertThat(result).isEqualTo(existing.withSubject("kc-1"));
+    verify(subscribers).save(existing.withSubject("kc-1"));
     verify(tokens).deleteBySubscriber(existing.id());
     var raw = ArgumentCaptor.forClass(String.class);
     verify(mailer).send(eq("fulano@example.com"), raw.capture());
@@ -110,11 +111,41 @@ class RegisterSubscriberUseCaseTest {
   }
 
   @Test
+  void sameAccountAskingAgainGetsAFreshToken() {
+    var existing = Fixtures.subscriber().withSubject("kc-1");
+    when(subscribers.lockByEmail("fulano@example.com")).thenReturn(Optional.of(existing));
+
+    assertThat(useCase.register("fulano@example.com", true, "kc-1")).isEqualTo(existing);
+
+    verify(tokens).deleteBySubscriber(existing.id());
+    verify(mailer).send(eq("fulano@example.com"), any());
+  }
+
+  @Test
+  void pendingAddressOfAnotherAccountIsAConflictAndIsNotTakenOver() {
+    var existing = Fixtures.subscriber().withSubject("other-account");
+    when(subscribers.lockByEmail("fulano@example.com")).thenReturn(Optional.of(existing));
+
+    assertThatThrownBy(() -> useCase.register("fulano@example.com", true, "kc-1"))
+        .isInstanceOf(EmailAlreadyRegisteredException.class)
+        .hasMessage("e-mail already registered");
+
+    verify(subscribers, never()).save(any(Subscriber.class));
+    verifyNoInteractions(mailer, tokens);
+  }
+
+  @Test
+  void accountClashHasItsOwnMessage() {
+    assertThat(EmailAlreadyRegisteredException.accountAlreadySubscribed())
+        .hasMessage("this account already has a subscriber");
+  }
+
+  @Test
   void verifiedAddressIsAConflictAndNothingIsSent() {
     var verified = Fixtures.subscriber().verify(CLOCK);
     when(subscribers.lockByEmail("fulano@example.com")).thenReturn(Optional.of(verified));
 
-    assertThatThrownBy(() -> useCase.register("fulano@example.com", true))
+    assertThatThrownBy(() -> useCase.register("fulano@example.com", true, "kc-1"))
         .isInstanceOf(EmailAlreadyRegisteredException.class);
 
     verifyNoInteractions(mailer, tokens);

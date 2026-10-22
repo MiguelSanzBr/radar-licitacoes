@@ -26,7 +26,7 @@ class IdempotencyConcurrencyIT extends PostgresIT {
 
   @Test
   void secondCallBlocksUntilTheFirstCommitsThenReplays() throws Exception {
-    var owner = register.register("fulano@example.com", true).id();
+    var owner = register.register("fulano@example.com", true, "kc-1").id();
     var hash = Sha256.hash("body");
     var winnerClaimed = new CountDownLatch(1);
     var loserRuns = new AtomicInteger();

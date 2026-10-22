@@ -2,6 +2,7 @@ package br.dev.miguelsanzbr.radar.alerts.adapter;
 
 import static br.dev.miguelsanzbr.radar.api.OpenApiConformance.conforms;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -23,6 +24,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 class AlertsFlowIT extends PostgresIT {
@@ -35,12 +37,21 @@ class AlertsFlowIT extends PostgresIT {
   @Autowired MockMvc mvc;
   @Autowired PurgeJob purgeJob;
 
-  private UUID subscribe(String email) throws Exception {
-    mvc.perform(post("/assinatura").param("email", email).param("consent", "on"))
-        .andExpect(status().isAccepted());
+  /** Consent from a logged-in browser session whose subject is the lower-cased e-mail. */
+  private ResultActions consent(String email) throws Exception {
+    return mvc.perform(
+        post("/assinatura")
+            .with(Auth.webSupplier(email.toLowerCase(java.util.Locale.ROOT), email))
+            .with(csrf())
+            .param("consent", "on"));
+  }
+
+  /** Consents and follows the confirmation link; returns the token subject. */
+  private String subscribe(String email) throws Exception {
+    consent(email).andExpect(status().isAccepted());
     mvc.perform(get("/assinatura/confirmar").param("token", mailer.lastToken()))
         .andExpect(status().isOk());
-    return idOf(email);
+    return email.toLowerCase(java.util.Locale.ROOT);
   }
 
   private UUID idOf(String email) {
@@ -50,9 +61,9 @@ class AlertsFlowIT extends PostgresIT {
         .single();
   }
 
-  private static MockHttpServletRequestBuilder create(UUID subscriber, String key, String body) {
+  private static MockHttpServletRequestBuilder create(String subject, String key, String body) {
     return post("/api/v1/saved-searches")
-        .headers(Auth.asSubscriber(subscriber))
+        .with(Auth.supplier(subject))
         .header("Idempotency-Key", key)
         .contentType(MediaType.APPLICATION_JSON)
         .content(body);
@@ -64,8 +75,7 @@ class AlertsFlowIT extends PostgresIT {
 
   @Test
   void registrationStoresOnlyTheTokenHashAndTheLinkWorksOnce() throws Exception {
-    mvc.perform(post("/assinatura").param("email", "Fulano@Example.com").param("consent", "on"))
-        .andExpect(status().isAccepted());
+    consent("Fulano@Example.com").andExpect(status().isAccepted());
     var raw = mailer.lastToken();
 
     var storedHash =
@@ -92,8 +102,7 @@ class AlertsFlowIT extends PostgresIT {
 
   @Test
   void expiredTokenDoesNotVerify() throws Exception {
-    mvc.perform(post("/assinatura").param("email", "fulano@example.com").param("consent", "on"))
-        .andExpect(status().isAccepted());
+    consent("fulano@example.com").andExpect(status().isAccepted());
     jdbc.sql("UPDATE alerts.verification_token SET expires_at = now() - interval '1 second'")
         .update();
 
@@ -109,7 +118,10 @@ class AlertsFlowIT extends PostgresIT {
 
   @Test
   void consentIsRequired() throws Exception {
-    mvc.perform(post("/assinatura").param("email", "fulano@example.com"))
+    mvc.perform(
+            post("/assinatura")
+                .with(Auth.webSupplier("fulano@example.com", "fulano@example.com"))
+                .with(csrf()))
         .andExpect(status().isUnprocessableEntity())
         .andExpect(jsonPath("$.detail").value("consent is required"));
 
@@ -121,7 +133,7 @@ class AlertsFlowIT extends PostgresIT {
   void verifiedAddressThatDiffersOnlyByCaseIs409() throws Exception {
     subscribe("Fulano@Example.com");
 
-    mvc.perform(post("/assinatura").param("email", "fulano@example.com").param("consent", "on"))
+    consent("fulano@example.com")
         .andExpect(status().isConflict())
         .andExpect(jsonPath("$.status").value(409));
 
@@ -131,12 +143,10 @@ class AlertsFlowIT extends PostgresIT {
 
   @Test
   void reRegisteringAnUnverifiedAddressReplacesTheTokenAndReturns202() throws Exception {
-    mvc.perform(post("/assinatura").param("email", "Fulano@Example.com").param("consent", "on"))
-        .andExpect(status().isAccepted());
+    consent("Fulano@Example.com").andExpect(status().isAccepted());
     var oldToken = mailer.lastToken();
 
-    mvc.perform(post("/assinatura").param("email", "fulano@example.com").param("consent", "on"))
-        .andExpect(status().isAccepted());
+    consent("fulano@example.com").andExpect(status().isAccepted());
     var newToken = mailer.lastToken();
 
     assertThat(newToken).isNotEqualTo(oldToken);
@@ -261,27 +271,28 @@ class AlertsFlowIT extends PostgresIT {
             .getResponse()
             .getHeader("Location");
 
-    mvc.perform(get(location).headers(Auth.asSubscriber(stranger)))
+    mvc.perform(get(location).with(Auth.supplier(stranger)))
         .andExpect(status().isNotFound())
         .andExpect(conforms());
-    mvc.perform(delete(location).headers(Auth.asSubscriber(stranger)))
+    mvc.perform(delete(location).with(Auth.supplier(stranger)))
         .andExpect(status().isNotFound())
         .andExpect(conforms());
-    mvc.perform(get(location).headers(Auth.asSubscriber(owner)))
+    mvc.perform(get(location).with(Auth.supplier(owner)))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.name").value("Notebooks"))
         .andExpect(jsonPath("$.filters.uf").value("SP"))
         .andExpect(conforms());
-    mvc.perform(delete(location).headers(Auth.asSubscriber(owner)))
+    mvc.perform(delete(location).with(Auth.supplier(owner)))
         .andExpect(status().isNoContent())
         .andExpect(conforms());
-    mvc.perform(get(location).headers(Auth.asSubscriber(owner))).andExpect(status().isNotFound());
+    mvc.perform(get(location).with(Auth.supplier(owner))).andExpect(status().isNotFound());
   }
 
   @Test
-  void unknownOrMissingSubscriberIs401() throws Exception {
-    mvc.perform(create(UUID.randomUUID(), "key-0001", BODY))
-        .andExpect(status().isUnauthorized())
+  void withoutConsentIs403ConsentRequiredAndWithoutCredentials401() throws Exception {
+    mvc.perform(create("never-consented", "key-0001", BODY))
+        .andExpect(status().isForbidden())
+        .andExpect(jsonPath("$.type").value(org.hamcrest.Matchers.endsWith("consent-required.md")))
         .andExpect(conforms());
     mvc.perform(
             post("/api/v1/saved-searches")
@@ -291,15 +302,61 @@ class AlertsFlowIT extends PostgresIT {
                 .content(BODY))
         .andExpect(status().isUnauthorized())
         .andExpect(conforms());
-    mvc.perform(delete("/api/v1/me").headers(Auth.asSubscriber(UUID.randomUUID())))
+    mvc.perform(delete("/api/v1/me").headers(Auth.anonymous()))
         .andExpect(status().isUnauthorized())
         .andExpect(conforms());
+    assertThat(count("subscriber")).isZero();
+  }
+
+  @Test
+  void consentLinksTheTokenSubjectToTheSubscriber() throws Exception {
+    var subject = subscribe("fulano@example.com");
+
+    assertThat(
+            jdbc.sql("SELECT external_subject FROM alerts.subscriber").query(String.class).single())
+        .isEqualTo(subject);
+  }
+
+  @Test
+  void anotherAccountCannotTakeOverAPendingAddress() throws Exception {
+    mvc.perform(
+            post("/assinatura")
+                .with(Auth.webSupplier("first-account", "fulano@example.com"))
+                .with(csrf())
+                .param("consent", "on"))
+        .andExpect(status().isAccepted());
+
+    consent("fulano@example.com")
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.detail").value("e-mail already registered"));
+
+    assertThat(
+            jdbc.sql("SELECT external_subject FROM alerts.subscriber").query(String.class).single())
+        .isEqualTo("first-account");
+    assertThat(mailer.sent).hasSize(1);
+  }
+
+  @Test
+  void oneAccountCannotHoldTwoSubscribers() throws Exception {
+    subscribe("fulano@example.com");
+
+    mvc.perform(
+            post("/assinatura")
+                .with(Auth.webSupplier("fulano@example.com", "outro@example.com"))
+                .with(csrf())
+                .param("consent", "on"))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.detail").value("this account already has a subscriber"));
+
+    assertThat(count("subscriber")).isEqualTo(1);
   }
 
   @Test
   void deleteMeAnonymizesDeactivatesAndCleansUp() throws Exception {
     var owner = subscribe("fulano@example.com");
     var other = subscribe("ciclano@example.com");
+    var ownerId = idOf(owner);
+    var otherId = idOf(other);
     mvc.perform(create(owner, "key-0001", BODY)).andExpect(status().isCreated());
     mvc.perform(create(owner, "key-0002", BODY.replace("Notebooks", "Other")))
         .andExpect(status().isCreated());
@@ -314,22 +371,28 @@ class AlertsFlowIT extends PostgresIT {
         .update();
     var token = mailer.lastToken();
 
-    mvc.perform(delete("/api/v1/me").headers(Auth.asSubscriber(owner)))
+    mvc.perform(delete("/api/v1/me").with(Auth.supplier(owner)))
         .andExpect(status().isNoContent())
         .andExpect(conforms());
-    mvc.perform(delete("/api/v1/me").headers(Auth.asSubscriber(owner)))
-        .andExpect(status().isNoContent());
+    mvc.perform(delete("/api/v1/me").with(Auth.supplier(owner))).andExpect(status().isNoContent());
 
     var row =
         jdbc.sql(
-                "SELECT email, deleted_at IS NOT NULL AS deleted FROM alerts.subscriber WHERE id = :i")
-            .param("i", owner)
-            .query((rs, n) -> rs.getString("email") + "/" + rs.getBoolean("deleted"))
+                "SELECT email, deleted_at IS NOT NULL AS deleted, external_subject"
+                    + " FROM alerts.subscriber WHERE id = :i")
+            .param("i", ownerId)
+            .query(
+                (rs, n) ->
+                    rs.getString("email")
+                        + "/"
+                        + rs.getBoolean("deleted")
+                        + "/"
+                        + rs.getString("external_subject"))
             .single();
-    assertThat(row).isEqualTo("deleted-" + owner + "@invalid/true");
+    assertThat(row).isEqualTo("deleted-" + ownerId + "@invalid/true/null");
     assertThat(
             jdbc.sql("SELECT count(*) FROM alerts.saved_search WHERE subscriber_id = :i AND active")
-                .param("i", owner)
+                .param("i", ownerId)
                 .query(Long.class)
                 .single())
         .isZero();
@@ -337,7 +400,7 @@ class AlertsFlowIT extends PostgresIT {
             jdbc.sql(
                     "SELECT name || '|' || query_text FROM alerts.saved_search"
                         + " WHERE subscriber_id = :i AND NOT active")
-                .param("i", owner)
+                .param("i", ownerId)
                 .query(String.class)
                 .list())
         .containsExactly("(apagada)|", "(apagada)|");
@@ -345,25 +408,25 @@ class AlertsFlowIT extends PostgresIT {
             jdbc.sql(
                     "SELECT procurement_id FROM alerts.alert_delivery d JOIN alerts.saved_search s"
                         + " ON s.id = d.saved_search_id WHERE s.subscriber_id = :i")
-                .param("i", owner)
+                .param("i", ownerId)
                 .query(String.class)
                 .list())
         .containsExactlyInAnyOrder("p-sent", "p-sent");
     assertThat(
             jdbc.sql("SELECT count(*) FROM alerts.idempotency_key WHERE subscriber_id = :i")
-                .param("i", owner)
+                .param("i", ownerId)
                 .query(Long.class)
                 .single())
         .isZero();
     assertThat(
             jdbc.sql("SELECT count(*) FROM alerts.saved_search WHERE subscriber_id = :i AND active")
-                .param("i", other)
+                .param("i", otherId)
                 .query(Long.class)
                 .single())
         .isEqualTo(1);
     assertThat(
             jdbc.sql("SELECT count(*) FROM alerts.idempotency_key WHERE subscriber_id = :i")
-                .param("i", other)
+                .param("i", otherId)
                 .query(Long.class)
                 .single())
         .isEqualTo(1);
@@ -377,11 +440,9 @@ class AlertsFlowIT extends PostgresIT {
   @Test
   void erasedEmailCanRegisterAgain() throws Exception {
     var owner = subscribe("fulano@example.com");
-    mvc.perform(delete("/api/v1/me").headers(Auth.asSubscriber(owner)))
-        .andExpect(status().isNoContent());
+    mvc.perform(delete("/api/v1/me").with(Auth.supplier(owner))).andExpect(status().isNoContent());
 
-    mvc.perform(post("/assinatura").param("email", "fulano@example.com").param("consent", "on"))
-        .andExpect(status().isAccepted());
+    consent("fulano@example.com").andExpect(status().isAccepted());
 
     assertThat(count("subscriber")).isEqualTo(2);
   }
@@ -390,10 +451,8 @@ class AlertsFlowIT extends PostgresIT {
   void dailyPurgeDropsOldUnverifiedSubscribersAndStaleKeys() throws Exception {
     var verified = subscribe("verified@example.com");
     mvc.perform(create(verified, "key-0001", BODY)).andExpect(status().isCreated());
-    mvc.perform(post("/assinatura").param("email", "stale@example.com").param("consent", "on"))
-        .andExpect(status().isAccepted());
-    mvc.perform(post("/assinatura").param("email", "recent@example.com").param("consent", "on"))
-        .andExpect(status().isAccepted());
+    consent("stale@example.com").andExpect(status().isAccepted());
+    consent("recent@example.com").andExpect(status().isAccepted());
     jdbc.sql(
             "UPDATE alerts.subscriber SET created_at = now() - interval '8 days'"
                 + " WHERE email = 'stale@example.com'")

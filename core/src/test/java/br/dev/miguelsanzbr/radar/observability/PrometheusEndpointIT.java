@@ -1,6 +1,7 @@
 package br.dev.miguelsanzbr.radar.observability;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.when;
 
 import br.dev.miguelsanzbr.radar.PostgresTestConfig;
 import br.dev.miguelsanzbr.radar.outbox.adapter.kafka.KafkaTestConfig;
@@ -8,11 +9,17 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.List;
+import java.util.Map;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.micrometer.metrics.test.autoconfigure.AutoConfigureMetrics;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Import;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
@@ -23,11 +30,40 @@ class PrometheusEndpointIT {
 
   @LocalServerPort int port;
 
+  /** The scrape needs the operator role (ADR-0019); the token is decoded by this stub. */
+  @MockitoBean JwtDecoder decoder;
+
+  @BeforeEach
+  void operatorToken() {
+    when(decoder.decode("operator"))
+        .thenReturn(
+            Jwt.withTokenValue("operator")
+                .header("alg", "RS256")
+                .subject("prometheus")
+                .claim("realm_access", Map.of("roles", List.of("operator")))
+                .build());
+  }
+
   private HttpResponse<String> request(String path) throws Exception {
     return HttpClient.newHttpClient()
         .send(
-            HttpRequest.newBuilder(URI.create("http://localhost:" + port + path)).build(),
+            HttpRequest.newBuilder(URI.create("http://localhost:" + port + path))
+                .header("Authorization", "Bearer operator")
+                .build(),
             HttpResponse.BodyHandlers.ofString());
+  }
+
+  @Test
+  void scrapeIsClosedToVisitors() throws Exception {
+    var anonymous =
+        HttpClient.newHttpClient()
+            .send(
+                HttpRequest.newBuilder(
+                        URI.create("http://localhost:" + port + "/actuator/prometheus"))
+                    .build(),
+                HttpResponse.BodyHandlers.ofString());
+
+    assertThat(anonymous.statusCode()).isEqualTo(401);
   }
 
   private String get(String path) throws Exception {

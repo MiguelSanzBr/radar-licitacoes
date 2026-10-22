@@ -6,6 +6,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.noContent;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -18,7 +19,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 @BackfillSpringBootTest
 class BackfillOpsIT {
@@ -40,6 +43,12 @@ class BackfillOpsIT {
     jdbc.execute("TRUNCATE ingest.ingestion_run");
   }
 
+  /** The ops route needs the operator role (see docs/security/authz-matrix.md). */
+  private static MockHttpServletRequestBuilder backfill() {
+    return post("/ops/backfill")
+        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_operator")));
+  }
+
   private int runs(String where) {
     return jdbc.queryForObject(
         "SELECT count(*) FROM ingest.ingestion_run WHERE " + where, Integer.class);
@@ -50,10 +59,7 @@ class BackfillOpsIT {
     PNCP.stubFor(get(urlPathEqualTo(BackfillTestSupport.PUBLICATION)).willReturn(noContent()));
 
     mvc.perform(
-            post("/ops/backfill")
-                .param("from", "2026-10-20")
-                .param("to", "2026-10-21")
-                .param("modality", "6"))
+            backfill().param("from", "2026-10-20").param("to", "2026-10-21").param("modality", "6"))
         .andExpect(status().isAccepted())
         .andExpect(jsonPath("$.accepted").value(true))
         .andExpect(jsonPath("$.from").value("2026-10-20"))
@@ -70,17 +76,14 @@ class BackfillOpsIT {
     clock.set(NOON);
     PNCP.stubFor(get(urlPathEqualTo(BackfillTestSupport.PUBLICATION)).willReturn(noContent()));
 
-    mvc.perform(post("/ops/backfill").param("from", "2026-10-20").param("to", "2026-10-20"))
+    mvc.perform(backfill().param("from", "2026-10-20").param("to", "2026-10-20"))
         .andExpect(status().isConflict())
         .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
         .andExpect(jsonPath("$.status").value(409));
     assertThat(runs("true")).isZero();
 
     mvc.perform(
-            post("/ops/backfill")
-                .param("from", "2026-10-20")
-                .param("to", "2026-10-20")
-                .param("force", "true"))
+            backfill().param("from", "2026-10-20").param("to", "2026-10-20").param("force", "true"))
         .andExpect(status().isAccepted())
         .andExpect(jsonPath("$.modality").value(6));
     await().untilAsserted(() -> assertThat(runs("status = 'DONE'")).isEqualTo(1));
@@ -88,10 +91,10 @@ class BackfillOpsIT {
 
   @Test
   void invalidRangesAreProblemJson400AndStartNothing() throws Exception {
-    mvc.perform(post("/ops/backfill").param("from", "2026-10-21").param("to", "2026-10-20"))
+    mvc.perform(backfill().param("from", "2026-10-21").param("to", "2026-10-20"))
         .andExpect(status().isBadRequest())
         .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON));
-    mvc.perform(post("/ops/backfill").param("from", "2025-01-01").param("to", "2026-10-20"))
+    mvc.perform(backfill().param("from", "2025-01-01").param("to", "2026-10-20"))
         .andExpect(status().isBadRequest())
         .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON));
 
@@ -101,14 +104,14 @@ class BackfillOpsIT {
 
   @Test
   void missingOrMalformedParametersAreProblemJson400() throws Exception {
-    mvc.perform(post("/ops/backfill").param("from", "2026-10-20"))
+    mvc.perform(backfill().param("from", "2026-10-20"))
         .andExpect(status().isBadRequest())
         .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON));
-    mvc.perform(post("/ops/backfill").param("from", "yesterday").param("to", "2026-10-20"))
+    mvc.perform(backfill().param("from", "yesterday").param("to", "2026-10-20"))
         .andExpect(status().isBadRequest())
         .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON));
     mvc.perform(
-            post("/ops/backfill")
+            backfill()
                 .param("from", "2026-10-20")
                 .param("to", "2026-10-20")
                 .param("modality", "six"))
@@ -126,16 +129,13 @@ class BackfillOpsIT {
                 com.github.tomakehurst.wiremock.client.WireMock.aResponse()
                     .withFixedDelay(1500)
                     .withStatus(204)));
-    mvc.perform(post("/ops/backfill").param("from", "2026-10-20").param("to", "2026-10-20"))
+    mvc.perform(backfill().param("from", "2026-10-20").param("to", "2026-10-20"))
         .andExpect(status().isAccepted());
     // the run row is saved while the window is held, before the delayed PNCP call answers
     await().until(() -> runs("status = 'RUNNING'") == 1);
 
     mvc.perform(
-            post("/ops/backfill")
-                .param("from", "2026-10-20")
-                .param("to", "2026-10-20")
-                .param("force", "true"))
+            backfill().param("from", "2026-10-20").param("to", "2026-10-20").param("force", "true"))
         .andExpect(status().isConflict())
         .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON));
 

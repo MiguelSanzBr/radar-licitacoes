@@ -12,11 +12,16 @@ import br.dev.miguelsanzbr.radar.api.generated.api.SavedSearchesApi;
 import br.dev.miguelsanzbr.radar.api.generated.model.SavedSearch;
 import br.dev.miguelsanzbr.radar.api.generated.model.SavedSearchFilters;
 import br.dev.miguelsanzbr.radar.api.generated.model.SavedSearchRequest;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Size;
 import java.net.URI;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 import tools.jackson.databind.MapperFeature;
 import tools.jackson.databind.json.JsonMapper;
@@ -69,6 +74,17 @@ class SavedSearchController implements SavedSearchesApi {
             .location(URI.create("/api/v1/saved-searches/" + body.getId()));
     return (result.replayed() ? response.header("Idempotent-Replayed", "true") : response)
         .body(body);
+  }
+
+  /**
+   * The same creation for the page /buscas/nova: the browser has a session and a CSRF token, not a
+   * bearer token, so it cannot call the stateless API route.
+   */
+  @PostMapping(path = "/buscas", consumes = "application/json", produces = "application/json")
+  ResponseEntity<SavedSearch> createFromPage(
+      @RequestHeader("Idempotency-Key") @Size(min = 8, max = 128) String idempotencyKey,
+      @Valid @RequestBody SavedSearchRequest request) {
+    return createSavedSearch(idempotencyKey, request);
   }
 
   @Override

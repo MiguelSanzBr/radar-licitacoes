@@ -8,7 +8,9 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -18,6 +20,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import br.dev.miguelsanzbr.radar.alerts.Auth;
+import br.dev.miguelsanzbr.radar.alerts.application.ConsentRequiredException;
 import br.dev.miguelsanzbr.radar.alerts.application.EraseSubscriberUseCase;
 import br.dev.miguelsanzbr.radar.alerts.application.IdempotencyGuard;
 import br.dev.miguelsanzbr.radar.alerts.application.IdempotencyGuard.Result;
@@ -25,29 +28,31 @@ import br.dev.miguelsanzbr.radar.alerts.application.IdempotencyGuard.Stored;
 import br.dev.miguelsanzbr.radar.alerts.application.IdempotencyMismatchException;
 import br.dev.miguelsanzbr.radar.alerts.application.ManageSavedSearchUseCase;
 import br.dev.miguelsanzbr.radar.alerts.application.SavedSearchNotFoundException;
+import br.dev.miguelsanzbr.radar.alerts.application.UnauthenticatedException;
+import br.dev.miguelsanzbr.radar.alerts.application.port.CurrentSubscriber;
 import br.dev.miguelsanzbr.radar.alerts.domain.AlertFilters;
 import br.dev.miguelsanzbr.radar.alerts.domain.Frequency;
 import br.dev.miguelsanzbr.radar.alerts.domain.SavedQuery;
 import br.dev.miguelsanzbr.radar.alerts.domain.SavedSearch;
 import br.dev.miguelsanzbr.radar.alerts.domain.SavedSearchLimitExceededException;
 import br.dev.miguelsanzbr.radar.alerts.domain.SubscriberErasedException;
+import br.dev.miguelsanzbr.radar.identity.SecurityConfig;
 import java.time.Instant;
 import java.util.UUID;
 import java.util.function.Supplier;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 @WebMvcTest(controllers = {SavedSearchController.class, MeController.class})
-@Import({ProblemAdvice.class, HeaderCurrentSubscriber.class})
-@ActiveProfiles("test")
+@Import({ProblemAdvice.class, SecurityConfig.class})
 class SavedSearchControllerTest {
 
   private static final UUID OWNER = UUID.fromString("0198a3a0-0000-7000-8000-000000000001");
@@ -62,6 +67,12 @@ class SavedSearchControllerTest {
   @MockitoBean ManageSavedSearchUseCase manage;
   @MockitoBean EraseSubscriberUseCase erase;
   @MockitoBean IdempotencyGuard guard;
+  @MockitoBean CurrentSubscriber current;
+
+  @BeforeEach
+  void currentSubscriberIsTheOwner() {
+    when(current.require()).thenReturn(OWNER);
+  }
 
   private static SavedSearch search() {
     return new SavedSearch(
@@ -77,7 +88,7 @@ class SavedSearchControllerTest {
   private static MockHttpServletRequestBuilder create(String key, String body) {
     var request =
         post("/api/v1/saved-searches")
-            .headers(Auth.asSubscriber(OWNER))
+            .with(Auth.supplier("owner"))
             .contentType(MediaType.APPLICATION_JSON)
             .content(body);
     return key == null ? request : request.header("Idempotency-Key", key);
@@ -198,7 +209,7 @@ class SavedSearchControllerTest {
   }
 
   @Test
-  void withoutSubscriberHeaderIs401Problem() throws Exception {
+  void withoutCredentialsIs401Problem() throws Exception {
     mvc.perform(
             post("/api/v1/saved-searches")
                 .headers(Auth.anonymous())
@@ -263,7 +274,7 @@ class SavedSearchControllerTest {
   void getReturnsTheOwnSearch() throws Exception {
     when(manage.get(OWNER, SEARCH_ID)).thenReturn(search());
 
-    mvc.perform(get("/api/v1/saved-searches/{id}", SEARCH_ID).headers(Auth.asSubscriber(OWNER)))
+    mvc.perform(get("/api/v1/saved-searches/{id}", SEARCH_ID).with(Auth.supplier("owner")))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.name").value("Notebooks"))
         .andExpect(conforms());
@@ -273,7 +284,7 @@ class SavedSearchControllerTest {
   void getOfAnotherSubscribersSearchIs404Problem() throws Exception {
     when(manage.get(OWNER, SEARCH_ID)).thenThrow(new SavedSearchNotFoundException());
 
-    mvc.perform(get("/api/v1/saved-searches/{id}", SEARCH_ID).headers(Auth.asSubscriber(OWNER)))
+    mvc.perform(get("/api/v1/saved-searches/{id}", SEARCH_ID).with(Auth.supplier("owner")))
         .andExpect(status().isNotFound())
         .andExpect(
             jsonPath("$.type")
@@ -284,14 +295,14 @@ class SavedSearchControllerTest {
 
   @Test
   void getWithMalformedIdIs400() throws Exception {
-    mvc.perform(get("/api/v1/saved-searches/not-a-uuid").headers(Auth.asSubscriber(OWNER)))
+    mvc.perform(get("/api/v1/saved-searches/not-a-uuid").with(Auth.supplier("owner")))
         .andExpect(status().isBadRequest())
         .andExpect(conforms());
   }
 
   @Test
   void deleteDeactivatesAndReturns204() throws Exception {
-    mvc.perform(delete("/api/v1/saved-searches/{id}", SEARCH_ID).headers(Auth.asSubscriber(OWNER)))
+    mvc.perform(delete("/api/v1/saved-searches/{id}", SEARCH_ID).with(Auth.supplier("owner")))
         .andExpect(status().isNoContent())
         .andExpect(conforms());
 
@@ -302,14 +313,14 @@ class SavedSearchControllerTest {
   void deleteOfAnotherSubscribersSearchIs404() throws Exception {
     doThrow(new SavedSearchNotFoundException()).when(manage).delete(OWNER, SEARCH_ID);
 
-    mvc.perform(delete("/api/v1/saved-searches/{id}", SEARCH_ID).headers(Auth.asSubscriber(OWNER)))
+    mvc.perform(delete("/api/v1/saved-searches/{id}", SEARCH_ID).with(Auth.supplier("owner")))
         .andExpect(status().isNotFound())
         .andExpect(conforms());
   }
 
   @Test
   void deleteMeErasesTheCurrentSubscriber() throws Exception {
-    mvc.perform(delete("/api/v1/me").headers(Auth.asSubscriber(OWNER)))
+    mvc.perform(delete("/api/v1/me").with(Auth.supplier("owner")))
         .andExpect(status().isNoContent())
         .andExpect(conforms());
 
@@ -317,10 +328,91 @@ class SavedSearchControllerTest {
   }
 
   @Test
-  void deleteMeWithoutSubscriberIs401() throws Exception {
+  void deleteMeWithoutCredentialsIs401() throws Exception {
     mvc.perform(delete("/api/v1/me").headers(Auth.anonymous()))
         .andExpect(status().isUnauthorized())
         .andExpect(conforms());
+  }
+
+  @Test
+  void deleteMeWithoutConsentHasNothingToEraseAndIs204() throws Exception {
+    when(current.require()).thenThrow(new ConsentRequiredException());
+
+    mvc.perform(delete("/api/v1/me").with(Auth.supplier("owner")))
+        .andExpect(status().isNoContent())
+        .andExpect(conforms());
+
+    verifyNoInteractions(erase);
+  }
+
+  @Test
+  void savedSearchWithoutConsentIs403ConsentRequiredPointingToTheConsentPage() throws Exception {
+    when(current.require()).thenThrow(new ConsentRequiredException());
+
+    mvc.perform(get("/api/v1/saved-searches/{id}", SEARCH_ID).with(Auth.supplier("owner")))
+        .andExpect(status().isForbidden())
+        .andExpect(content().contentTypeCompatibleWith("application/problem+json"))
+        .andExpect(
+            jsonPath("$.type")
+                .value(
+                    "https://github.com/miguelsanzbr/radar-licitacoes/blob/main/docs/problems/consent-required.md"))
+        .andExpect(jsonPath("$.detail").value(org.hamcrest.Matchers.containsString("/assinatura")))
+        .andExpect(conforms());
+  }
+
+  @Test
+  void subscriberGoneBetweenLookupAndUseIs401Problem() throws Exception {
+    when(manage.get(OWNER, SEARCH_ID)).thenThrow(new UnauthenticatedException());
+
+    mvc.perform(get("/api/v1/saved-searches/{id}", SEARCH_ID).with(Auth.supplier("owner")))
+        .andExpect(status().isUnauthorized())
+        .andExpect(
+            jsonPath("$.type")
+                .value(
+                    "https://github.com/miguelsanzbr/radar-licitacoes/blob/main/docs/problems/unauthorized.md"))
+        .andExpect(conforms());
+  }
+
+  @Test
+  void operatorCannotReachSupplierRoutes() throws Exception {
+    mvc.perform(get("/api/v1/saved-searches/{id}", SEARCH_ID).with(Auth.operator()))
+        .andExpect(status().isForbidden())
+        .andExpect(
+            jsonPath("$.type")
+                .value(
+                    "https://github.com/miguelsanzbr/radar-licitacoes/blob/main/docs/problems/forbidden.md"))
+        .andExpect(conforms());
+    verifyNoInteractions(manage);
+  }
+
+  @Test
+  void pageFormCreatesWithTheSessionAndTheCsrfToken() throws Exception {
+    guardRunsTheAction(false);
+    when(manage.create(any(), any(), any(), any())).thenReturn(search());
+
+    mvc.perform(
+            post("/buscas")
+                .with(Auth.webSupplier("owner", "fulano@example.com"))
+                .with(csrf())
+                .header("Idempotency-Key", "key-12345")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(BODY))
+        .andExpect(status().isCreated())
+        .andExpect(header().string("Location", "/api/v1/saved-searches/" + SEARCH_ID))
+        .andExpect(jsonPath("$.name").value("Notebooks"));
+  }
+
+  @Test
+  void pageFormWithoutCsrfTokenIs403AndCreatesNothing() throws Exception {
+    mvc.perform(
+            post("/buscas")
+                .with(Auth.webSupplier("owner", "fulano@example.com"))
+                .header("Idempotency-Key", "key-12345")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(BODY))
+        .andExpect(status().isForbidden());
+
+    verifyNoInteractions(guard, manage);
   }
 
   @Test
@@ -330,8 +422,7 @@ class SavedSearchControllerTest {
     assertThatThrownBy(
             () ->
                 mvc.perform(
-                    get("/api/v1/saved-searches/{id}", SEARCH_ID)
-                        .headers(Auth.asSubscriber(OWNER))))
+                    get("/api/v1/saved-searches/{id}", SEARCH_ID).with(Auth.supplier("owner"))))
         .hasRootCauseInstanceOf(IllegalArgumentException.class);
   }
 }

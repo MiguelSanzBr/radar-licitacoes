@@ -4,15 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Nova busca salva | Radar de Licitações</title>
-  <style>
-    body { font: 16px/1.5 system-ui, sans-serif; max-width: 32rem; margin: 2rem auto; padding: 0 1rem; }
-    label, button { display: block; margin: .75rem 0; }
-    input[type=text], select { width: 100%; padding: .4rem; box-sizing: border-box; }
-    #resultado { margin-top: 1rem; font-weight: 600; }
-  </style>
+  <link rel="stylesheet" href="/css/alertas.css">
 </head>
 <body>
-  <main data-dev="false">
+  <main>
     <h1>Nova busca salva</h1>
     <form id="form">
       <label>Nome <input type="text" name="name" maxlength="80" required></label>
@@ -27,41 +22,11 @@
       <label>Valor mínimo <input type="text" name="minValue" pattern="[0-9]+(\.[0-9]{1,2})?"></label>
       <label>Valor máximo <input type="text" name="maxValue" pattern="[0-9]+(\.[0-9]{1,2})?"></label>
       <label><input type="checkbox" name="open"> somente com propostas abertas</label>
-      <label id="dev-subscriber" hidden>Assinante (somente em desenvolvimento)
-        <input type="text" name="subscriber" placeholder="UUID do assinante">
-      </label>
       <button type="submit">Salvar busca</button>
     </form>
     <p id="resultado" role="status" aria-live="polite"></p>
   </main>
-  <script>
-    const main = document.querySelector('main');
-    if (main.dataset.dev === 'true') document.getElementById('dev-subscriber').hidden = false;
-
-    document.getElementById('form').addEventListener('submit', async (event) => {
-      event.preventDefault();
-      const out = document.getElementById('resultado');
-      out.textContent = 'Salvando...';
-      const f = new FormData(event.target);
-      const filters = {};
-      for (const k of ['uf', 'minValue', 'maxValue']) if (f.get(k)) filters[k] = f.get(k);
-      if (f.get('open')) filters.open = true;
-      const headers = { 'Content-Type': 'application/json', 'Idempotency-Key': crypto.randomUUID() };
-      if (main.dataset.dev === 'true' && f.get('subscriber')) headers['X-Debug-Subscriber'] = f.get('subscriber');
-      try {
-        const resposta = await fetch('/api/v1/saved-searches', {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({ name: f.get('name'), query: f.get('query'), frequency: f.get('frequency'), filters }),
-        });
-        const corpo = await resposta.json();
-        out.textContent = resposta.ok
-          ? 'Busca salva: ' + corpo.name
-          : (corpo.detail ?? 'Não foi possível salvar a busca.');
-      } catch (erro) {
-        out.textContent = 'Não foi possível falar com o servidor. Tente de novo em instantes.';
-      }
-    });
-  </script>
+  <script src="/js/csrf.js"></script>
+  <script src="/js/buscas-nova.js"></script>
 </body>
 </html>

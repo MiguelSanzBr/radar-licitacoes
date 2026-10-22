@@ -1,5 +1,6 @@
 package br.dev.miguelsanzbr.radar.alerts.adapter.in.web;
 
+import br.dev.miguelsanzbr.radar.alerts.application.ConsentRequiredException;
 import br.dev.miguelsanzbr.radar.alerts.application.EmailAlreadyRegisteredException;
 import br.dev.miguelsanzbr.radar.alerts.application.IdempotencyMismatchException;
 import br.dev.miguelsanzbr.radar.alerts.application.SavedSearchNotFoundException;
@@ -34,6 +35,24 @@ class ProblemAdvice {
   @ExceptionHandler(UnauthenticatedException.class)
   ResponseEntity<ProblemDetail> unauthenticated(UnauthenticatedException e) {
     return problem(e, HttpStatus.UNAUTHORIZED, "unauthorized", "Não autenticado");
+  }
+
+  @ExceptionHandler(ConsentRequiredException.class)
+  ResponseEntity<ProblemDetail> consentRequired() {
+    return problem(
+        "Aceite receber alertas em /assinatura antes de usar as buscas salvas.",
+        HttpStatus.FORBIDDEN,
+        "consent-required",
+        "Consentimento necessário");
+  }
+
+  @ExceptionHandler(EmailNotVerifiedException.class)
+  ResponseEntity<ProblemDetail> emailNotVerified() {
+    return problem(
+        "Confirme o e-mail da sua conta no provedor de login antes de assinar os alertas.",
+        HttpStatus.FORBIDDEN,
+        "email-not-verified",
+        "E-mail não verificado");
   }
 
   @ExceptionHandler(SubscriberErasedException.class)

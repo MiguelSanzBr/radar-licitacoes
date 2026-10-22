@@ -26,4 +26,11 @@ class ModularityTest {
 
     assertThat(targets).containsExactlyInAnyOrder("shared", "api");
   }
+
+  @Test
+  void identityDependsOnNoOtherModule() {
+    var identity = MODULES.getModuleByName("identity").orElseThrow();
+
+    assertThat(identity.getDirectDependencies(MODULES).stream()).isEmpty();
+  }
 }
