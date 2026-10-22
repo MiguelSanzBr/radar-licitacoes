@@ -1,8 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Codigo gerado a partir do contrato OpenAPI e injecao de ports; ver docs/coverage-exclusions.md. -->
+<!-- Codigo gerado (OpenAPI e jOOQ) e injecao de ports; ver docs/coverage-exclusions.md. -->
 <FindBugsFilter>
   <Match>
     <Class name="~br\.dev\.miguelsanzbr\.radar\.api\.generated\..*"/>
+  </Match>
+  <Match>
+    <Class name="~br\.dev\.miguelsanzbr\.radar\.search\.adapter\.out\.jooq\.generated\..*"/>
   </Match>
   <!-- Casos de uso guardam as ports injetadas (interfaces); nao e vazamento de estado mutavel. -->
   <Match>

@@ -159,7 +159,7 @@ public final class Procurement {
   private ProcurementSnapshotView view() {
     return new ProcurementSnapshotView(
         id(),
-        status.name(),
+        status.code(),
         current.situation(),
         current.organ(),
         current.unit(),

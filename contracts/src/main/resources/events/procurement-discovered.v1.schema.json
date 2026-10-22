@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://radar.miguelsanzbr.dev/schemas/events/procurement-discovered.v1.schema.json",
+  "title": "ProcurementDiscovered v1",
+  "allOf": [
+    {
+      "$ref": "envelope.schema.json"
+    }
+  ],
+  "properties": {
+    "eventType": {
+      "const": "ProcurementDiscovered"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "aggregateType": {
+      "const": "Procurement"
+    },
+    "aggregateId": {
+      "$ref": "procurement-snapshot.v1.schema.json#/$defs/procurementId"
+    },
+    "payload": {
+      "type": "object",
+      "required": [
+        "aggregateId",
+        "occurredAt",
+        "snapshot"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "aggregateId": {
+          "$ref": "procurement-snapshot.v1.schema.json#/$defs/procurementId"
+        },
+        "occurredAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "snapshot": {
+          "$ref": "procurement-snapshot.v1.schema.json"
+        }
+      }
+    }
+  }
+}

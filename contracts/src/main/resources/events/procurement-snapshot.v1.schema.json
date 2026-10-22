@@ -1,0 +1,238 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://radar.miguelsanzbr.dev/schemas/events/procurement-snapshot.v1.schema.json",
+  "title": "ProcurementSnapshot v1",
+  "description": "Normalised state of a procurement (everything but the raw PNCP JSON), carried by ProcurementDiscovered and ProcurementUpdated. Money is a decimal string with two places; absent values are null.",
+  "type": "object",
+  "required": [
+    "id",
+    "status",
+    "situation",
+    "organ",
+    "unit",
+    "modality",
+    "disputeMode",
+    "legalBasis",
+    "srp",
+    "estimatedValue",
+    "awardedValue",
+    "proposalWindow",
+    "publishedAt",
+    "pncpUpdatedAt",
+    "objectDescription",
+    "revision"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "$ref": "#/$defs/procurementId"
+    },
+    "status": {
+      "enum": [
+        "PUBLISHED",
+        "SUSPENDED",
+        "REVOKED",
+        "ANNULLED"
+      ]
+    },
+    "situation": {
+      "$ref": "#/$defs/idName"
+    },
+    "organ": {
+      "type": "object",
+      "required": [
+        "cnpj",
+        "name"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "cnpj": {
+          "type": "string",
+          "pattern": "^\\d{14}$"
+        },
+        "name": {
+          "type": "string"
+        }
+      }
+    },
+    "unit": {
+      "type": "object",
+      "required": [
+        "code",
+        "name",
+        "uf",
+        "municipalityName",
+        "ibgeCode"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "uf": {
+          "enum": [
+            "AC",
+            "AL",
+            "AP",
+            "AM",
+            "BA",
+            "CE",
+            "DF",
+            "ES",
+            "GO",
+            "MA",
+            "MT",
+            "MS",
+            "MG",
+            "PA",
+            "PB",
+            "PR",
+            "PE",
+            "PI",
+            "RJ",
+            "RN",
+            "RS",
+            "RO",
+            "RR",
+            "SC",
+            "SP",
+            "SE",
+            "TO",
+            null
+          ]
+        },
+        "municipalityName": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "ibgeCode": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[1-5]\\d{6}$"
+        }
+      }
+    },
+    "modality": {
+      "$ref": "#/$defs/idName"
+    },
+    "disputeMode": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/idName"
+        }
+      ]
+    },
+    "legalBasis": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "required": [
+        "code",
+        "name"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        }
+      }
+    },
+    "srp": {
+      "type": "boolean"
+    },
+    "estimatedValue": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^-?\\d+\\.\\d{2}$"
+    },
+    "awardedValue": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^-?\\d+\\.\\d{2}$"
+    },
+    "proposalWindow": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "required": [
+        "openingAt",
+        "closingAt"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "openingAt": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "closingAt": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        }
+      }
+    },
+    "publishedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "pncpUpdatedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "objectDescription": {
+      "type": "string"
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 1
+    }
+  },
+  "$defs": {
+    "procurementId": {
+      "description": "PNCP control number.",
+      "type": "string",
+      "pattern": "^\\d{14}-\\d+-\\d{6}/\\d{4}$"
+    },
+    "idName": {
+      "description": "Numeric code and name pair, as PNCP names situations, modalities and dispute modes.",
+      "type": "object",
+      "required": [
+        "id",
+        "name"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

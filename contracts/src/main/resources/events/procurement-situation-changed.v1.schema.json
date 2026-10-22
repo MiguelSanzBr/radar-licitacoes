@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://radar.miguelsanzbr.dev/schemas/events/procurement-situation-changed.v1.schema.json",
+  "title": "ProcurementSituationChanged v1",
+  "allOf": [
+    {
+      "$ref": "envelope.schema.json"
+    }
+  ],
+  "properties": {
+    "eventType": {
+      "const": "ProcurementSituationChanged"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "aggregateType": {
+      "const": "Procurement"
+    },
+    "aggregateId": {
+      "$ref": "procurement-snapshot.v1.schema.json#/$defs/procurementId"
+    },
+    "payload": {
+      "type": "object",
+      "required": [
+        "aggregateId",
+        "occurredAt",
+        "from",
+        "to",
+        "pncpUpdatedAt",
+        "unexpected"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "aggregateId": {
+          "$ref": "procurement-snapshot.v1.schema.json#/$defs/procurementId"
+        },
+        "occurredAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "from": {
+          "$ref": "procurement-snapshot.v1.schema.json#/$defs/idName"
+        },
+        "to": {
+          "$ref": "procurement-snapshot.v1.schema.json#/$defs/idName"
+        },
+        "pncpUpdatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "unexpected": {
+          "description": "True when the state machine does not allow the transition.",
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}

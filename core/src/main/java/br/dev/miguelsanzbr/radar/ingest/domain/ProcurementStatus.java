@@ -1,5 +1,7 @@
 package br.dev.miguelsanzbr.radar.ingest.domain;
 
+import java.util.Locale;
+
 /**
  * Internal status, mapped from the PNCP situation id (working assumption, confirmed by probe S10).
  */
@@ -44,6 +46,11 @@ public sealed interface ProcurementStatus {
   }
 
   String name();
+
+  /** Upper-case form used by events and by the stored column: PUBLISHED, SUSPENDED, ... */
+  default String code() {
+    return name().toUpperCase(Locale.ROOT);
+  }
 
   /** Transitions of the state machine; Revoked and Annulled are terminal. */
   default boolean allowsTransitionTo(ProcurementStatus next) {

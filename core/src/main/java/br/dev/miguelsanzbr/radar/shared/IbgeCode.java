@@ -12,4 +12,9 @@ public record IbgeCode(String value) {
       throw new IllegalArgumentException("invalid ibge code [" + value + "]");
     }
   }
+
+  @Override
+  public String toString() {
+    return value;
+  }
 }

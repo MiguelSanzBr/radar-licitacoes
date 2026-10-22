@@ -25,6 +25,11 @@ class IbgeCodeTest {
   }
 
   @Test
+  void printsAsItsValueSoEventsCarryAPlainString() {
+    assertThat(new IbgeCode("4205407")).hasToString("4205407");
+  }
+
+  @Test
   void rejectsNull() {
     assertThatIllegalArgumentException().isThrownBy(() -> new IbgeCode(null));
   }

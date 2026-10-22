@@ -18,7 +18,7 @@ Por enquanto, o alvo disponível é a verificação completa do build:
 make verify
 ```
 
-É preciso JDK 25 e Docker (os testes de integração sobem containers com Testcontainers).
+É preciso JDK 25 e Docker: os testes de integração sobem containers com Testcontainers e o build gera o modelo jOOQ a partir das migrations num Postgres descartável.
 
 Imagem: 393 MB (medido por scripts/image-size.sh em 2026-10-20).
 

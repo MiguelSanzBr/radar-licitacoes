@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://radar.miguelsanzbr.dev/schemas/events/envelope.schema.json",
+  "title": "EventEnvelope",
+  "description": "Wrapper of every event published to Kafka. The payload is validated by the schema of its event type.",
+  "type": "object",
+  "required": [
+    "eventId",
+    "eventType",
+    "schemaVersion",
+    "aggregateType",
+    "aggregateId",
+    "aggregateVersion",
+    "occurredAt",
+    "traceparent",
+    "payload"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "eventId": {
+      "description": "UUID v7, unique per event; the consumer inbox deduplicates on it.",
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "eventType": {
+      "type": "string",
+      "minLength": 1
+    },
+    "schemaVersion": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "aggregateType": {
+      "type": "string",
+      "minLength": 1
+    },
+    "aggregateId": {
+      "description": "Also the Kafka record key.",
+      "type": "string",
+      "minLength": 1
+    },
+    "aggregateVersion": {
+      "description": "Revision of the aggregate after the event; a projector ignores a lower one.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "traceparent": {
+      "description": "W3C trace context; null until tracing is on.",
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^00-[0-9a-f]{32}-[0-9a-f]{16}-[0-9a-f]{2}$"
+    },
+    "payload": {
+      "type": "object"
+    }
+  }
+}

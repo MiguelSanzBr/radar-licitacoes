@@ -4,6 +4,7 @@ import br.dev.miguelsanzbr.radar.ingest.application.port.OutboxAppender;
 import br.dev.miguelsanzbr.radar.observability.TraceparentInjector;
 import br.dev.miguelsanzbr.radar.shared.DomainEvent;
 import br.dev.miguelsanzbr.radar.shared.EventEnvelope;
+import br.dev.miguelsanzbr.radar.shared.IbgeCode;
 import br.dev.miguelsanzbr.radar.shared.Money;
 import br.dev.miguelsanzbr.radar.shared.ProcurementId;
 import br.dev.miguelsanzbr.radar.shared.UuidV7;
@@ -32,13 +33,14 @@ public class JdbcOutboxAppender implements OutboxAppender {
       VALUES (?, ?, ?, ?, ?, ?::jsonb, ?::jsonb)
       """;
 
-  /** Money goes out as a plain decimal string ("441560.04") and ids as their text. */
+  /** Money goes out as a plain decimal string ("441560.04"); ids and codes as their text. */
   private static final JsonMapper JSON =
       JsonMapper.builder()
           .addModule(
               new SimpleModule()
                   .addSerializer(Money.class, new MoneySerializer())
-                  .addSerializer(ProcurementId.class, ToStringSerializer.instance))
+                  .addSerializer(ProcurementId.class, ToStringSerializer.instance)
+                  .addSerializer(IbgeCode.class, ToStringSerializer.instance))
           .build();
 
   private final JdbcTemplate jdbc;

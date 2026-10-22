@@ -16,7 +16,6 @@ import br.dev.miguelsanzbr.radar.shared.Money;
 import br.dev.miguelsanzbr.radar.shared.ProcurementId;
 import br.dev.miguelsanzbr.radar.shared.Uf;
 import java.util.List;
-import java.util.Locale;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -141,7 +140,7 @@ final class ProcurementEntityMapper {
 
   /** The status is derived from the situation; the column only exists to index on it. */
   private static String statusColumn(Procurement p) {
-    return p.status().name().toUpperCase(Locale.ROOT);
+    return p.status().code();
   }
 
   /** The only call to the aggregate's rehydration factory. */

@@ -13,4 +13,8 @@ Toda `<exclude>` em `pom.xml` precisa constar nesta tabela, com o motivo. O scri
 
 Não são exclusões de cobertura e o script de política não os verifica.
 
-- `core/spotbugs-exclude.xml`: cobre `br.dev.miguelsanzbr.radar.api.generated.*` e o padrão `EI_EXPOSE_REP2` nos casos de uso de `br.dev.miguelsanzbr.radar.alerts.application`, que guardam ports (interfaces) recebidas por construtor; o alerta é falso positivo de injeção de dependência. Os DTOs gerados expõem listas mutáveis (`EI_EXPOSE_REP`, 27 achados, todos nesse pacote). Código escrito à mão continua sob a análise completa.
+- `core/spotbugs-exclude.xml`: cobre `br.dev.miguelsanzbr.radar.api.generated.*`, `br.dev.miguelsanzbr.radar.search.adapter.out.jooq.generated.*` (a análise reclama de `equals` não sobrescrito e de métodos sobrescrevíveis chamados em construtores, padrões do gerador) e o padrão `EI_EXPOSE_REP2` nos casos de uso de `br.dev.miguelsanzbr.radar.alerts.application`, que guardam ports (interfaces) recebidas por construtor; o alerta é falso positivo de injeção de dependência. Os DTOs gerados expõem listas mutáveis (`EI_EXPOSE_REP`, 27 achados, todos nesse pacote). Código escrito à mão continua sob a análise completa.
+
+## Código gerado sem exclusão
+
+O modelo jOOQ do schema `search` (pacote `br.dev.miguelsanzbr.radar.search.adapter.out.jooq.generated`) é gerado a cada build a partir das migrations reais (`core/src/codegen/JooqCodegen.java`, executado na fase `generate-sources`). O gerador anota cada classe com `org.jooq.Generated`, que tem retenção RUNTIME, então o JaCoCo e o PIT ignoram essas classes pela própria anotação. Por isso não há linha na tabela acima.

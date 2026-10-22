@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://radar.miguelsanzbr.dev/schemas/events/procurement-closed.v1.schema.json",
+  "title": "ProcurementClosed v1",
+  "allOf": [
+    {
+      "$ref": "envelope.schema.json"
+    }
+  ],
+  "properties": {
+    "eventType": {
+      "const": "ProcurementClosed"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "aggregateType": {
+      "const": "Procurement"
+    },
+    "aggregateId": {
+      "$ref": "procurement-snapshot.v1.schema.json#/$defs/procurementId"
+    },
+    "payload": {
+      "type": "object",
+      "required": [
+        "aggregateId",
+        "occurredAt",
+        "closingAt"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "aggregateId": {
+          "$ref": "procurement-snapshot.v1.schema.json#/$defs/procurementId"
+        },
+        "occurredAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "closingAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    }
+  }
+}

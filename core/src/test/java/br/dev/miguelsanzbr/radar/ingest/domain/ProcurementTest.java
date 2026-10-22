@@ -20,6 +20,7 @@ import br.dev.miguelsanzbr.radar.shared.Uf;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Locale;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
@@ -54,7 +55,7 @@ class ProcurementTest {
     assertThat(event.eventType()).isEqualTo("ProcurementDiscovered");
     var view = event.snapshot();
     assertThat(view.id()).isEqualTo(ID);
-    assertThat(view.status()).isEqualTo("Published");
+    assertThat(view.status()).isEqualTo("PUBLISHED");
     assertThat(view.situation()).isEqualTo(snapshot.situation());
     assertThat(view.organ()).isEqualTo(snapshot.organ());
     assertThat(view.unit()).isEqualTo(snapshot.unit());
@@ -421,7 +422,8 @@ class ProcurementTest {
     assertThat(changed.to()).isEqualTo(new PncpSituation(to, "to"));
     assertThat(changed.pncpUpdatedAt()).isEqualTo(updatedAt);
     assertThat(changed.unexpected()).isEqualTo(unexpected);
-    assertThat(((ProcurementUpdated) events.get(0)).snapshot().status()).isEqualTo(status);
+    assertThat(((ProcurementUpdated) events.get(0)).snapshot().status())
+        .isEqualTo(status.toUpperCase(Locale.ROOT));
     assertThat(p.status().name()).isEqualTo(status);
     assertThat(p.situation()).isEqualTo(new PncpSituation(to, "to"));
     assertThat(p.revision()).isEqualTo(2);

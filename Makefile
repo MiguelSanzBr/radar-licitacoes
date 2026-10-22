@@ -5,7 +5,9 @@ verify:
 
 TRIVY_IMAGE := aquasec/trivy:0.76.0@sha256:2416d1f74045b57274df1a340eee6b510cacd73c66a6ccb8da092b117eb7d222
 
+# O codegen do jOOQ precisa de Docker (Testcontainers) e roda no host: o build da imagem nao o tem.
 image:
+	./mvnw -q compile -pl core -am -DskipTests
 	docker build -t radar-licitacoes:local .
 
 image-size:

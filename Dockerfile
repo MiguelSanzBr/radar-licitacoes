@@ -15,8 +15,9 @@ FROM eclipse-temurin:25-jdk-alpine@sha256:1e20ead9eec7234db293f1913438090d533ed4
 WORKDIR /src
 COPY --from=poms /src ./
 RUN --mount=type=cache,target=/root/.m2 ./mvnw -B -q dependency:go-offline
+# O modelo jOOQ (core/target/generated-sources/jooq) vem do contexto: gerado no host por `make image`.
 COPY . .
-RUN --mount=type=cache,target=/root/.m2 ./mvnw -B -q -DskipTests package -pl core -am \
+RUN --mount=type=cache,target=/root/.m2 ./mvnw -B -q -DskipTests -Djooq.codegen.skip=true package -pl core -am \
  && set -- core/target/core-*.jar && [ "$#" -eq 1 ] && mv "$1" /app.jar
 
 # Sem --launcher: o jar extraido lista as bibliotecas no Class-Path, o que deixa o AOT cache

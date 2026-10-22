@@ -5,3 +5,5 @@
 !pom.xml
 !**/pom.xml
 !**/src/main
+# Modelo jOOQ gerado no host por `make image`; o build da imagem nao tem Docker para gera-lo.
+!core/target/generated-sources/jooq
