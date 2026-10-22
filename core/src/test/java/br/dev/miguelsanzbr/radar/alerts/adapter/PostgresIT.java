@@ -19,7 +19,8 @@ import org.springframework.test.context.ActiveProfiles;
 /**
  * The JVM-wide Postgres (see {@link PostgresTestConfig}) and one Spring context for the alerts ITs.
  */
-@SpringBootTest(properties = "radar.outbox.relay-enabled=false")
+@SpringBootTest(
+    properties = {"radar.outbox.relay-enabled=false", "radar.outbox.publisher=inmemory"})
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Import({PostgresTestConfig.class, OutboxTestConfig.class, PostgresIT.RecordingMailerConfig.class})

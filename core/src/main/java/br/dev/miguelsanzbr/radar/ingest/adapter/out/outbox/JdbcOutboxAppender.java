@@ -60,6 +60,7 @@ public class JdbcOutboxAppender implements OutboxAppender {
       headers.put("eventType", envelope.eventType());
       headers.put("schemaVersion", envelope.schemaVersion());
       headers.put("aggregateVersion", envelope.aggregateVersion());
+      headers.put("occurredAt", envelope.occurredAt().toString());
       jdbc.update(
           INSERT,
           envelope.eventId(),

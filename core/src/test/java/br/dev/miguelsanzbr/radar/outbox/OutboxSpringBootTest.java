@@ -13,6 +13,7 @@ import org.springframework.context.annotation.Import;
 @Documented
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
-@SpringBootTest(properties = "radar.outbox.relay-enabled=false")
+@SpringBootTest(
+    properties = {"radar.outbox.relay-enabled=false", "radar.outbox.publisher=inmemory"})
 @Import({PostgresTestConfig.class, OutboxTestConfig.class})
 public @interface OutboxSpringBootTest {}

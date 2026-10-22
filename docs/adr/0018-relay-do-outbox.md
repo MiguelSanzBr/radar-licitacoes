@@ -24,6 +24,7 @@ Polling com `SELECT ... WHERE published_at IS NULL AND attempts < 10 ORDER BY id
 - A implantação recomendada é um relay ativo. Mais de um serve para continuidade (o segundo assume se o primeiro cair) e para drenar backlog, não para ganhar ordem.
 - Depois do poison, um evento posterior do mesmo agregado deixa de esperar pelo evento envenenado e pode ser publicado antes dele. É a consequência de não bloquear a fila; a guarda de versão do consumidor cobre.
 - Falha de uma mensagem é `PublishException` ou qualquer `RuntimeException` do publicador: as duas contam tentativa, gravam `last_error` (`e.toString()`, até 2000 caracteres) e isolam o agregado no lote. Só um `Error` aborta o lote, e a transação desfaz tudo. `outbox_poison_total` é incrementado depois do commit, então um rollback e nova tentativa não contam duas vezes.
+- Falha do broker inteiro (`BrokerUnavailableException`: sem ack no prazo ou erro retentável do Kafka) encerra o lote na primeira mensagem, para não gastar um timeout por agregado. Grava `last_error`, mas não conta tentativa nem toca `outbox_poison_total`: uma queda do broker não é culpa da mensagem e não pode envenenar a fila. Erros específicos da mensagem continuam contando e isolando só o agregado.
 - A transação do relay fica aberta (com as travas das linhas) enquanto o publicador espera o broker, então o tempo do lote é limitado pelo timeout do publicador: no PR 1.7 o produtor Kafka define `delivery.timeout.ms` e `max.block.ms` curtos. Numa queda geral do broker o lote deve abortar cedo, em vez de esgotar o timeout mensagem a mensagem e contar tentativa de todas; o PR 1.7 implementa isso.
 - Métricas: `outbox_pending` (não publicados), `outbox_oldest_age_seconds` (a mais antiga ainda tentável, sem as linhas no limite de tentativas) e `outbox_poison_pending` (não publicados no limite de tentativas, a vigiar por alerta).
 
@@ -35,3 +36,5 @@ Polling com `SELECT ... WHERE published_at IS NULL AND attempts < 10 ORDER BY id
 ## Prova
 
 `docs/benchmarks/outbox/atomicity-and-concurrency.md`: atomicidade, ordem por agregado, poison e dois relays concorrentes sobre 10 000 eventos (0 duplicados em 6,0 s).
+
+`docs/benchmarks/outbox/broker-down.md`: broker Kafka pausado por 60 s com 100 eventos pendentes, 0 publicados durante a queda, 100 entregues depois, zero perda.

@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -108,6 +109,42 @@ class OutboxRelayIT {
 
     assertThat(relay.relayOnce()).isEqualTo(2);
     assertThat(publisher.publishedIds()).containsExactly(b1, b2, a1, a2);
+  }
+
+  @Test
+  void brokerWideFailureEndsTheBatchRecordsTheErrorAndCountsNoAttempt() {
+    var a = insert("A");
+    var b = insert("B");
+    var c = insert("C");
+    var calls = new AtomicInteger();
+    EventPublisher down =
+        message -> {
+          calls.incrementAndGet();
+          throw new BrokerUnavailableException("no ack");
+        };
+    jdbc.update(
+        "UPDATE outbox.outbox_event SET attempts = ? WHERE id = ?",
+        properties.maxAttempts() - 1,
+        a);
+    var poisonBefore = registry.counter("outbox_poison_total").count();
+    var relayOnDeadBroker = new OutboxRelay(jdbc, transactionManager, down, properties, registry);
+
+    assertThat(relayOnDeadBroker.relayOnce()).isZero();
+
+    assertThat(calls).hasValue(1);
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT attempts FROM outbox.outbox_event WHERE id = ?", Integer.class, a))
+        .isEqualTo(properties.maxAttempts() - 1);
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT last_error FROM outbox.outbox_event WHERE id = ?", String.class, a))
+        .contains("no ack");
+    assertThat(registry.counter("outbox_poison_total").count()).isEqualTo(poisonBefore);
+    assertThat(
+            OutboxRows.count(
+                jdbc, "id IN (" + b + "," + c + ") AND attempts = 0 AND last_error IS NULL"))
+        .isEqualTo(2);
   }
 
   @Test

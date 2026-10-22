@@ -20,7 +20,7 @@ class LivenessProbeTest {
 
   @LocalServerPort int port;
 
-  // the relay needs a publisher; the Kafka one arrives with PR 1.7
+  // the relay needs a publisher, and this context has no broker
   @TestConfiguration
   static class Publisher {
     @Bean
@@ -36,6 +36,7 @@ class LivenessProbeTest {
     registry.add("spring.datasource.username", postgres::getUsername);
     registry.add("spring.datasource.password", postgres::getPassword);
     registry.add("radar.outbox.relay-enabled", () -> "false");
+    registry.add("radar.outbox.publisher", () -> "inmemory");
   }
 
   private HttpResponse<String> get(String path) throws Exception {

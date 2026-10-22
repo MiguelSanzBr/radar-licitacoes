@@ -136,10 +136,11 @@ class JdbcOutboxAppenderIT {
 
     JsonNode headers = json.readTree(row.get("headers").toString());
     assertThat(headers.propertyNames())
-        .containsExactlyInAnyOrder("eventType", "schemaVersion", "aggregateVersion");
+        .containsExactlyInAnyOrder("eventType", "schemaVersion", "aggregateVersion", "occurredAt");
     assertThat(headers.get("eventType").asString()).isEqualTo("ProcurementDiscovered");
     assertThat(headers.get("schemaVersion").asInt()).isEqualTo(1);
     assertThat(headers.get("aggregateVersion").asLong()).isEqualTo(7);
+    assertThat(headers.get("occurredAt").asString()).isEqualTo("2026-10-22T12:00:00Z");
   }
 
   @Test

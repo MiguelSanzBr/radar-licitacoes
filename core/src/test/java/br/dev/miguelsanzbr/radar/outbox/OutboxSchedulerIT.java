@@ -14,7 +14,7 @@ import org.springframework.test.annotation.DirtiesContext;
 
 // why: the live 50 ms relay of this context must stop with the class, not leak into later ITs
 @DirtiesContext
-@SpringBootTest(properties = "radar.outbox.poll-interval=50ms")
+@SpringBootTest(properties = {"radar.outbox.poll-interval=50ms", "radar.outbox.publisher=inmemory"})
 @Import({PostgresTestConfig.class, OutboxTestConfig.class})
 class OutboxSchedulerIT {
 

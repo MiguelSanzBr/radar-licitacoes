@@ -15,4 +15,14 @@ class PublishExceptionTest {
 
     assertThat(e).hasMessage("not acknowledged").hasCause(cause);
   }
+
+  @Test
+  void brokerUnavailableIsAPublishExceptionThatKeepsItsCause() {
+    var cause = new IOException("connection reset");
+
+    var e = new BrokerUnavailableException("no ack", cause);
+
+    assertThat(e).isInstanceOf(PublishException.class).hasMessage("no ack").hasCause(cause);
+    assertThat(new BrokerUnavailableException("down")).hasMessage("down");
+  }
 }

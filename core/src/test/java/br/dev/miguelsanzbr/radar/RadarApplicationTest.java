@@ -15,6 +15,7 @@ class RadarApplicationTest {
           "--spring.main.web-application-type=none",
           "--spring.profiles.active=noop",
           "--radar.outbox.relay-enabled=false",
+          "--radar.outbox.publisher=noop",
           "--spring.datasource.url=" + postgres.getJdbcUrl(),
           "--spring.datasource.username=" + postgres.getUsername(),
           "--spring.datasource.password=" + postgres.getPassword()

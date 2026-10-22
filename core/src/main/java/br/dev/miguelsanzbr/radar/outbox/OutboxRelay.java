@@ -76,15 +76,28 @@ public class OutboxRelay {
         publisher.publish(message);
         publishedIds.add(message.id());
       } catch (PublishException | RuntimeException e) {
+        if (e instanceof BrokerUnavailableException) {
+          // why: the broker is down for everyone: trying every other aggregate only burns
+          // timeouts, and an outage is not the message's fault, so it costs no attempt
+          recordError(message, e);
+          break;
+        }
+        recordFailure(message, e);
         // why: later events of the same aggregate must not overtake the failed one
         blockedAggregates.add(message.aggregateId());
-        recordFailure(message, e);
       }
     }
     jdbc.update(
         "UPDATE outbox.outbox_event SET published_at = now() WHERE id = ANY (?)",
         ps -> ps.setArray(1, ps.getConnection().createArrayOf("bigint", publishedIds.toArray())));
     return publishedIds.size();
+  }
+
+  private void recordError(OutboxMessage message, Exception e) {
+    jdbc.update(
+        "UPDATE outbox.outbox_event SET last_error = left(?, 2000) WHERE id = ?",
+        e.toString(),
+        message.id());
   }
 
   private void recordFailure(OutboxMessage message, Exception e) {
