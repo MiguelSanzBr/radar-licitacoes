@@ -36,3 +36,20 @@ O contexto `ingest` guarda o agregado `Procurement` com histórico de situaçõe
 
 - `JpaProcurementRepositoryIT`, `ProcurementPartitionsIT`, `ProcurementNPlusOneIT` e `ProcurementEntityMapperTest` em `core/src/test/java/br/dev/miguelsanzbr/radar/ingest/adapter/out/jpa/`.
 - Contagem de statements antes e depois: `docs/benchmarks/jpa/n-plus-one.md`.
+
+## Projeções e Inbox
+
+O consumidor `search.adapter.in.kafka.ProcurementEventsListener` lê `radar.procurement.v1` no grupo `search-projector` (`radar.search.projector.group`), com `String` na entrada, confirmação manual e fábrica de containers própria do `search`. O JSON do envelope vira registros de `search.application` (o `search` não importa nada de `ingest` nem de `outbox`; um teste do Modulith prende isso). `eventType` desconhecido é registrado e confirmado, para o produtor poder evoluir. Mensagem venenosa (JSON malformado, campo obrigatório ausente, `aggregateVersion` ausente em vez de virar versão 0) não é repetida: o tratador de erros a registra e segue (a DLQ chega na PR 4.3). Falha de banco ou de transação (`DataAccessException` ou `TransactionException` em qualquer ponto da cadeia de causas) é repetida sem limite a cada 5 segundos, para uma queda do banco nunca descartar registro; qualquer outra falha tem 3 tentativas de 1 segundo. O contexto de trace vem do cabeçalho Kafka `traceparent`, com o campo do envelope como reserva. `radar.search.projector.enabled=false` desliga o consumidor.
+
+Inbox e projeção ficam na mesma transação do gerenciador do lado de leitura (`searchTransactionManager`): `INSERT INTO search.processed_event ... ON CONFLICT DO NOTHING`, e só se inseriu a linha o evento é aplicado. A confirmação do offset vem depois do commit, então uma queda no meio reentrega o evento e o inbox o descarta.
+
+- `Discovered` e `Updated` fazem upsert em `procurement_search_view` e `procurement_detail_view` com `WHERE excluded.source_version > atual.source_version`: versão igual ou menor nunca sobrescreve (plano, §10 item 5). O `search_vector` é calculado no próprio upsert (A = objeto truncado em 100 000 caracteres, B = órgão e unidade, C = município e modalidade) porque `unaccent` não é `IMMUTABLE`. O `value_band` sai de `ProcurementView.valueBand()`.
+- O detalhe guarda o snapshot recebido mais o `history` (lista de transições) e, depois do fechamento, `closedAt`. O `etag` é o SHA-256 do texto canônico do `jsonb` gravado, calculado no mesmo comando SQL.
+- `SituationChanged` e `Closed` atualizam o que já existe: status e histórico, ou `closedAt`. O agregado emite `Updated` e `SituationChanged` com a mesma `aggregateVersion`, então esses dois eventos aplicam de versão igual para cima; um evento de versão menor que a projetada é descartado e conta como processado.
+- Se a linha da licitação ainda não existe (evento de situação ou fechamento antes do `Discovered`), nada é gravado e a transação inteira desfaz, inclusive o `processed_event`; o consumidor confirma o offset, registra um aviso e incrementa `projection_deferred_total`. Isso não se recupera sozinho: a garantia vem da ordem do relay (outra tarefa serializa os relays com um advisory lock, e a ordem por agregado passa a valer), que torna o `DEFERRED` inalcançável na operação normal. O contador existe para provar que continua zero. O mesmo conserto fecha outro buraco: um `SituationChanged` que chegasse antes do `Updated` da mesma versão subiria o `source_version` e faria o `Updated` ser descartado pela guarda estrita.
+- `projection_checkpoint` guarda o último evento e o offset aplicados; evento repetido não mexe nele.
+- A métrica `projection_lag_seconds` (histograma) mede o tempo entre `occurredAt` do envelope e a projeção.
+
+Alternativa rejeitada: `tsvector` como coluna gerada, por causa do `unaccent` (o wrapper imutável fica registrado no ADR-0011).
+
+Prova: `ProjectionIdempotencyIT` (mesmo lote de 200 envelopes três vezes, esquema `search` byte a byte idêntico), `JooqProjectionStoreIT` (versão antiga depois da nova, situação antes do `Discovered`, vetor sem acento, objeto de 2 milhões de caracteres) e `docs/benchmarks/cqrs/idempotency.md`.

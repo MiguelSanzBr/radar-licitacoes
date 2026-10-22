@@ -33,4 +33,17 @@ class ModularityTest {
 
     assertThat(identity.getDirectDependencies(MODULES).stream()).isEmpty();
   }
+
+  @Test
+  void searchNeverReachesIntoTheWriteSide() {
+    var search = MODULES.getModuleByName("search").orElseThrow();
+
+    var targets =
+        search.getDirectDependencies(MODULES).stream()
+            .map(dependency -> dependency.getTargetModule().getIdentifier().toString())
+            .distinct()
+            .toList();
+
+    assertThat(targets).doesNotContain("ingest", "outbox", "alerts");
+  }
 }
