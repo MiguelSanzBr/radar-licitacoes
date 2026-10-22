@@ -1,7 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Somente codigo gerado a partir do contrato OpenAPI; ver docs/coverage-exclusions.md. -->
+<!-- Codigo gerado a partir do contrato OpenAPI e injecao de ports; ver docs/coverage-exclusions.md. -->
 <FindBugsFilter>
   <Match>
     <Class name="~br\.dev\.miguelsanzbr\.radar\.api\.generated\..*"/>
+  </Match>
+  <!-- Casos de uso guardam as ports injetadas (interfaces); nao e vazamento de estado mutavel. -->
+  <Match>
+    <Package name="br.dev.miguelsanzbr.radar.alerts.application"/>
+    <Bug pattern="EI_EXPOSE_REP2"/>
   </Match>
 </FindBugsFilter>

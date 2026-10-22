@@ -13,4 +13,4 @@ Toda `<exclude>` em `pom.xml` precisa constar nesta tabela, com o motivo. O scri
 
 Não são exclusões de cobertura e o script de política não os verifica.
 
-- `core/spotbugs-exclude.xml`: cobre só `br.dev.miguelsanzbr.radar.api.generated.*`. Os DTOs gerados expõem listas mutáveis (`EI_EXPOSE_REP`, 27 achados, todos nesse pacote). Código escrito à mão continua sob a análise completa.
+- `core/spotbugs-exclude.xml`: cobre `br.dev.miguelsanzbr.radar.api.generated.*` e o padrão `EI_EXPOSE_REP2` nos casos de uso de `br.dev.miguelsanzbr.radar.alerts.application`, que guardam ports (interfaces) recebidas por construtor; o alerta é falso positivo de injeção de dependência. Os DTOs gerados expõem listas mutáveis (`EI_EXPOSE_REP`, 27 achados, todos nesse pacote). Código escrito à mão continua sob a análise completa.

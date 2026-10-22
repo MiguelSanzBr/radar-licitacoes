@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Assinar alertas | Radar de Licitações</title>
+  <style>
+    body { font: 16px/1.5 system-ui, sans-serif; max-width: 32rem; margin: 2rem auto; padding: 0 1rem; }
+    label, button { display: block; margin: .75rem 0; }
+    input[type=email] { width: 100%; padding: .4rem; box-sizing: border-box; }
+    #resultado { margin-top: 1rem; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <main>
+  <h1>Receber alertas por e-mail</h1>
+  <form id="form" method="post" action="/assinatura">
+    <label>E-mail
+      <input type="email" name="email" required autocomplete="email">
+    </label>
+    <label>
+      <input type="checkbox" name="consent" required>
+      concordo em receber e-mails
+    </label>
+    <p>Veja <a href="/privacidade">quais dados guardamos e como apagá-los</a>.</p>
+    <button type="submit">Enviar link de confirmação</button>
+  </form>
+  <p id="resultado" role="status"></p>
+  </main>
+  <script>
+    document.getElementById('form').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const out = document.getElementById('resultado');
+      try {
+        const resposta = await fetch('/assinatura', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams(new FormData(event.target)),
+        });
+        out.textContent = resposta.ok
+          ? await resposta.text()
+          : ((await resposta.json()).detail ?? 'Não foi possível cadastrar.');
+      } catch (erro) {
+        out.textContent = 'Não foi possível falar com o servidor. Tente de novo em instantes.';
+      }
+    });
+  </script>
+</body>
+</html>
