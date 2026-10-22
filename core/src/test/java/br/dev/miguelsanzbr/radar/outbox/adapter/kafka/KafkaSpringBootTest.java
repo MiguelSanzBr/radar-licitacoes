@@ -6,6 +6,7 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import org.springframework.boot.micrometer.tracing.test.autoconfigure.AutoConfigureTracing;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 
@@ -18,6 +19,12 @@ import org.springframework.context.annotation.Import;
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
 @SpringBootTest(
-    properties = {"radar.outbox.relay-enabled=false", "radar.outbox.publish-timeout=1s"})
+    properties = {
+      "radar.outbox.relay-enabled=false",
+      "radar.outbox.publish-timeout=1s",
+      // why: no collector in tests; W3C propagation is only on when tracing export is switched on
+      "management.tracing.export.otlp.enabled=false"
+    })
+@AutoConfigureTracing
 @Import({PostgresTestConfig.class, KafkaTestConfig.class})
 public @interface KafkaSpringBootTest {}

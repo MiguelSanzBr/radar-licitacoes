@@ -31,6 +31,12 @@ make probe          # constrói o jar e roda em segundo plano (log e PID em tool
 make probe-report   # gera docs/benchmarks/probe/<data>.md a partir do JSONL gravado
 ```
 
+## Observabilidade
+
+- Métricas: `GET /actuator/prometheus` (aberto até a tarefa 5.1, que o restringe ao papel de operador). Os nomes usados nos dashboards e nas regras estão no ADR-0025.
+- Traces: OpenTelemetry com envio OTLP para `OTEL_EXPORTER_OTLP_ENDPOINT` (padrão `http://localhost:4318`). Sem coletor o exportador registra avisos; para desligar só o envio, `MANAGEMENT_TRACING_EXPORT_OTLP_ENABLED=false`. O trace de uma requisição HTTP continua pelo outbox e pelo registro Kafka (header `traceparent`). Quando o compose existir (tarefa 7.2), o Grafana do `otel-lgtm` mostra o trace e o Prometheus faz o scrape do app.
+- Logs: texto no desenvolvimento; JSON na imagem (perfil `json`), com `traceId`, `spanId` e `correlationId`. O cabeçalho `X-Correlation-Id` é aceito na entrada e devolvido na resposta.
+
 ## Números
 
 <!-- bench:start -->

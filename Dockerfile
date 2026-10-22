@@ -58,6 +58,9 @@ RUN java -XX:AOTCacheOutput=/app/app.aot -Dspring.context.exit=onRefresh \
       -Dspring.profiles.active=aot-train -jar /app/app.jar \
  && chmod 0644 /app/app.aot
 
+# Logs em JSON no console (perfil json); SPRING_PROFILES_INCLUDE soma ao perfil ativo em vez de
+# ser substituido quando o compose define SPRING_PROFILES_ACTIVE.
+ENV SPRING_PROFILES_INCLUDE=json
 ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=75 -XX:+ExitOnOutOfMemoryError"
 USER 10001:10001
 EXPOSE 8080

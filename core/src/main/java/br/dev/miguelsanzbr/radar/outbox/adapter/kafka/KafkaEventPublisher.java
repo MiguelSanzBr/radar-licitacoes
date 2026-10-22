@@ -1,5 +1,6 @@
 package br.dev.miguelsanzbr.radar.outbox.adapter.kafka;
 
+import br.dev.miguelsanzbr.radar.observability.TraceparentExtractor;
 import br.dev.miguelsanzbr.radar.outbox.BrokerUnavailableException;
 import br.dev.miguelsanzbr.radar.outbox.EventPublisher;
 import br.dev.miguelsanzbr.radar.outbox.OutboxMessage;
@@ -27,11 +28,15 @@ public class KafkaEventPublisher implements EventPublisher {
 
   private final Function<ProducerRecord<String, String>, Future<?>> sender;
   private final KafkaPublisherProperties properties;
+  private final TraceparentExtractor traces;
 
   public KafkaEventPublisher(
-      KafkaTemplate<String, String> template, KafkaPublisherProperties properties) {
+      KafkaTemplate<String, String> template,
+      KafkaPublisherProperties properties,
+      TraceparentExtractor traces) {
     this.sender = record -> template.send(record);
     this.properties = properties;
+    this.traces = traces;
   }
 
   @Override
@@ -41,12 +46,16 @@ public class KafkaEventPublisher implements EventPublisher {
       throw new PublishException(
           "no topic configured for aggregate type " + message.aggregateType());
     }
-    try {
+    var traceparent = message.headers().get("traceparent");
+    // why: the relay is async, so the send joins the trace of the request that wrote the row; the
+    // template's producer observation then re-stamps the header as a child of that same trace
+    try (var ignored =
+        traces.continueFrom(
+            traceparent == null ? null : traceparent.toString(), "outbox publish")) {
       var record = new ProducerRecord<>(topic, message.aggregateId(), envelope(message));
       header(record, "eventId", message.eventId().toString());
       header(record, "eventType", message.eventType());
       header(record, "schemaVersion", Integer.toString(message.schemaVersion()));
-      var traceparent = message.headers().get("traceparent");
       if (traceparent != null) {
         header(record, "traceparent", traceparent.toString());
       }

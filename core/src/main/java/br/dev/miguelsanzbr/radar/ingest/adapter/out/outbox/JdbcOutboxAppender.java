@@ -1,6 +1,7 @@
 package br.dev.miguelsanzbr.radar.ingest.adapter.out.outbox;
 
 import br.dev.miguelsanzbr.radar.ingest.application.port.OutboxAppender;
+import br.dev.miguelsanzbr.radar.observability.TraceparentInjector;
 import br.dev.miguelsanzbr.radar.shared.DomainEvent;
 import br.dev.miguelsanzbr.radar.shared.EventEnvelope;
 import br.dev.miguelsanzbr.radar.shared.Money;
@@ -42,25 +43,32 @@ public class JdbcOutboxAppender implements OutboxAppender {
 
   private final JdbcTemplate jdbc;
   private final UuidV7 ids;
+  private final TraceparentInjector traceparents;
 
-  JdbcOutboxAppender(JdbcTemplate jdbc, UuidV7 ids) {
+  JdbcOutboxAppender(JdbcTemplate jdbc, UuidV7 ids, TraceparentInjector traceparents) {
     this.jdbc = jdbc;
     this.ids = ids;
+    this.traceparents = traceparents;
   }
 
   @Override
   @Transactional(propagation = Propagation.MANDATORY)
   public void append(
       String aggregateType, long aggregateVersion, List<? extends DomainEvent> events) {
+    // why: the relay runs later on another thread; the row keeps the trace of the writing request
+    var traceparent = traceparents.current();
     for (var event : events) {
-      // traceparent stays null until the tracing PR; null keys are left out of the headers
       var envelope =
-          EventEnvelope.wrap(event, aggregateType, aggregateVersion, SCHEMA_VERSION, null, ids);
+          EventEnvelope.wrap(
+              event, aggregateType, aggregateVersion, SCHEMA_VERSION, traceparent, ids);
       var headers = new LinkedHashMap<String, Object>();
       headers.put("eventType", envelope.eventType());
       headers.put("schemaVersion", envelope.schemaVersion());
       headers.put("aggregateVersion", envelope.aggregateVersion());
       headers.put("occurredAt", envelope.occurredAt().toString());
+      if (traceparent != null) {
+        headers.put("traceparent", traceparent);
+      }
       jdbc.update(
           INSERT,
           envelope.eventId(),

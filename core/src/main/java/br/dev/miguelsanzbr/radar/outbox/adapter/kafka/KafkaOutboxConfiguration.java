@@ -1,5 +1,8 @@
 package br.dev.miguelsanzbr.radar.outbox.adapter.kafka;
 
+import br.dev.miguelsanzbr.radar.observability.TraceparentExtractor;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.binder.MeterBinder;
 import java.util.Map;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.common.config.TopicConfig;
@@ -20,8 +23,10 @@ class KafkaOutboxConfiguration {
 
   @Bean
   KafkaEventPublisher kafkaEventPublisher(
-      KafkaTemplate<String, String> template, KafkaPublisherProperties properties) {
-    return new KafkaEventPublisher(template, properties);
+      KafkaTemplate<String, String> template,
+      KafkaPublisherProperties properties,
+      TraceparentExtractor traces) {
+    return new KafkaEventPublisher(template, properties, traces);
   }
 
   @Bean
@@ -33,7 +38,7 @@ class KafkaOutboxConfiguration {
 
   @Bean
   NewTopic procurementDlqTopic(KafkaPublisherProperties properties) {
-    return topic(properties.topicFor("Procurement") + ".dlq", 12, properties);
+    return topic(properties.dlqTopicFor("Procurement"), 12, properties);
   }
 
   @Bean
@@ -43,7 +48,26 @@ class KafkaOutboxConfiguration {
 
   @Bean
   NewTopic alertDlqTopic(KafkaPublisherProperties properties) {
-    return topic(properties.topicFor("Alert") + ".dlq", 6, properties);
+    return topic(properties.dlqTopicFor("Alert"), 6, properties);
+  }
+
+  /**
+   * Registers {@code dlq_messages_total{topic}} at zero for each dead-letter topic so dashboards
+   * and rate() have a series from the first scrape. Nothing increments it until the consumers (PR
+   * 4.3) dead-letter a message.
+   */
+  @Bean
+  MeterBinder deadLetterCounters(KafkaPublisherProperties properties) {
+    return registry ->
+        properties
+            .topics()
+            .keySet()
+            .forEach(
+                type ->
+                    Counter.builder("dlq_messages_total")
+                        .description("Messages sent to a dead-letter topic")
+                        .tag("topic", properties.dlqTopicFor(type))
+                        .register(registry));
   }
 
   private static NewTopic topic(String name, int partitions, KafkaPublisherProperties properties) {

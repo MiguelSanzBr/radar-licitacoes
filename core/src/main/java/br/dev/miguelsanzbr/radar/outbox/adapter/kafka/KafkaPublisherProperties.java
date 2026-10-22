@@ -16,6 +16,9 @@ public record KafkaPublisherProperties(
     @DefaultValue("10s") Duration publishTimeout,
     @DefaultValue("1") int replicationFactor) {
 
+  /** Suffix of the dead-letter topic of every topic. */
+  public static final String DLQ_SUFFIX = ".dlq";
+
   public KafkaPublisherProperties {
     topics = Map.copyOf(topics);
   }
@@ -24,5 +27,10 @@ public record KafkaPublisherProperties(
   public String topicFor(String aggregateType) {
     return Objects.requireNonNull(
         topics.get(aggregateType), "radar.outbox.topics." + aggregateType);
+  }
+
+  /** The dead-letter topic of an aggregate type. */
+  public String dlqTopicFor(String aggregateType) {
+    return topicFor(aggregateType) + DLQ_SUFFIX;
   }
 }

@@ -26,6 +26,9 @@ import tools.jackson.databind.json.JsonMapper;
 class KafkaEventPublisherIT {
 
   private static final JsonMapper JSON = JsonMapper.builder().build();
+  private static final String STORED_TRACE_ID = "0af7651916cd43dd8448eb211c80319c";
+  private static final String STORED_SPAN_ID = "b7ad6b7169203331";
+  private static final String W3C = "00-[0-9a-f]{32}-[0-9a-f]{16}-0[0-3]";
 
   @Autowired OutboxRelay relay;
   @Autowired EventPublisher publisher;
@@ -47,7 +50,11 @@ class KafkaEventPublisherIT {
             jdbc,
             "IT-B",
             "ProcurementDiscovered",
-            "{\"aggregateVersion\":1,\"traceparent\":\"00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01\"}");
+            "{\"aggregateVersion\":1,\"traceparent\":\"00-"
+                + STORED_TRACE_ID
+                + "-"
+                + STORED_SPAN_ID
+                + "-01\"}");
     var a2 =
         OutboxRows.insertWithHeaders(
             jdbc,
@@ -86,14 +93,19 @@ class KafkaEventPublisherIT {
     assertThat(new String(second.headers().lastHeader("eventType").value()))
         .isEqualTo("ProcurementUpdated");
     assertThat(new String(second.headers().lastHeader("schemaVersion").value())).isEqualTo("1");
-    assertThat(second.headers().lastHeader("traceparent")).isNull();
+    // a row without a stored trace still leaves with a valid W3C header of a fresh trace
+    var fresh = new String(second.headers().lastHeader("traceparent").value());
+    assertThat(fresh).matches(W3C);
+    assertThat(fresh).doesNotContain(STORED_TRACE_ID);
 
     var traced =
         mine.stream().filter(r -> eventId(r).equals(b1.toString())).findFirst().orElseThrow();
-    assertThat(new String(traced.headers().lastHeader("traceparent").value()))
-        .startsWith("00-0af7651916cd43dd8448eb211c80319c");
+    // a stored trace is continued: same traceId, a new span id (the producer span), body untouched
+    var continued = new String(traced.headers().lastHeader("traceparent").value());
+    assertThat(continued).matches(W3C);
+    assertThat(continued).contains("-" + STORED_TRACE_ID + "-").doesNotContain(STORED_SPAN_ID);
     assertThat(JSON.readTree(traced.value()).get("traceparent").asString())
-        .startsWith("00-0af7651916cd43dd8448eb211c80319c");
+        .isEqualTo("00-" + STORED_TRACE_ID + "-" + STORED_SPAN_ID + "-01");
 
     assertThat(
             jdbc.queryForObject(

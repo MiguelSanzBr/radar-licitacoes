@@ -8,9 +8,12 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import br.dev.miguelsanzbr.radar.observability.TraceparentExtractor;
 import br.dev.miguelsanzbr.radar.outbox.BrokerUnavailableException;
 import br.dev.miguelsanzbr.radar.outbox.OutboxMessage;
 import br.dev.miguelsanzbr.radar.outbox.PublishException;
+import io.micrometer.tracing.Tracer;
+import io.micrometer.tracing.propagation.Propagator;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
@@ -49,7 +52,9 @@ class KafkaEventPublisherTest {
           Map.of("Procurement", "radar.procurement.v1", "Alert", "radar.alert.v1"),
           Duration.ofMillis(200),
           1);
-  private final KafkaEventPublisher publisher = new KafkaEventPublisher(template, properties);
+  private final KafkaEventPublisher publisher =
+      new KafkaEventPublisher(
+          template, properties, new TraceparentExtractor(Tracer.NOOP, Propagator.NOOP));
 
   @BeforeEach
   void acknowledge() {

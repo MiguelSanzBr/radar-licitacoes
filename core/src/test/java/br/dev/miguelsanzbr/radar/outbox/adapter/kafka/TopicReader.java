@@ -13,12 +13,12 @@ import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.serialization.StringDeserializer;
 
 /** Reads a topic from the beginning with a throwaway consumer group. */
-final class TopicReader {
+public final class TopicReader {
 
   private TopicReader() {}
 
   /** Polls until {@code done} accepts everything read so far, or the timeout passes. */
-  static List<ConsumerRecord<String, String>> readUntil(
+  public static List<ConsumerRecord<String, String>> readUntil(
       String topic, Predicate<List<ConsumerRecord<String, String>>> done, Duration timeout) {
     var records = new ArrayList<ConsumerRecord<String, String>>();
     try (var consumer =

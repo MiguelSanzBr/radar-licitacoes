@@ -63,11 +63,6 @@ class LivenessProbeTest {
     assertThat(get("/actuator/health/readiness").statusCode()).isEqualTo(200);
   }
 
-  @Test
-  void prometheusIsNotExposed() throws Exception {
-    assertThat(get("/actuator/prometheus").statusCode()).isEqualTo(404);
-  }
-
   /** The Helm chart's terminationGracePeriodSeconds (30s) assumes these values. */
   @Test
   void shutsDownGracefullyWithinTheKubernetesGracePeriod() {

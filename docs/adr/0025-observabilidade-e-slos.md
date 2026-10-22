@@ -40,6 +40,30 @@ A configuração de buckets fica em `core/src/main/resources/application.propert
 
 Regra para os alvos: alvo que a medição não confirmar é ajustado no plano e registrado neste ADR com o valor medido. Nunca o contrário, ou seja, não se ajusta a medição para caber no alvo.
 
+## Rastreamento e logs
+
+Implementado na tarefa 4.1.
+
+- Ponte OpenTelemetry pelo `spring-boot-starter-opentelemetry` (Micrometer Tracing e exportador OTLP gerenciados pelo Boot). Amostragem 1.0 (`management.tracing.sampling.probability`), reduzida por ambiente com `MANAGEMENT_TRACING_SAMPLING_PROBABILITY`. O endpoint OTLP vem de `OTEL_EXPORTER_OTLP_ENDPOINT` (padrão `http://localhost:4318`). Só os spans saem por OTLP: métricas saem por scrape (`/actuator/prometheus`) e logs por stdout, então a exportação OTLP de métricas e de logs fica desligada.
+- O `traceparent` atravessa o outbox. `JdbcOutboxAppender` grava o `traceparent` do span ativo no `headers` da linha, na mesma transação do agregado. O relay roda em outra thread e não tem trace próprio: `KafkaEventPublisher` abre um span "outbox publish" filho do `traceparent` gravado e envia dentro dele. Com `spring.kafka.template.observation-enabled=true`, o span de produção do `KafkaTemplate` vira filho desse span, e o header `traceparent` do registro Kafka carrega o `traceId` ORIGINAL da requisição (o `spanId` é o do produtor). O envelope JSON mantém o `traceparent` gravado na linha. Consumidores usam `spring.kafka.listener.observation-enabled=true` e continuam o trace; quem não usa observação de listener pode usar `TraceparentExtractor` (pacote `observability`).
+- Logs JSON com o formato `logstash` do Boot, ligado pelo perfil `json` (a imagem define `SPRING_PROFILES_INCLUDE=json`; testes e desenvolvimento ficam em texto). O MDC leva `traceId`, `spanId` e `correlationId`. `CorrelationIdFilter` lê `X-Correlation-Id` (só `[A-Za-z0-9._-]` até 64 caracteres, senão descarta) ou gera um UUID v7, e devolve o valor no cabeçalho da resposta.
+- Em testes o Boot desliga a exportação de traces e, junto, a propagação W3C; os testes que precisam de propagação usam `@AutoConfigureTracing` com `management.tracing.export.otlp.enabled=false`.
+- Pendente: o `/actuator/prometheus` está exposto sem autenticação até a tarefa 5.1 (papel de operador).
+
+Métricas por tarefa (nomes fixos, os mesmos dos dashboards):
+
+| Métrica | Tarefa | Situação |
+|---|---|---|
+| `pncp_items_fetched_total` | 1.4 | existe |
+| `outbox_pending`, `outbox_oldest_age_seconds`, `outbox_poison_pending`, `outbox_poison_total` | 1.6 | existe |
+| `dlq_messages_total{topic}` | 4.1 registra em zero para os tópicos `.dlq`; 4.3 incrementa | registrada |
+| `http_server_requests_seconds_*` (buckets 50 ms, 200 ms, 500 ms) | 4.1 | existe |
+| `projection_lag_seconds` | 1.9 | pendente |
+| `kafka_consumer_lag` | 1.9 | pendente |
+| `alert_delivery_latency_seconds` | 3.2 | pendente |
+
+Prova: `TracePropagationIT` faz uma requisição HTTP que grava um edital e seus eventos no outbox, roda o relay e lê o Kafka: o `traceId` do span de servidor é o mesmo na linha do outbox, no header do registro Kafka e no MDC do handler. `PrometheusEndpointIT` faz o scrape e confere os nomes. As tarefas 1.9 e 3.2 estendem esse teste até a projeção e o alerta e devem mantê-lo verde.
+
 ## Alternativas rejeitadas (e por quê)
 
 - Alerta por limiar fixo de latência (por exemplo, p95 acima de 200 ms por 5 min): dispara com ruído em picos curtos e não diz quanto do orçamento de erro já foi consumido. Mantido só para os alertas de atraso de outbox, projeção e entrega, onde não há orçamento de erro.
