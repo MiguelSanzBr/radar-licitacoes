@@ -9,5 +9,11 @@ scrape_configs:
   - job_name: radar
     metrics_path: /actuator/prometheus
     scrape_interval: 15s
+    # O endpoint exige o papel operator (ADR-0019). Em Kubernetes o scrape precisa de um token de
+    # operador (client credentials do Keycloak, renovado antes de expirar) montado como arquivo;
+    # sem ele a resposta e 401. No compose nao ha scrape: a aplicacao envia por OTLP (ADR-0022).
+    # authorization:
+    #   type: Bearer
+    #   credentials_file: /etc/prometheus/operator-token
     static_configs:
       - targets: ['app:8080']

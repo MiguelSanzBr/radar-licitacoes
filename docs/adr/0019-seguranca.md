@@ -13,6 +13,7 @@ A API pública de busca é aberta, mas buscas salvas, exclusão de dados (LGPD) 
 - cliente `radar-web`, confidencial, só fluxo de autorização (código), redirect `http://localhost:8080/login/oauth2/code/keycloak`, com um mapper que põe `radar-api` na audiência do access token e outro que põe os papéis do realm no ID token;
 - cliente `radar-api`, só portador (bearer-only), que existe para ser a audiência exigida pela API;
 - papéis do realm `supplier` e `operator`; usuários de desenvolvimento `fornecedor` e `operador`, com senhas padrão documentadas em `infra/compose/.env.example`;
+- cliente `radar-ops-cli`, confidencial, só client credentials (conta de serviço com o papel `operator` e o mapper de audiência `radar-api`), para a automação de operação: `make seed` e o `e2e` chamam `/ops/backfill` com ele, sem senha de usuário (segredo de desenvolvimento, só neste arquivo de realm);
 - o cliente embutido `admin-cli` vem com concessão direta (senha) desligada, para que nenhum cliente do realm troque senha por token.
 
 O arquivo do realm serve só ao ambiente local: segredo do cliente e senhas são padrões de desenvolvimento. Fora dele o realm é criado com segredos próprios.

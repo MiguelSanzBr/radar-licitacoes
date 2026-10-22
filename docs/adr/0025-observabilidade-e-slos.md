@@ -12,7 +12,7 @@ Os alvos desta decisão vêm da seção 7.4 do plano. Nenhum deles foi medido ai
 ## Decisão
 
 - Métricas com Micrometer, expostas em `/actuator/prometheus`. O tracing com a ponte OpenTelemetry e o envio OTLP para o stack LGTM ficam na tarefa 4.1.
-- Prometheus faz scrape do app a cada 15 s (`infra/prometheus/prometheus.yml`).
+- Prometheus faz scrape do app a cada 15 s (`infra/prometheus/prometheus.yml`); no compose o caminho é o push por OTLP (no compose, ver abaixo).
 - Quatro dashboards versionados em `infra/grafana/dashboards/` (coleta, outbox e Kafka, busca e API, alertas). Cada painel lê o datasource pela variável `datasource`, sem UID fixo.
 - Regras de SLO em `infra/prometheus/rules/slo.yml`: burn rate com duas janelas. Alerta crítico com 14,4 vezes o ritmo aceito em 1 h e 5 min (consome cerca de 2% do orçamento de 30 dias em uma hora). Alerta de aviso com 6 vezes em 6 h e 30 min (cerca de 5% do orçamento). Alertas de limiar simples para outbox, projeção e entrega de alerta, com `for` de 10 min.
 - Os alertas têm `severity`, `summary` e `runbook_url` apontando para `docs/runbook.md`.
@@ -48,7 +48,7 @@ Implementado na tarefa 4.1.
 - O `traceparent` atravessa o outbox. `JdbcOutboxAppender` grava o `traceparent` do span ativo no `headers` da linha, na mesma transação do agregado. O relay roda em outra thread e não tem trace próprio: `KafkaEventPublisher` abre um span "outbox publish" filho do `traceparent` gravado e envia dentro dele. Com `spring.kafka.template.observation-enabled=true`, o span de produção do `KafkaTemplate` vira filho desse span, e o header `traceparent` do registro Kafka carrega o `traceId` ORIGINAL da requisição (o `spanId` é o do produtor). O envelope JSON mantém o `traceparent` gravado na linha. Consumidores usam `spring.kafka.listener.observation-enabled=true` e continuam o trace; quem não usa observação de listener pode usar `TraceparentExtractor` (pacote `observability`).
 - Logs JSON com o formato `logstash` do Boot, ligado pelo perfil `json` (a imagem define `SPRING_PROFILES_INCLUDE=json`; testes e desenvolvimento ficam em texto). O MDC leva `traceId`, `spanId` e `correlationId`. `CorrelationIdFilter` lê `X-Correlation-Id` (só `[A-Za-z0-9._-]` até 64 caracteres, senão descarta) ou gera um UUID v7, e devolve o valor no cabeçalho da resposta.
 - Em testes o Boot desliga a exportação de traces e, junto, a propagação W3C; os testes que precisam de propagação usam `@AutoConfigureTracing` com `management.tracing.export.otlp.enabled=false`.
-- Pendente: o `/actuator/prometheus` está exposto sem autenticação até a tarefa 5.1 (papel de operador).
+- Desde a tarefa 5.1 o `/actuator/prometheus` exige o papel `operator` (ADR-0019). No compose não há scrape: a aplicação envia as métricas por OTLP ao `otel-lgtm` (ADR-0022), e o `prometheus.yml` fica para o Kubernetes, onde o scrape precisa de um token de operador montado como arquivo (bloco `authorization` comentado no arquivo).
 
 Métricas por tarefa (nomes fixos, os mesmos dos dashboards):
 
@@ -63,6 +63,16 @@ Métricas por tarefa (nomes fixos, os mesmos dos dashboards):
 | `alert_delivery_latency_seconds` | 3.2 | pendente |
 
 Prova: `TracePropagationIT` faz uma requisição HTTP que grava um edital e seus eventos no outbox, roda o relay e lê o Kafka: o `traceId` do span de servidor é o mesmo na linha do outbox, no header do registro Kafka e no MDC do handler. `PrometheusEndpointIT` faz o scrape e confere os nomes. As tarefas 1.9 e 3.2 estendem esse teste até a projeção e o alerta e devem mantê-lo verde.
+
+### Nomes das métricas sob OTLP (verificado no compose, 2026-10-22)
+
+Com o envio por OTLP, o Prometheus do `otel-lgtm` traduz os nomes. Consultado depois de `make up` e `make seed`:
+
+- Contadores mantêm o sufixo `_total` sem duplicar (`ingest_items_total`, `pncp_items_fetched_total`, `dlq_messages_total`, `outbox_poison_total`). Medidores (`outbox_pending`, `outbox_oldest_age_seconds`, `resilience4j_circuitbreaker_state`) chegam com o mesmo nome.
+- Timers e histogramas saem em milissegundos por padrão e chegam como `*_milliseconds_*`, o que quebraria todo `*_seconds_*` dos dashboards e das regras. A correção é `management.otlp.metrics.export.base-time-unit=seconds` (variável `MANAGEMENT_OTLP_METRICS_EXPORT_BASE_TIME_UNIT` no compose); com ela chegam `http_server_requests_seconds_{bucket,count,sum}` e `pncp_request_duration_seconds_*`, com os buckets `le="0.05"`, `"0.2"` e `"0.5"` que o SLO de latência usa.
+- Os rótulos de negócio (`uri`, `status`, `endpoint`, `outcome`, `kind`) são os mesmos. O OTLP acrescenta `service_name` (`radar-licitacoes`, de `spring.application.name`) e `service_instance_id`; o rótulo `application=radar` continua.
+- Diferenças que não são de nome: o `up{job="radar"}` do alerta `RadarTargetDown` não existe sob push (a série `up` do `otel-lgtm` é só a do coletor, com `job="otelcol-contrib"`); com push, a ausência de dados aparece como `absent()` (o `RadarSemTrafego` continua válido). As regras de SLO (`rules/slo.yml`) não são carregadas no Prometheus do `otel-lgtm` (a imagem fixa o `prometheus.yaml` e não tem Alertmanager): os dashboards funcionam, os alertas valem no Kubernetes, onde o Prometheus carrega o arquivo.
+- Logs: o Boot só exporta logs por OTLP com o appender do OpenTelemetry no Logback, que o projeto não tem. No compose os logs saem por stdout (`make logs`) e o Loki do `otel-lgtm` fica vazio.
 
 ## Alternativas rejeitadas (e por quê)
 

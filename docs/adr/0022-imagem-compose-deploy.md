@@ -5,7 +5,7 @@
 
 ## Contexto
 
-O projeto não usa nuvem permanente. O ambiente oficial é o `docker compose up`, e o deploy é a troca da imagem por um digest conhecido, com volta ao digest anterior se o smoke falhar. Tudo isso parte de uma imagem pequena, reproduzível, sem root e que suba rápido. Esta ADR começa pela imagem (PR 7.1). As seções de compose (PR 7.2) e de deploy e rollback (PR 7.5) são preenchidas nesses PRs.
+O projeto não usa nuvem permanente. O ambiente oficial é o `docker compose up`, e o deploy é a troca da imagem por um digest conhecido, com volta ao digest anterior se o smoke falhar. Tudo isso parte de uma imagem pequena, reproduzível, sem root e que suba rápido. Esta ADR começou pela imagem (PR 7.1) e traz agora o compose (PR 7.2). A seção de deploy e rollback (PR 7.5) é preenchida nesse PR.
 
 ## Decisão
 
@@ -41,6 +41,36 @@ Inicialização (`Started RadarApplication in X s`, 3 execuções após uma de a
 
 O host tinha outras cargas, por isso as rodadas variam. Nas duas, o cache reduziu a inicialização à metade ou menos. Os números serão refeitos quando houver Kafka.
 
+### Compose (`infra/compose/docker-compose.yml`)
+
+`make up` é o ambiente oficial: cria `.env` (cópia de `.env.example`) e `secrets/db_password` (valor aleatório) se faltarem, constrói a imagem se ela não existir e roda `docker compose up -d --wait`. Do zero, com as imagens já baixadas, tudo fica saudável em cerca de 2 minutos (o Keycloak em `start-dev` compila o servidor a cada criação do container). Todas as portas ficam presas a `127.0.0.1`. Toda imagem do compose é fixada por tag e digest (`tag@sha256:...`, resolvidos com `docker buildx imagetools inspect`); o Dependabot (`package-ecosystem: docker-compose`, diretório `/infra/compose`) propõe as atualizações.
+
+| Serviço | Imagem | Limite | Observação |
+| --- | --- | --- | --- |
+| `postgres` | `postgres:18` | 256 MB | `shared_preload_libraries=pg_stat_statements`; `infra/postgres/init/01-extensions.sql` cria `pg_stat_statements` e `pgstattuple`; volume `pgdata` em `/var/lib/postgresql` (layout do 18); `pg_isready` |
+| `kafka` | `apache/kafka:4.1.0` | 512 MB | KRaft com um nó, heap de 256 MB, listener interno `kafka:9092` e externo `localhost:9094`; saúde por `nc -z` (o `kafka-broker-api-versions.sh` sobe uma JVM a cada 5 s) |
+| `redis` | `redis:8.8-alpine` | 96 MB | sem persistência; a aplicação ainda não o usa (marco M5), mas ele faz parte da pilha de um comando |
+| `keycloak` | `quay.io/keycloak/keycloak:26.8` | 896 MB | `start-dev --import-realm` com `infra/keycloak/realm-radar.json` somente leitura; saúde pela porta de gerenciamento 9000 via `/dev/tcp` (a imagem não tem `curl`) |
+| `mailpit` | `axllent/mailpit:v1.31.6` | 64 MB | SMTP 1025, interface 8025 (`SPRING_MAIL_HOST=mailpit`; o envio real chega com os alertas) |
+| `otel-lgtm` | `grafana/otel-lgtm:0.36.0` | 1792 MB | saúde pelo `/api/health` do Grafana (a `app` espera por ele); Grafana 3000; recebe OTLP em 4318; dashboards de `infra/grafana/dashboards` provisionados por um provider extra (`radar.yml`) sobre o datasource Prometheus da imagem (uid `prometheus`) |
+| `pncp-fixture` | `wiremock/wiremock:3.13.2-alpine` | 256 MB | faz o papel do PNCP (ver abaixo) |
+| `app` | `radar-licitacoes:${RADAR_TAG:-local}` | 640 MB | `depends_on` com `service_healthy` em `postgres`, `kafka`, `keycloak`, `pncp-fixture` e `otel-lgtm` (este sobe em paralelo ao Keycloak, que é o mais lento, então não atrasa a partida); saúde em `/actuator/health/readiness`; porta 8080 |
+| `apicurio` | `apicurio/apicurio-registry:3.3.3` | 512 MB | só com `--profile layer3` (`PROFILE=layer3 make up`); sem ligação com a aplicação ainda |
+
+**Segredos.** `.env` e `secrets/` ficam fora do git; `scripts/compose-init.sh` gera `secrets/db_password` e `secrets/read_writer_password` com valores aleatórios, sem sobrescrever. A aplicação lê os segredos por `SPRING_CONFIG_IMPORT=optional:configtree:/run/secrets/`, em que o nome do arquivo é a propriedade: `db_password` é montado como `spring.datasource.password` (o Postgres o lê por `POSTGRES_PASSWORD_FILE`) e `read_writer_password` é montado duas vezes, como `spring.flyway.placeholders.readWriterPassword` (a migration V6 cria o papel `radar_read_writer` com ele) e `radar.search.datasource.password` (a busca entra com ele). Os arquivos são `0644` porque o container roda como uid 10001; o diretório `secrets/` é `0700` no host. Limitação: o Postgres só aplica a senha do banco, e a V6 só cria o papel (sem `ALTER ROLE`), na primeira criação do volume. Apagar `secrets/` sem `CLEAN=1 make down` regenera os arquivos e deixa o banco com a senha antiga; trocar a senha de um volume existente exige `ALTER ROLE` manual. Os demais valores de `.env` são padrões de desenvolvimento do realm, já públicos em `.env.example`.
+
+**Keycloak e o emissor.** O navegador e a aplicação precisam concordar com o `iss` dos tokens, mas só o navegador enxerga `localhost:8180`. Solução: `KC_HOSTNAME=http://localhost:8180` (o `iss` e as URLs de login saem sempre assim) e, na aplicação, `radar.oidc.issuer=http://localhost:8180/realms/radar` mais URIs explícitas de back-channel para as chaves (`jwk-set-uri` do resource server e do cliente) e para a troca do código por token (`token-uri`), todas em `http://keycloak:8080`. Como a ADR-0019 já configura os endpoints em vez de usar descoberta, não foi preciso `hostname-backchannel-dynamic` nem código novo. Conferido: o login do `fornecedor` pelo fluxo de código (redirecionamento para `localhost:8180`, volta em `/login/oauth2/code/keycloak`) termina na página `/assinatura`, e o token de client credentials tem `iss=http://localhost:8180/realms/radar`, `aud=radar-api` e o papel `operator`.
+
+**Telemetria por push.** `/actuator/prometheus` exige o papel `operator`, então no compose não há scrape: a aplicação envia métricas (`MANAGEMENT_OTLP_METRICS_EXPORT_*`, passo de 15 s, unidade de tempo em segundos) e traces para `http://otel-lgtm:4318`. Os nomes que chegam ao Prometheus do `otel-lgtm` estão no ADR-0025. Os logs saem por stdout (`make logs`): o envio por OTLP exige o appender do OpenTelemetry no Logback, que o projeto não tem.
+
+**PNCP do compose.** O serviço `pncp-fixture` serve o dia **2026-10-21, modalidade 6, 1.633 editais em 33 páginas** (dados públicos do PNCP, coletados em 2026-10-22), gravado em `infra/compose/seed/pncp-2026-10-21-mod6.jsonl.gz` (474 KB, uma página da resposta por linha) por `scripts/collect-pncp-fixture.sh`, que respeita a ADR-0017 (no máximo 1 requisição por segundo, `User-Agent` do projeto, espera de 15 s e nova tentativa no 429). Na partida o container descompacta as linhas em `__files/page-N.json`, e um único mapeamento do WireMock responde `publicacao` desse dia com o arquivo da página pedida e qualquer outra janela com 204, como o PNCP. A aplicação usa `RADAR_PNCP_BASE_URL=http://pncp-fixture:8080` e `RADAR_PNCP_REQUESTS_PER_SECOND=20` (o 1 req/s da ADR-0017 protege o PNCP real, não a fixture). A coleta incremental continua ligada e recebe 204. `make seed` pede o token de client credentials do cliente `radar-ops-cli` (papel `operator`, só no realm de desenvolvimento) e chama `POST /ops/backfill?from=2026-10-21&to=2026-10-21&modality=6&force=true`; o dia carrega em cerca de 30 s.
+
+**E2E.** O módulo `e2e` (`./mvnw -Pe2e verify -pl e2e -am`, com a imagem construída) sobe o compose pelo `ComposeContainer`, confere que `/ops` sem token dá 401, faz o seed com token de operador e espera as 1.633 linhas em `ingest.procurement`, a execução em `DONE`, o outbox inteiro publicado e as métricas `ingest_items_total` e `pncp_items_fetched_total` no Prometheus do `otel-lgtm` (lido pelo proxy de datasources do Grafana). Quando a busca e os alertas existirem, a conferência por SQL vira uma busca pela API e entra o alerta recebido no Mailpit.
+
+**Memória.** Medida com `docker stats --no-stream` depois do seed (docs/benchmarks/compose-memory.md): cerca de 2,8 GiB para a pilha inteira (2,0 GiB antes do seed), sendo o `otel-lgtm` (1,3 GiB) e o Keycloak (0,5 GiB) os maiores. Nenhum serviço precisou virar opcional neste host; `apicurio` fica no perfil `layer3`.
+
+**Imagem da aplicação e tag.** O compose usa `radar-licitacoes:${RADAR_TAG:-local}`. A tag tem uma só fonte: `RADAR_TAG` no ambiente (o `make` exporta com padrão `local`, e o compose e o `e2e` leem do ambiente; `make image` constrói a mesma tag). A tag é global no daemon: dois checkouts construindo ao mesmo tempo sobrescrevem a mesma tag, e `RADAR_TAG` permite separar.
+
 ## Alternativas rejeitadas (e por quê)
 
 - JRE `25-jre-alpine` sem `jlink`: 162 MB maiores com o app mínimo (418 contra 256 MB), sem ganho funcional.
@@ -48,9 +78,15 @@ O host tinha outras cargas, por isso as rodadas variam. Nas duas, o cache reduzi
 - `--launcher` no extract: as classes das bibliotecas saem do cache, que perde o ganho principal.
 - Imagem `-jre` Ubuntu (glibc): esperada maior e com mais pacotes para atualizar (expectativa, não medida).
 - Mapear o socket do Docker no Trivy: o scan roda sobre um tar da imagem (`docker save`), sem dar ao container acesso ao daemon.
+- Scrape do app pelo Prometheus no compose: o endpoint exige o papel `operator`, e dar um token de longa duração ao Prometheus do `otel-lgtm` (que não aceita arquivo de configuração extra sem trocar o da imagem) pesaria mais que o push por OTLP, que já é o caminho dos traces.
+- Habilitar concessão por senha no `radar-web` para o `make seed`: a ADR-0019 proíbe que cliente do realm troque senha por token; o cliente `radar-ops-cli` com client credentials dá ao script o papel `operator` sem senha de usuário.
+- WireMock com um mapeamento por página e as páginas descompactadas no git: 3,5 MB a mais no repositório; o `.jsonl.gz` (474 KB) com uma linha por página e um mapeamento com template dá o mesmo resultado.
+- Healthcheck do Kafka com `kafka-broker-api-versions.sh`: confiável, mas uma JVM nova a cada intervalo; `nc -z` na porta do broker basta em nó único.
 
 ## Consequências
 
+- Compose: as portas são fixas (8080, 8180, 3000, 8025, 5432, 9094): o redirect do cliente `radar-web` e o `KC_HOSTNAME` dependem de 8080 e 8180, então o `e2e` e o ambiente de desenvolvimento não rodam ao mesmo tempo (`make down` antes de `make e2e`).
+- Os alertas de `infra/prometheus/rules/slo.yml` não são avaliados no compose (o Prometheus do `otel-lgtm` não carrega o arquivo); `up{job="radar"}` não existe sob push. Detalhes no ADR-0025.
 - O cache depende do JVM exato: trocar o digest da base sem rebuild completo invalida o cache, e a JVM ignora um cache inválido sem falhar, apenas sobe mais devagar. O teste de container (que sobe um Postgres numa rede compartilhada e passa o datasource por variáveis de ambiente) confere que `/app/app.aot` existe e que a inicialização não registra aviso de AOT.
 - O Trivy varre o SO (Alpine) e os jars da imagem final, e também a imagem de build do JDK fixada no Dockerfile. Ele não confere o JDK dentro do runtime `jlink` (binário em `/opt/jre`, fora de gerenciador de pacotes): vulnerabilidades do JDK (Temurin 25.0.4.1+1) não são verificadas por máquina. A mitigação é acompanhar os avisos de segurança do Temurin e subir o digest do `eclipse-temurin` em um PR de chore a cada atualização crítica.
 - Scan atual (Trivy 0.76.0, `--severity CRITICAL,HIGH --ignore-unfixed`): 0 vulnerabilidades no SO e nos jars da imagem final e na imagem de build.
@@ -59,3 +95,5 @@ O host tinha outras cargas, por isso as rodadas variam. Nas duas, o cache reduzi
 
 - `it-image/src/test/java/br/dev/miguelsanzbr/radar/image/RadarImageIT.java`, executado por `make image image-test`.
 - `make image-size` imprime o tamanho; `make image-scan` roda o Trivy.
+- `e2e/src/test/java/br/dev/miguelsanzbr/radar/e2e/ComposeStackE2EIT.java`, executado por `make e2e` (precisa de `make image` antes).
+- `make up`, `make seed`, `make logs` e `make down` (`CLEAN=1` apaga os volumes); `scripts/compose-init.sh`, `scripts/seed.sh` e `scripts/collect-pncp-fixture.sh`.

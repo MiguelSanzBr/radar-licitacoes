@@ -79,6 +79,31 @@
       "directAccessGrantsEnabled": false
     },
     {
+      "clientId": "radar-ops-cli",
+      "name": "Radar de Licitações (automação de operação: make seed, e2e)",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "radar-ops-dev-secret",
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "protocolMappers": [
+        {
+          "name": "radar-api audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.client.audience": "radar-api",
+            "access.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        }
+      ]
+    },
+    {
       "clientId": "admin-cli",
       "name": "${client_admin-cli}",
       "enabled": true,
@@ -121,6 +146,14 @@
           "temporary": false
         }
       ],
+      "realmRoles": [
+        "operator"
+      ]
+    },
+    {
+      "username": "service-account-radar-ops-cli",
+      "enabled": true,
+      "serviceAccountClientId": "radar-ops-cli",
       "realmRoles": [
         "operator"
       ]

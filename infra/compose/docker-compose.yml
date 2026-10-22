@@ -1,0 +1,204 @@
+# Ambiente oficial: `make up` (ver ADR-0022). Tudo em localhost; os segredos e o .env saem de
+# scripts/compose-init.sh. Limites de memoria medidos em docs/benchmarks/compose-memory.md.
+name: radar
+
+services:
+  postgres:
+    image: postgres:18@sha256:edb0c08dc33befd0262ab3b5cf1c4f3f8cfd8b09e88c05b45adee29d6761ddb6
+    command: ["postgres", "-c", "shared_preload_libraries=pg_stat_statements", "-c", "max_connections=100"]
+    environment:
+      POSTGRES_USER: radar
+      POSTGRES_DB: radar
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+    secrets: [db_password]
+    volumes:
+      # Postgres 18: o volume vai em /var/lib/postgresql (o PGDATA fica numa subpasta por versao)
+      - pgdata:/var/lib/postgresql
+      - ../postgres/init:/docker-entrypoint-initdb.d:ro
+    ports: ["127.0.0.1:5432:5432"]
+    mem_limit: 256m
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U radar -d radar"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  kafka:
+    image: apache/kafka:4.1.0@sha256:bff074a5d0051dbc0bbbcd25b045bb1fe84833ec0d3c7c965d1797dd289ec88f
+    environment:
+      KAFKA_NODE_ID: "1"
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:9094
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://localhost:9094
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: "1"
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: "1"
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: "1"
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: "0"
+      KAFKA_HEAP_OPTS: -Xms128m -Xmx256m
+    ports: ["127.0.0.1:9094:9094"]
+    mem_limit: 512m
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 9092"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  redis:
+    # A aplicacao ainda nao usa Redis (entra no marco M5); ele faz parte da pilha de um comando.
+    image: redis:8.8-alpine@sha256:dc95ea2fcf5d5c4253be0f967c28143d0f625846197eed2fd32c748eb99abfca
+    command: ["redis-server", "--save", "", "--maxmemory", "64mb"]
+    mem_limit: 96m
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.8@sha256:79c623a22abacf3fe6c00a5fb30f5b7843d717b234033b80995891c06116d244
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+      # Mesma URL para o navegador e para o claim iss dos tokens; a aplicacao fala com o Keycloak
+      # por http://keycloak:8080 (chaves e troca de codigo), ver o servico app.
+      KC_HOSTNAME: http://localhost:8180
+      KC_HEALTH_ENABLED: "true"
+      JAVA_OPTS_KC_HEAP: -Xms64m -Xmx384m
+    volumes:
+      - ../keycloak/realm-radar.json:/opt/keycloak/data/import/realm-radar.json:ro
+    ports: ["127.0.0.1:8180:8080"]
+    mem_limit: 896m
+    healthcheck:
+      # a imagem nao tem curl: o endpoint de saude (porta de gerenciamento 9000) via /dev/tcp
+      test:
+        - CMD-SHELL
+        - >-
+          exec 3<>/dev/tcp/localhost/9000 &&
+          printf 'GET /health/ready HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3 &&
+          grep -q '"status": "UP"' <&3
+      interval: 5s
+      timeout: 5s
+      retries: 40
+      start_period: 30s
+
+  mailpit:
+    image: axllent/mailpit:v1.31.6@sha256:23fe39e81bde596a918000b3135c0f85dc8bb4c9ea6be274b051143f3e300387
+    ports: ["127.0.0.1:1025:1025", "127.0.0.1:8025:8025"]
+    mem_limit: 64m
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  otel-lgtm:
+    # Grafana, Prometheus, Loki, Tempo, Pyroscope e o coletor OTLP numa imagem. A aplicacao envia
+    # metricas, traces e logs por OTLP (porta 4318); nao ha scrape. Os dashboards de infra/grafana
+    # entram pelo provisionamento e usam o datasource Prometheus da imagem (uid prometheus).
+    image: grafana/otel-lgtm:0.36.0@sha256:57c04cbd8e7022f32bb84c4ac005d79baf8b08e2c5be44facf11f5f1f9944ba2
+    volumes:
+      - ../grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - ../grafana/provisioning/dashboards/radar.yml:/otel-lgtm/grafana/conf/provisioning/dashboards/radar.yaml:ro
+    ports: ["127.0.0.1:3000:3000"]
+    mem_limit: 1792m
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:3000/api/health >/dev/null"]
+      interval: 5s
+      timeout: 3s
+      retries: 40
+      start_period: 15s
+
+  pncp-fixture:
+    # Faz o papel do PNCP: serve o dia gravado em seed/ (dados publicos do PNCP, coletados em
+    # 2026-10-22, publicacoes de 2026-10-21, modalidade 6) e responde 204 para qualquer outra janela.
+    image: wiremock/wiremock:3.13.2-alpine@sha256:f8c42a38dca3f4a1d7219af11c80438740f39eebb1505b0f029aed743c20e147
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        mkdir -p /home/wiremock/__files
+        zcat /seed/*.jsonl.gz | awk '{ f = "/home/wiremock/__files/page-" NR ".json"; print > f; close(f) }'
+        exec /docker-entrypoint.sh --local-response-templating --no-request-journal --disable-banner
+    environment:
+      JAVA_OPTS: -Xms32m -Xmx128m
+    volumes:
+      - ./seed:/seed:ro
+      - ./pncp-fixture/mappings:/home/wiremock/mappings:ro
+    mem_limit: 256m
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/__admin/health >/dev/null"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+
+  app:
+    image: radar-licitacoes:${RADAR_TAG:-local}  # RADAR_TAG vem do ambiente (make exporta)
+    pull_policy: never
+    depends_on:
+      postgres: {condition: service_healthy}
+      kafka: {condition: service_healthy}
+      keycloak: {condition: service_healthy}
+      pncp-fixture: {condition: service_healthy}
+      otel-lgtm: {condition: service_healthy}
+    secrets:
+      - source: db_password
+        target: spring.datasource.password
+      # o papel radar_read_writer nasce na migration V6 com este valor (placeholder) e a busca
+      # entra com ele (configtree: o nome do arquivo e a propriedade)
+      - source: read_writer_password
+        target: spring.flyway.placeholders.readWriterPassword
+      - source: read_writer_password
+        target: radar.search.datasource.password
+    environment:
+      SPRING_APPLICATION_NAME: radar-licitacoes
+      SPRING_CONFIG_IMPORT: optional:configtree:/run/secrets/
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/radar
+      SPRING_DATASOURCE_USERNAME: radar
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      SPRING_MAIL_HOST: mailpit
+      SPRING_MAIL_PORT: "1025"
+      # Emissor = URL do navegador; chaves e token pelo nome do servico (back-channel)
+      RADAR_OIDC_ISSUER: ${RADAR_OIDC_ISSUER}
+      RADAR_WEB_CLIENT_SECRET: ${RADAR_WEB_CLIENT_SECRET}
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWKSETURI: http://keycloak:8080/realms/radar/protocol/openid-connect/certs
+      SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_KEYCLOAK_JWKSETURI: http://keycloak:8080/realms/radar/protocol/openid-connect/certs
+      SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_KEYCLOAK_TOKENURI: http://keycloak:8080/realms/radar/protocol/openid-connect/token
+      # O PNCP do compose e a fixture (sem rede externa); o limite de 1 req/s vale so para o PNCP real
+      RADAR_PNCP_BASE_URL: http://pncp-fixture:8080
+      RADAR_PNCP_REQUESTS_PER_SECOND: "20"
+      # Telemetria por push para o otel-lgtm (o /actuator/prometheus exige o papel operator)
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-lgtm:4318
+      MANAGEMENT_OTLP_METRICS_EXPORT_ENABLED: "true"
+      MANAGEMENT_OTLP_METRICS_EXPORT_URL: http://otel-lgtm:4318/v1/metrics
+      MANAGEMENT_OTLP_METRICS_EXPORT_STEP: 15s
+      # Os dashboards e as regras usam *_seconds: sem isto o OTLP traz *_milliseconds
+      MANAGEMENT_OTLP_METRICS_EXPORT_BASE_TIME_UNIT: seconds
+    ports: ["127.0.0.1:8080:8080"]
+    mem_limit: 640m
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health/readiness >/dev/null"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 40s
+
+  apicurio:
+    # Camada 3 (PR 8.1): o registro de schemas sobe so com `--profile layer3`; a aplicacao ainda nao o usa.
+    image: apicurio/apicurio-registry:3.3.3@sha256:c9cae4c90ce46538abf673c68eb591345f23bcc6c2aa6bfd47189adcf609d8f1
+    profiles: [layer3]
+    ports: ["127.0.0.1:8081:8080"]
+    mem_limit: 512m
+
+secrets:
+  db_password:
+    file: ./secrets/db_password
+  read_writer_password:
+    file: ./secrets/read_writer_password
+
+volumes:
+  pgdata:

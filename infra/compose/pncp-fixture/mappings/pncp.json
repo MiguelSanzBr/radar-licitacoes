@@ -1,0 +1,32 @@
+{
+  "mappings": [
+    {
+      "name": "dia gravado da fixture: a pagina pedida vem de /seed (uma pagina por linha)",
+      "priority": 1,
+      "request": {
+        "method": "GET",
+        "urlPath": "/api/consulta/v1/contratacoes/publicacao",
+        "queryParameters": {
+          "dataInicial": { "equalTo": "20261021" },
+          "dataFinal": { "equalTo": "20261021" },
+          "codigoModalidadeContratacao": { "equalTo": "6" }
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/json" },
+        "bodyFileName": "page-{{request.query.pagina}}.json",
+        "transformers": ["response-template"]
+      }
+    },
+    {
+      "name": "qualquer outra janela: sem dados, como o PNCP responde",
+      "priority": 10,
+      "request": {
+        "method": "GET",
+        "urlPathPattern": "/api/consulta/v1/contratacoes/(publicacao|atualizacao)"
+      },
+      "response": { "status": 204 }
+    }
+  ]
+}

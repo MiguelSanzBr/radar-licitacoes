@@ -1,4 +1,4 @@
-.PHONY: verify mutation check-coverage-policy lint-openapi audit-repo tf-fmt tf-validate tf-lint tf-plan up down replay bench slo synth probe deploy rollback profile image image-size image-scan image-test lint-observability probe-report backfill helm-lint helm-smoke sbom sbom-scan secrets-scan
+.PHONY: verify mutation check-coverage-policy lint-openapi audit-repo tf-fmt tf-validate tf-lint tf-plan up down logs seed e2e replay bench slo synth probe deploy rollback profile image image-size image-scan image-test lint-observability probe-report backfill helm-lint helm-smoke sbom sbom-scan secrets-scan
 
 verify:
 	./mvnw verify
@@ -8,7 +8,7 @@ TRIVY_IMAGE := aquasec/trivy:0.76.0@sha256:2416d1f74045b57274df1a340eee6b510cacd
 # O codegen do jOOQ precisa de Docker (Testcontainers) e roda no host: o build da imagem nao o tem.
 image:
 	./mvnw -q compile -pl core -am -DskipTests
-	docker build -t radar-licitacoes:local .
+	docker build -t radar-licitacoes:$(RADAR_TAG) .
 
 image-size:
 	scripts/image-size.sh
@@ -120,9 +120,36 @@ probe:
 probe-report:
 	$(PROBE_JAVA) -jar $(PROBE_JAR) report --in=$(PROBE_OUT) --to=docs/benchmarks/probe/$$(date +%F).md
 
-up down replay bench slo synth deploy rollback profile:
+replay bench slo synth deploy rollback profile:
 	@echo "$@: not implemented yet" >&2
 	@exit 1
+
+# Ambiente local completo (ADR-0022): cria .env e segredos se faltarem, constroi a imagem se nao
+# existir e sobe tudo esperando os healthchecks. Camada 3: PROFILE=layer3 make up.
+# RADAR_TAG e a unica fonte da tag: o make exporta e o compose e o e2e leem do ambiente.
+export RADAR_TAG ?= local
+COMPOSE = docker compose -f infra/compose/docker-compose.yml
+
+up:
+	scripts/compose-init.sh
+	docker image inspect radar-licitacoes:$(RADAR_TAG) >/dev/null 2>&1 || $(MAKE) image
+	$(COMPOSE) $(if $(PROFILE),--profile $(PROFILE)) up -d --wait
+
+# Para tudo, inclusive os servicos de perfil (apicurio); apaga os volumes somente com CLEAN=1.
+down:
+	$(COMPOSE) --profile '*' down $(if $(filter 1,$(CLEAN)),-v)
+
+logs:
+	$(COMPOSE) --profile '*' logs -f --tail=100 $(SERVICE)
+
+# Carrega o dia gravado em infra/compose/seed pelo backfill do operador (client credentials do realm).
+SEED_DAY ?= 2026-10-21
+seed:
+	scripts/seed.sh $(SEED_DAY)
+
+# Sobe o compose e roda o fluxo ponta a ponta; precisa da imagem (make image) e das portas livres.
+e2e:
+	./mvnw -q -Pe2e verify -pl e2e -am
 
 # Uso: make backfill FROM=2026-10-01 TO=2026-10-31 [MODALITY=6]; force=true ignora a janela noturna.
 backfill:

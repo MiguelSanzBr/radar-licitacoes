@@ -68,6 +68,23 @@ class KeycloakIT extends PostgresIT {
     return JSON.readTree(response.body());
   }
 
+  /** Client credentials of the automation client (make seed, e2e): no user, role operator. */
+  private static JsonNode opsCliToken() throws Exception {
+    var form =
+        "grant_type=client_credentials&client_id=radar-ops-cli&client_secret=radar-ops-dev-secret";
+    var response =
+        HttpClient.newHttpClient()
+            .send(
+                HttpRequest.newBuilder(
+                        URI.create(SharedKeycloak.issuer() + "/protocol/openid-connect/token"))
+                    .header("Content-Type", "application/x-www-form-urlencoded")
+                    .POST(HttpRequest.BodyPublishers.ofString(form))
+                    .build(),
+                HttpResponse.BodyHandlers.ofString());
+    assertThat(response.statusCode()).as(response.body()).isEqualTo(200);
+    return JSON.readTree(response.body());
+  }
+
   private static JsonNode claims(String jwt) {
     return JSON.readTree(Base64.getUrlDecoder().decode(jwt.split("\\.")[1]));
   }
@@ -107,6 +124,22 @@ class KeycloakIT extends PostgresIT {
         .andExpect(status().isForbidden())
         .andExpect(jsonPath("$.type").value(org.hamcrest.Matchers.endsWith("forbidden.md")))
         .andExpect(conforms());
+  }
+
+  @Test
+  void opsCliClientCredentialsTokenIsAnOperatorWithTheApiAudience() throws Exception {
+    var accessToken = opsCliToken().get("access_token").asString();
+    var claims = claims(accessToken);
+    assertThat(claims.get("aud").toString()).contains("radar-api");
+    assertThat(claims.at("/realm_access/roles").values())
+        .extracting(JsonNode::asString)
+        .contains("operator");
+
+    // authorized, so the controller answers (400 for an inverted range), not 401 or 403
+    mvc.perform(
+            post("/ops/backfill?from=2026-10-02&to=2026-10-01")
+                .header("Authorization", "Bearer " + accessToken))
+        .andExpect(status().isBadRequest());
   }
 
   @Test

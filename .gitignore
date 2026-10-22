@@ -27,3 +27,6 @@ data/
 *.tfplan
 crash.log
 .terraform/
+
+# Compose local: segredos gerados por scripts/compose-init.sh
+infra/compose/secrets/

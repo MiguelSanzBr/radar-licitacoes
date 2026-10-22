@@ -285,6 +285,13 @@
 
   <profiles>
     <profile>
+      <!-- ./mvnw -Pe2e verify -pl e2e: sobe infra/compose (precisa da imagem, make image) e roda o fluxo ponta a ponta. -->
+      <id>e2e</id>
+      <modules>
+        <module>e2e</module>
+      </modules>
+    </profile>
+    <profile>
       <!-- ./mvnw -Pimage verify: exige a imagem radar-licitacoes:local (make image); fora do build padrao. -->
       <id>image</id>
       <modules>
