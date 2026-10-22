@@ -1,4 +1,4 @@
-.PHONY: verify mutation check-coverage-policy lint-openapi audit-repo tf-fmt tf-validate tf-lint tf-plan up down backfill replay bench slo synth probe deploy rollback profile image image-size image-scan image-test lint-observability probe-report
+.PHONY: verify mutation check-coverage-policy lint-openapi audit-repo tf-fmt tf-validate tf-lint tf-plan up down replay bench slo synth probe deploy rollback profile image image-size image-scan image-test lint-observability probe-report
 
 verify:
 	./mvnw verify
@@ -84,6 +84,10 @@ probe:
 probe-report:
 	$(PROBE_JAVA) -jar $(PROBE_JAR) report --in=$(PROBE_OUT) --to=docs/benchmarks/probe/$$(date +%F).md
 
-up down backfill replay bench slo synth deploy rollback profile:
+up down replay bench slo synth deploy rollback profile:
 	@echo "$@: not implemented yet" >&2
 	@exit 1
+
+# Uso: make backfill FROM=2026-10-01 TO=2026-10-31 [MODALITY=6]; force=true ignora a janela noturna.
+backfill:
+	curl -fsS -X POST "http://localhost:8080/ops/backfill?from=$(FROM)&to=$(TO)&modality=$${MODALITY:-6}&force=true"
