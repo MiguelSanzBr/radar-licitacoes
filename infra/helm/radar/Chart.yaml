@@ -1,0 +1,7 @@
+apiVersion: v2
+name: radar
+description: Radar de Licitacoes (aplicacao Spring Boot); Postgres e Kafka sao dependencias externas
+type: application
+version: 0.1.0
+# Tag da imagem quando values.image.tag esta vazio.
+appVersion: local

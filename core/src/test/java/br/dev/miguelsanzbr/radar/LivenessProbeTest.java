@@ -8,10 +8,12 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Bean;
+import org.springframework.core.env.Environment;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
@@ -19,6 +21,8 @@ import org.springframework.test.context.DynamicPropertySource;
 class LivenessProbeTest {
 
   @LocalServerPort int port;
+
+  @Autowired Environment environment;
 
   // the relay needs a publisher, and this context has no broker
   @TestConfiguration
@@ -62,5 +66,13 @@ class LivenessProbeTest {
   @Test
   void prometheusIsNotExposed() throws Exception {
     assertThat(get("/actuator/prometheus").statusCode()).isEqualTo(404);
+  }
+
+  /** The Helm chart's terminationGracePeriodSeconds (30s) assumes these values. */
+  @Test
+  void shutsDownGracefullyWithinTheKubernetesGracePeriod() {
+    assertThat(environment.getProperty("server.shutdown")).isEqualTo("graceful");
+    assertThat(environment.getProperty("spring.lifecycle.timeout-per-shutdown-phase"))
+        .isEqualTo("20s");
   }
 }

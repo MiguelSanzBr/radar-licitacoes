@@ -1,4 +1,4 @@
-.PHONY: verify mutation check-coverage-policy lint-openapi audit-repo tf-fmt tf-validate tf-lint tf-plan up down replay bench slo synth probe deploy rollback profile image image-size image-scan image-test lint-observability probe-report
+.PHONY: verify mutation check-coverage-policy lint-openapi audit-repo tf-fmt tf-validate tf-lint tf-plan up down replay bench slo synth probe deploy rollback profile image image-size image-scan image-test lint-observability probe-report backfill helm-lint helm-smoke
 
 verify:
 	./mvnw verify
@@ -52,6 +52,14 @@ audit-repo:
 	if git ls-files | grep -iEf "$$patterns"; then echo "audit-repo: caminho versionado com termo proibido" >&2; exit 1; fi; \
 	if git ls-files -z | xargs -0 grep -IilEf "$$patterns"; then echo "audit-repo: conteudo versionado com termo proibido" >&2; exit 1; fi; \
 	echo "audit-repo: ok"
+
+# helm lint + kubeconform -strict sobre o chart; instala as ferramentas fixadas se faltarem.
+helm-lint:
+	scripts/helm-lint.sh
+
+# Sobe um cluster kind, instala o chart e espera o readiness (apaga o cluster ao sair).
+helm-smoke:
+	scripts/helm-smoke.sh
 
 tf-fmt:
 	scripts/terraform.sh fmt

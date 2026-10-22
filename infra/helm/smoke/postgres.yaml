@@ -1,0 +1,38 @@
+# Postgres descartavel so para o smoke em kind: sem volume, sem backup, credenciais de teste.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: postgres}
+  template:
+    metadata:
+      labels: {app: postgres}
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:18
+          env:
+            - {name: POSTGRES_DB, value: radar}
+            - {name: POSTGRES_USER, value: radar}
+            - {name: POSTGRES_PASSWORD, value: radar-smoke}
+          ports:
+            - containerPort: 5432
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "radar", "-d", "radar"]
+            periodSeconds: 2
+          resources:
+            requests: {cpu: 50m, memory: 128Mi}
+            limits: {memory: 384Mi}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+spec:
+  selector: {app: postgres}
+  ports:
+    - port: 5432

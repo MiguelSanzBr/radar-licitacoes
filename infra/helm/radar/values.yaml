@@ -1,0 +1,51 @@
+image:
+  repository: radar-licitacoes
+  tag: local
+  pullPolicy: IfNotPresent
+
+replicaCount: 1
+
+serviceAccount:
+  create: true
+  name: ""
+
+service:
+  port: 80
+
+# Variaveis de ambiente nao secretas (ConfigMap). Postgres e externo: aponte o URL para o seu.
+config:
+  SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/radar
+
+# Kafka e externo: vira SPRING_KAFKA_BOOTSTRAP_SERVERS no ConfigMap.
+kafka:
+  bootstrapServers: kafka:9092
+
+# Credenciais (Secret). Com create=true o chart cria o Secret a partir de values; com create=false
+# existingName e obrigatorio e deve ter SPRING_DATASOURCE_USERNAME e SPRING_DATASOURCE_PASSWORD.
+secret:
+  create: false
+  existingName: ""
+  values: {}
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+  limits:
+    cpu: "1"
+    memory: 768Mi
+
+# Termino: preStop (drenagem do endpoint) + shutdownPhaseSeconds precisam caber em
+# terminationGracePeriodSeconds; o template falha se nao couberem.
+terminationGracePeriodSeconds: 30
+preStopSleepSeconds: 5
+# Deve igualar spring.lifecycle.timeout-per-shutdown-phase da aplicacao (20s).
+shutdownPhaseSeconds: 20
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 70
+
+podAnnotations: {}

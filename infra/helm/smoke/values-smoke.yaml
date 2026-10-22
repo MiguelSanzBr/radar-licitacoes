@@ -1,0 +1,19 @@
+# Valores do smoke em kind: imagem carregada com `kind load`, Postgres descartavel do cluster.
+image:
+  pullPolicy: Never
+# Sem broker no kind (RAM): o admin do Kafka nao pode derrubar a subida nem criar topicos.
+config:
+  SPRING_KAFKA_ADMIN_FAIL_FAST: "false"
+  SPRING_KAFKA_ADMIN_AUTO_CREATE: "false"
+secret:
+  create: true
+  values:
+    SPRING_DATASOURCE_USERNAME: radar
+    SPRING_DATASOURCE_PASSWORD: radar-smoke
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: "1"
+    memory: 768Mi

@@ -7,9 +7,21 @@
 
 O projeto precisa mostrar que pode rodar em nuvem sem manter um ambiente pago no ar. Um ambiente permanente custaria todo mês e exigiria operação contínua. Ao mesmo tempo, o repositório precisa provar que a infraestrutura como código é válida e coerente, para que quem avaliar o projeto consiga verificar sem gastar dinheiro com a AWS.
 
-A parte Helm desta decisão é implementada na tarefa 7.3. Este ADR cobre a parte Terraform.
+Para Kubernetes o repositório traz um chart Helm. Ele é validado sem cluster pago: schema e instalação real num cluster `kind` descartável.
 
 ## Decisão
+
+Helm e kind:
+
+- O chart fica em `infra/helm/radar/` e instala só a aplicação: Deployment, Service, ConfigMap, Secret (só com `secret.create=true`, senão referencia um Secret existente), ServiceAccount, HPA opcional (desligado por padrão, CPU 70%) e PDB com `minAvailable: 1` quando há mais de uma réplica. Postgres e Kafka são dependências externas, informadas por values.
+- O Pod tem probes de startup (liveness, 30 tentativas a cada 2 s), liveness e readiness nos endpoints do actuator, todas com `timeoutSeconds: 3`, requests de 250m/512Mi e limites de 1 CPU/768Mi, usuário 10001 não root, sistema de arquivos raiz somente leitura com `emptyDir` em `/tmp`, `terminationGracePeriodSeconds: 30` e `preStop` nativo (`sleep`) de 5 s.
+- A aplicação usa `server.shutdown=graceful` com `spring.lifecycle.timeout-per-shutdown-phase=20s`; um teste de contexto confere os dois valores. Os 5 s do `preStop` mais os 20 s cabem nos 30 s do Pod, e o template falha se `preStopSleepSeconds + shutdownPhaseSeconds` não for menor que `terminationGracePeriodSeconds`.
+- `make helm-lint` roda `helm lint` e `kubeconform -strict` sobre o `helm template`, com os valores padrão e com todos os opcionais ligados.
+- `make helm-smoke` cria o cluster `radar-smoke` (imagem do nó fixada por digest), carrega `radar-licitacoes:local`, aplica um Postgres descartável (`infra/helm/smoke/postgres.yaml`), instala o chart com `--wait`, consulta `/actuator/health/readiness` por `port-forward` e apaga o cluster ao sair. Helm, kind, kubectl e kubeconform têm versão e checksum fixados em `scripts/helm-tools.sh`, que reinstala em `~/.local/bin` qualquer binário ausente ou em versão diferente da fixada (o `PATH` não é confiado).
+- Em produção o Secret deve vir de fora do chart (`secret.existingName`, por exemplo de um gerenciador de segredos); `secret.create` existe só para o smoke e para demos.
+- No CI o job `helm` roda os dois alvos, com a imagem construída antes e `helm/kind-action` fixada por commit.
+
+Terraform:
 
 - O Terraform fica em `infra/terraform/` com quatro módulos (`network`, `compute`, `database`, `backup_bucket`) e o ambiente `envs/demo`.
 - A validação roda com `fmt`, `validate`, `tflint` com o ruleset AWS e `plan` contra LocalStack (`localstack/localstack:4.14`).
@@ -25,11 +37,28 @@ A parte Helm desta decisão é implementada na tarefa 7.3. Este ADR cobre a part
 - ECS Fargate: alternativa válida para o compute, com menos operação de host. Foi preterida agora porque o compose atual já é o ambiente oficial e uma única EC2 mantém o custo mínimo. Continua registrada como caminho de migração.
 - MSK (Kafka gerenciado): custo fixo alto para um demo. Kafka em container cobre o uso do projeto.
 - Aplicar o ambiente de verdade para validar: gera custo recorrente e exige credencial real. Rejeitado pela regra de custo zero.
+- Chart sem teste de instalação (só `helm lint`): não pega probe errada, imagem que não sobe nem Secret ausente. O smoke em kind cobre isso por poucos minutos de CI.
 - Só `validate`, sem `plan`: não prova o grafo de dependências entre módulos nem as referências entre recursos. O `plan` contra LocalStack cobre isso sem credencial real.
 
 ## Consequências
 
-O que a validação prova:
+O que o smoke em kind prova:
+
+- O chart renderiza e os manifestos são válidos no schema do Kubernetes 1.37 (`kubeconform -strict`).
+- A imagem real sobe no cluster, passa pelas probes de startup, liveness e readiness reais e o Pod fica Ready com Postgres 18 e as migrações do Flyway.
+- Segurança do Pod: o processo roda com usuário 10001 e raiz somente leitura (a aplicação sobe só com `/tmp` gravável).
+- O desligamento gracioso, medido: ao escalar o deployment a zero, o log do Pod contém `Commencing graceful shutdown` e o Pod some em menos de 25 s (o kubelet manda SIGKILL aos 30 s). O smoke falha se qualquer das duas coisas não acontecer. O tempo é medido sem tráfego.
+
+O que o smoke em kind não prova:
+
+- Kafka: o kind não tem broker (RAM), então o smoke desliga a falha rápida e a criação de tópicos do admin e prova só que a prontidão não depende do broker, não a publicação de eventos.
+- Rede de nuvem real (balanceador, Ingress, DNS, políticas de rede).
+- Classes de armazenamento e volumes persistentes: o Postgres do smoke não tem volume.
+- Autoscaling sob carga: o HPA só é validado no schema, e o kind não instala metrics-server.
+- Agendamento em vários nós, afinidade e comportamento do PDB durante drenagem de nós.
+- Perda de requisições durante o desligamento sob tráfego.
+
+O que a validação do Terraform prova:
 
 - Sintaxe dos arquivos HCL e formatação.
 - Schema do provider AWS (nomes de argumentos e tipos) para a versão fixada.
@@ -38,7 +67,7 @@ O que a validação prova:
 - Padrões do tflint com o ruleset AWS.
 - Validação de entrada: `ssh_cidr` aceita só prefixo /16 ou mais restrito e rejeita 0.0.0.0/0.
 
-O que a validação não prova:
+O que a validação do Terraform não prova:
 
 - Que o `apply` funciona: colisão de nome de bucket S3 (nome global), erros de API na criação dos recursos, timeouts da RDS e ordem real de criação.
 - Permissões IAM: a policy do bucket e da role da EC2 não é avaliada contra uma conta real.
@@ -59,5 +88,6 @@ Adiamento explícito:
 
 ## Prova
 
+- `make helm-lint` e `make helm-smoke` rodaram localmente, com saídas registradas no relatório da tarefa 7.3. O job `helm` do CI foi escrito, mas ainda não foi executado no GitHub Actions. O YAML do workflow foi validado com actionlint.
 - `make tf-fmt`, `make tf-validate`, `make tf-lint` e `make tf-plan` rodaram localmente, com saídas registradas no relatório da tarefa 7.4. O job `infra` do CI foi escrito, mas ainda não foi executado no GitHub Actions. O YAML do workflow foi validado com actionlint.
 - Plan salvo em `docs/infra/plan-2026-10-15.txt`, sem segredos: a senha do banco fica no Secrets Manager e o plan só mostra `master_user_secret` como "known after apply".

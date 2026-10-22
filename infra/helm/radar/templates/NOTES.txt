@@ -1,0 +1,9 @@
+Radar instalado como {{ include "radar.fullname" . }} (imagem {{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}).
+
+Postgres e externo: {{ .Values.config.SPRING_DATASOURCE_URL }}
+Kafka: {{ .Values.kafka.bootstrapServers }}
+Credenciais: Secret {{ include "radar.secretName" . }} (SPRING_DATASOURCE_USERNAME, SPRING_DATASOURCE_PASSWORD).
+
+Para acessar sem Ingress:
+  kubectl port-forward svc/{{ include "radar.fullname" . }} 8080:{{ .Values.service.port }}
+  curl http://localhost:8080/actuator/health/readiness
