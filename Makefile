@@ -120,7 +120,25 @@ probe:
 probe-report:
 	$(PROBE_JAVA) -jar $(PROBE_JAR) report --in=$(PROBE_OUT) --to=docs/benchmarks/probe/$$(date +%F).md
 
-replay bench slo synth deploy rollback profile:
+# Massa sintetica rotulada (tools/synth, ADR-0005): `make synth SYNTH_COUNT=600000 SYNTH_SEED=42` carrega o read
+# model do Postgres do compose (senha do arquivo de segredo ou de RADAR_DB_PASSWORD, nunca no argv);
+# `make synth SYNTH_MODE=events` grava os envelopes em SYNTH_OUT para o replay. Corpus: infra/compose/seed.
+SYNTH_COUNT ?= 600000
+SYNTH_SEED ?= 42
+SYNTH_MODE ?= copy
+SYNTH_OUT ?= data/synth-events.jsonl.gz
+SYNTH_JDBC_URL ?= jdbc:postgresql://localhost:5432/radar
+SYNTH_USER ?= radar
+SYNTH_JAR := tools/synth/target/synth.jar
+
+synth:
+	./mvnw -q -pl tools/synth -am package -DskipTests
+	@pw="$${RADAR_DB_PASSWORD:-$$(cat infra/compose/secrets/db_password 2>/dev/null)}"; \
+	[ "$(SYNTH_MODE)" != copy ] || [ -n "$$pw" ] || { echo "synth: defina RADAR_DB_PASSWORD ou rode make up (infra/compose/secrets/db_password)" >&2; exit 1; }; \
+	RADAR_DB_PASSWORD="$$pw" $(PROBE_JAVA) -jar $(SYNTH_JAR) --mode=$(SYNTH_MODE) --count=$(SYNTH_COUNT) --seed=$(SYNTH_SEED) \
+	  --out=$(SYNTH_OUT) --jdbc-url=$(SYNTH_JDBC_URL) --user=$(SYNTH_USER)
+
+replay bench slo deploy rollback profile:
 	@echo "$@: not implemented yet" >&2
 	@exit 1
 

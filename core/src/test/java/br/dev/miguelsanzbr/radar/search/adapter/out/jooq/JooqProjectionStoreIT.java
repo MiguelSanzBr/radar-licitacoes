@@ -95,6 +95,24 @@ class JooqProjectionStoreIT {
   }
 
   @Test
+  void aSyntheticIdIsLabelledSyntheticOnInsertAndOnUpdate() {
+    var synthetic = "SYN-12345678000190-1-000001/2026";
+    store.project(discovered("s1", view(synthetic, "first", "10.00", 1), 1), 0);
+    store.project(
+        updated("s2", view(synthetic, "second", "10.00", 1, 2, T0.plusSeconds(20)), 2), 1);
+
+    assertThat(
+            jdbc.queryForList(
+                "SELECT source FROM search.procurement_search_view"
+                    + " WHERE numero_controle_pncp = ? AND object_description = 'second'",
+                String.class,
+                synthetic))
+        .containsExactly("synthetic");
+    store.project(discovered("p1", view(ID, "real", "10.00", 1), 1), 2);
+    assertThat(searchRow()).containsEntry("source", "pncp");
+  }
+
+  @Test
   void aProcurementWithoutValueIsBandZero() {
     store.project(discovered("d", view(ID, "object", null, 1), 1), 0);
 

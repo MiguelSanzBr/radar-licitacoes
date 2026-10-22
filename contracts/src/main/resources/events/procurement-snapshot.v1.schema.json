@@ -215,7 +215,7 @@
     "procurementId": {
       "description": "PNCP control number.",
       "type": "string",
-      "pattern": "^\\d{14}-\\d+-\\d{6}/\\d{4}$"
+      "pattern": "^(SYN-)?\\d{14}-\\d+-\\d{6}/\\d{4}$"
     },
     "idName": {
       "description": "Numeric code and name pair, as PNCP names situations, modalities and dispute modes.",

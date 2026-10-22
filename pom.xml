@@ -29,6 +29,7 @@
     <module>contracts</module>
     <module>core</module>
     <module>tools/pncp-probe</module>
+    <module>tools/synth</module>
   </modules>
 
   <properties>

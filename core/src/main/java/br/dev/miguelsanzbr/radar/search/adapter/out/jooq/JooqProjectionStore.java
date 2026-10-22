@@ -39,14 +39,15 @@ class JooqProjectionStore implements ProjectionStore {
         (numero_controle_pncp, search_vector, object_description, organ_name, unit_name, uf,
          ibge_code, municipality_name, modality_id, status, estimated_value, value_band,
          proposal_opening_at, proposal_closing_at, published_at, pncp_updated_at, source_version,
-         projected_at)
+         projected_at, source)
       VALUES
         (?,
          setweight(to_tsvector('search.portuguese_unaccent', left(?, 100000)), 'A')
            || setweight(to_tsvector('search.portuguese_unaccent', ?), 'B')
            || setweight(to_tsvector('search.portuguese_unaccent', ?), 'C'),
          ?, ?, ?, ?, ?, ?, ?::smallint, ?, ?::numeric, ?::smallint,
-         ?::timestamptz, ?::timestamptz, ?::timestamptz, ?::timestamptz, ?::integer, now())
+         ?::timestamptz, ?::timestamptz, ?::timestamptz, ?::timestamptz, ?::integer, now(),
+         CASE WHEN ?::text LIKE 'SYN-%' THEN 'synthetic' ELSE 'pncp' END)
       ON CONFLICT (numero_controle_pncp) DO UPDATE SET
         search_vector = excluded.search_vector, object_description = excluded.object_description,
         organ_name = excluded.organ_name, unit_name = excluded.unit_name, uf = excluded.uf,
@@ -56,7 +57,7 @@ class JooqProjectionStore implements ProjectionStore {
         proposal_opening_at = excluded.proposal_opening_at,
         proposal_closing_at = excluded.proposal_closing_at, published_at = excluded.published_at,
         pncp_updated_at = excluded.pncp_updated_at, source_version = excluded.source_version,
-        projected_at = excluded.projected_at
+        projected_at = excluded.projected_at, source = excluded.source
       WHERE excluded.source_version > psv.source_version
       """;
 
@@ -201,7 +202,8 @@ class JooqProjectionStore implements ProjectionStore {
         utc(view.proposalClosingAt()),
         utc(view.publishedAt()),
         utc(view.pncpUpdatedAt()),
-        version);
+        version,
+        view.id());
     dsl.execute(UPSERT_DETAIL, view.json(), initialHistory, view.id(), view.id(), version);
     return true;
   }
