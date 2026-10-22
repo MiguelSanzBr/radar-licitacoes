@@ -1,0 +1,7 @@
+# Gitleaks (make secrets-scan): regras padrao, sem allowlist.
+# Allowlist so com regex exata, com comentario (motivo e dono), e so para defaults de desenvolvimento.
+# Detalhes em docs/security/scans.md.
+title = "radar-licitacoes"
+
+[extend]
+useDefault = true

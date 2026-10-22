@@ -78,6 +78,12 @@
         <type>pom</type>
         <scope>import</scope>
       </dependency>
+      <!-- GHSA-mcr4-qmvw-px4g: kafka-clients traz 1.11.2; remover quando o Kafka gerenciado trouxer >= 1.11.4 -->
+      <dependency>
+        <groupId>at.yawk.lz4</groupId>
+        <artifactId>lz4-java</artifactId>
+        <version>1.11.4</version>
+      </dependency>
       <dependency>
         <groupId>com.tngtech.archunit</groupId>
         <artifactId>archunit</artifactId>

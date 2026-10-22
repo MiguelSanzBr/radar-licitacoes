@@ -1,4 +1,4 @@
-.PHONY: verify mutation check-coverage-policy lint-openapi audit-repo tf-fmt tf-validate tf-lint tf-plan up down replay bench slo synth probe deploy rollback profile image image-size image-scan image-test lint-observability probe-report backfill helm-lint helm-smoke
+.PHONY: verify mutation check-coverage-policy lint-openapi audit-repo tf-fmt tf-validate tf-lint tf-plan up down replay bench slo synth probe deploy rollback profile image image-size image-scan image-test lint-observability probe-report backfill helm-lint helm-smoke sbom sbom-scan secrets-scan
 
 verify:
 	./mvnw verify
@@ -29,6 +29,32 @@ image-scan:
 	docker run --rm -v "$$tar":/image.tar:ro -v "$$HOME/.cache/trivy":/root/.cache/trivy $(TRIVY_IMAGE) \
 	  image --input /image.tar $(TRIVY_FLAGS) && \
 	$(TRIVY) image $(JDK_BUILD_IMAGE) $(TRIVY_FLAGS)
+
+# Varreduras de cadeia de suprimento e segredos (docs/security/scans.md). Imagens fixadas por digest.
+GRYPE_IMAGE := anchore/grype:v0.121.0@sha256:621d56d1d68106b787022c81546f7e0a36202a25d1239f0c20195fab8c16f7ea
+GITLEAKS_IMAGE := zricethezav/gitleaks:v8.30.1@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f
+SBOM_FILE := target/classes/META-INF/sbom/application.cdx.json
+# Worktrees apontam o .git para o repositorio principal: esse diretorio entra no mesmo caminho.
+GIT_COMMON_DIR = $(abspath $(shell git rev-parse --git-common-dir))
+
+sbom:
+	./mvnw -B -q -DskipTests package
+
+# Grype sobre o SBOM agregado (CycloneDX no package); falha em CRITICAL. Ignores justificados em .grype.yaml.
+sbom-scan: sbom
+	mkdir -p "$$HOME/.cache/grype"
+	docker run --rm -u "$$(id -u):$$(id -g)" -e HOME=/tmp -e GRYPE_DB_CACHE_DIR=/cache -e TMPDIR=/cache \
+	  -v "$$HOME/.cache/grype:/cache" -v "$(CURDIR):$(CURDIR)" -w "$(CURDIR)" \
+	  $(GRYPE_IMAGE) sbom:$(SBOM_FILE) -c .grype.yaml --fail-on critical
+
+# Gitleaks no historico completo e na arvore de trabalho; regras e allowlist em .gitleaks.toml.
+secrets-scan:
+	docker run --rm -u "$$(id -u):$$(id -g)" -e HOME=/tmp \
+	  -v "$(CURDIR):$(CURDIR)" -v "$(GIT_COMMON_DIR):$(GIT_COMMON_DIR)" -w "$(CURDIR)" \
+	  $(GITLEAKS_IMAGE) git --config .gitleaks.toml --log-opts=--all --redact --exit-code 1 --log-level warn --verbose "$(CURDIR)"
+	docker run --rm -u "$$(id -u):$$(id -g)" -e HOME=/tmp \
+	  -v "$(CURDIR):$(CURDIR)" -w "$(CURDIR)" \
+	  $(GITLEAKS_IMAGE) dir --config .gitleaks.toml --redact --exit-code 1 --log-level warn --verbose "$(CURDIR)"
 
 mutation:
 	./mvnw -Pmutation verify

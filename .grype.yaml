@@ -1,0 +1,3 @@
+# Grype (make sbom-scan): falha em CRITICAL. Ignore so com CVE, motivo e data de expiracao (YYYY-MM-DD).
+# Formato e regras em docs/security/scans.md. Sem entradas: o SBOM atual nao tem CRITICAL.
+ignore: []
