@@ -2,8 +2,11 @@ package br.dev.miguelsanzbr.radar.outbox.adapter.kafka;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import br.dev.miguelsanzbr.radar.observability.TraceparentExtractor;
 import br.dev.miguelsanzbr.radar.outbox.BrokerUnavailableException;
 import br.dev.miguelsanzbr.radar.outbox.OutboxMessage;
+import io.micrometer.tracing.Tracer;
+import io.micrometer.tracing.propagation.Propagator;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
@@ -35,7 +38,8 @@ class KafkaUnreachableBrokerTest {
           new KafkaEventPublisher(
               new KafkaTemplate<>(factory),
               new KafkaPublisherProperties(
-                  Map.of("Procurement", "radar.procurement.v1"), Duration.ofSeconds(10), 1));
+                  Map.of("Procurement", "radar.procurement.v1"), Duration.ofSeconds(10), 1),
+              new TraceparentExtractor(Tracer.NOOP, Propagator.NOOP));
       var message =
           new OutboxMessage(
               1,
