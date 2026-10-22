@@ -41,6 +41,10 @@ class BrokerDownIT {
     jdbc.update("DELETE FROM outbox.outbox_event");
   }
 
+  private long scalar(String sql) {
+    return jdbc.queryForObject(sql, Long.class);
+  }
+
   private void pause() {
     var docker = SharedKafka.INSTANCE.getDockerClient();
     docker.pauseContainerCmd(SharedKafka.INSTANCE.getContainerId()).exec();
@@ -89,17 +93,26 @@ class BrokerDownIT {
           500,
           TimeUnit.MILLISECONDS);
 
-      Thread.sleep(outage);
-
-      publishedDuringOutage =
-          jdbc.queryForObject(
-              "SELECT count(*) FROM outbox.outbox_event WHERE published_at IS NOT NULL AND aggregate_id <> 'WARM'",
-              Long.class);
-      maxAttempts =
-          jdbc.queryForObject("SELECT max(attempts) FROM outbox.outbox_event", Long.class);
-      erroredDuringOutage =
-          jdbc.queryForObject(
-              "SELECT count(*) FROM outbox.outbox_event WHERE last_error IS NOT NULL", Long.class);
+      // why: sample all through the outage and keep the worst value, so one bad moment cannot hide,
+      // and do not end the outage before the relay has recorded at least one error
+      var deadline = System.nanoTime() + outage.toNanos();
+      var errorsDeadline = deadline + Duration.ofSeconds(60).toNanos();
+      publishedDuringOutage = 0;
+      maxAttempts = 0;
+      erroredDuringOutage = 0;
+      while (System.nanoTime() < deadline
+          || (erroredDuringOutage == 0 && System.nanoTime() < errorsDeadline)) {
+        publishedDuringOutage =
+            Math.max(
+                publishedDuringOutage,
+                scalar(
+                    "SELECT count(*) FROM outbox.outbox_event WHERE published_at IS NOT NULL AND aggregate_id <> 'WARM'"));
+        maxAttempts =
+            Math.max(maxAttempts, scalar("SELECT max(attempts) FROM outbox.outbox_event"));
+        erroredDuringOutage =
+            scalar("SELECT count(*) FROM outbox.outbox_event WHERE last_error IS NOT NULL");
+        Thread.sleep(250);
+      }
 
       resumedAt = System.nanoTime();
       unpause();
@@ -119,7 +132,12 @@ class BrokerDownIT {
     assertThat(publishedDuringOutage).isZero();
     assertThat(erroredDuringOutage).isPositive();
     // why: a broker outage is not the message's fault, so it never counts towards the poison limit
-    assertThat(maxAttempts).isZero();
+    assertThat(maxAttempts)
+        .as(
+            "an outage must not count attempts, but these rows did: %s",
+            jdbc.queryForList(
+                "SELECT aggregate_id, attempts, left(last_error, 300) FROM outbox.outbox_event WHERE attempts > 0"))
+        .isZero();
 
     var read =
         TopicReader.readUntil(

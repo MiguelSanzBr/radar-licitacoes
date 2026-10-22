@@ -58,11 +58,25 @@ public class KafkaEventPublisher implements EventPublisher {
       throw new BrokerUnavailableException("no ack for " + message.aggregateId(), e);
     } catch (ExecutionException | RuntimeException e) {
       var text = "kafka publish failed for " + message.aggregateId() + ": " + e.getMessage();
-      if (e.getCause() instanceof RetriableException) {
+      if (brokerWide(e)) {
         throw new BrokerUnavailableException(text, e);
       }
       throw new PublishException(text, e);
     }
+  }
+
+  /**
+   * Broker-wide when any exception in the cause chain is retriable (timeouts, disconnects, network,
+   * replicas; a full producer buffer is a timeout too). The template wraps what the producer
+   * reports in a {@code KafkaProducerException}, so the top-level cause is not enough.
+   */
+  private static boolean brokerWide(Throwable failure) {
+    for (var t = failure; t != null; t = t.getCause()) {
+      if (t instanceof RetriableException) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /** The row stores the payload; the rest of the envelope comes from its columns and headers. */

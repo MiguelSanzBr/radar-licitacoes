@@ -16,12 +16,24 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.stream.Stream;
+import org.apache.kafka.clients.producer.BufferExhaustedException;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.common.KafkaException;
+import org.apache.kafka.common.errors.DisconnectException;
+import org.apache.kafka.common.errors.InvalidTopicException;
+import org.apache.kafka.common.errors.NetworkException;
+import org.apache.kafka.common.errors.NotEnoughReplicasException;
 import org.apache.kafka.common.errors.RecordTooLargeException;
+import org.apache.kafka.common.errors.SerializationException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
+import org.springframework.kafka.core.KafkaProducerException;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.SendResult;
 import tools.jackson.databind.json.JsonMapper;
@@ -228,5 +240,68 @@ class KafkaEventPublisherTest {
     assertThatThrownBy(() -> publisher.publish(message("Procurement", Map.of())))
         .isInstanceOf(PublishException.class);
     assertThat(Thread.currentThread().isInterrupted()).isTrue();
+  }
+
+  private static ProducerRecord<String, String> anyRecord() {
+    return new ProducerRecord<>("radar.procurement.v1", "PNCP-1", "{}");
+  }
+
+  /** What the template completes the future with: the cause wrapped in a KafkaProducerException. */
+  private static KafkaProducerException wrapped(Throwable cause) {
+    return new KafkaProducerException(anyRecord(), "Failed to send", cause);
+  }
+
+  static Stream<Throwable> brokerWideShapes() {
+    return Stream.of(
+        wrapped(new org.apache.kafka.common.errors.TimeoutException("metadata not available")),
+        wrapped(new NetworkException("connection reset")),
+        wrapped(new DisconnectException()),
+        wrapped(new NotEnoughReplicasException("min isr")),
+        wrapped(new BufferExhaustedException("buffer full")),
+        new NetworkException("thrown straight from send"),
+        new BufferExhaustedException("thrown straight from send"),
+        new KafkaException(
+            "producer failed", new org.apache.kafka.common.errors.TimeoutException("t")),
+        new CompletionException(wrapped(new NetworkException("deep"))));
+  }
+
+  @ParameterizedTest
+  @MethodSource("brokerWideShapes")
+  void failedFuturesOfBrokerWideShapesMeanTheBrokerIsUnavailable(Throwable failure) {
+    when(template.send(any(ProducerRecord.class)))
+        .thenReturn(CompletableFuture.failedFuture(failure));
+
+    assertThatThrownBy(() -> publisher.publish(message("Procurement", Map.of())))
+        .isInstanceOf(BrokerUnavailableException.class);
+  }
+
+  @ParameterizedTest
+  @MethodSource("brokerWideShapes")
+  void synchronousFailuresOfBrokerWideShapesMeanTheBrokerIsUnavailable(Throwable failure) {
+    when(template.send(any(ProducerRecord.class)))
+        .thenThrow(new RuntimeException("wrapper", failure));
+
+    assertThatThrownBy(() -> publisher.publish(message("Procurement", Map.of())))
+        .isInstanceOf(BrokerUnavailableException.class);
+  }
+
+  static Stream<Throwable> messageSpecificShapes() {
+    return Stream.of(
+        wrapped(new RecordTooLargeException("too big")),
+        wrapped(new SerializationException("bad value")),
+        wrapped(new InvalidTopicException("bad topic name")),
+        new IllegalStateException("producer closed"),
+        new KafkaException("something else"));
+  }
+
+  @ParameterizedTest
+  @MethodSource("messageSpecificShapes")
+  void messageSpecificShapesAreNotBrokerWide(Throwable failure) {
+    when(template.send(any(ProducerRecord.class)))
+        .thenReturn(CompletableFuture.failedFuture(failure));
+
+    assertThatThrownBy(() -> publisher.publish(message("Procurement", Map.of())))
+        .isInstanceOf(PublishException.class)
+        .isNotInstanceOf(BrokerUnavailableException.class);
   }
 }
