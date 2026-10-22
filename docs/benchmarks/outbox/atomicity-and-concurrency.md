@@ -26,23 +26,33 @@ Comando:
 
 ## Dois relays concorrentes sobre 10 000 eventos
 
-`OutboxConcurrencyIT` insere 10 000 eventos em 500 agregados, sobe duas threads cada uma com seu `OutboxRelay` e seu publicador em memória, e cada thread chama `relayOnce()` em laço até não haver pendentes. Cada chamada é um ciclo. Cada ciclo também é verificado: no máximo 100 mensagens, em ordem de id. O teste exige união dos ids publicados igual a 10 000, nenhum id publicado duas vezes e ciclos disjuntos entre os relays.
+`OutboxConcurrencyIT` insere 10 000 eventos em 50 agregados, sobe duas threads, cada uma com seu `OutboxRelay`, e as duas publicam no mesmo `InMemoryEventPublisher`, de modo que a ordem do registro é a ordem que um consumidor veria. Cada thread chama `relayOnce()` em laço até não haver pendentes. Cada chamada é um ciclo. O teste exige: 10 000 ids publicados, nenhum repetido, ids de cada agregado em ordem crescente, pelo menos um ciclo que devolveu 0 porque a trava estava com o outro relay, nada pendente no fim e cada ciclo com no máximo 100 mensagens.
 
 Linha impressa pelo teste (latência de 1 ms por publicação, simulando o ack do broker):
 
 ```
-OUTBOX_CONCURRENCY events=10000 relayA=5000 relayB=5000 cyclesA=50 cyclesB=50 duplicates=0 timeMs=5964
+OUTBOX_CONCURRENCY events=10000 aggregates=50 published=10000 distinct=10000 cyclesA=6140 cyclesB=5081 skippedCycles=11121 timeMs=13570
 ```
 
-| Variante | Eventos | Relay A | Relay B | Duplicados | Tempo |
-|---|---|---|---|---|---|
-| Latência de 1 ms por publicação | 10 000 | 5 000 | 5 000 | 0 | 6,0 s |
-| Sem latência (publicador instantâneo) | 10 000 | 5 000 | 5 000 | 0 | 0,7 s |
+| Variante | Eventos | Duplicados | Ciclos sem trava (devolveram 0) | Tempo |
+|---|---|---|---|---|
+| Latência de 1 ms por publicação | 10 000 | 0 | 11 121 | 13,6 s |
+| Sem latência (publicador instantâneo) | 10 000 | 0 | 322 | 1,6 s |
 
-O limite do teste é 60 s.
+Antes da trava (relays em paralelo com `SKIP LOCKED`) o mesmo cenário levava 6,0 s e 0,7 s, com 500 agregados e cada relay publicando metade dos eventos, mas sem garantia de ordem. Agora só um relay trabalha por vez e o outro gira em vazio, daí o tempo maior e o grande número de ciclos que devolvem 0 (cada um é uma transação curta que só tenta a trava; no scheduler real isso acontece uma vez por intervalo de 500 ms, não em laço). O limite do teste é 60 s.
+
+## Trava do relay
+
+`OutboxRelayIT` cobre a trava `pg_try_advisory_xact_lock` em duas situações:
+
+| Teste | Resultado |
+|---|---|
+| `aRelayHoldingTheLockMakesASecondRelayReturnZeroUntilItCommits` | com 101 linhas pendentes (uma além do lote), um segundo relay chamado durante o lote do primeiro devolve 0 e não publica nada; depois do commit do primeiro, o segundo publica a linha restante |
+| `theLockIsReleasedWhenTheBatchTransactionRollsBack` | um lote que morre com `Error` desfaz a transação e um relay seguinte volta a publicar, ou seja, a trava não vaza |
 
 ## Leitura
 
-- Duplicados em um mesmo ciclo são impossíveis por construção: `FOR UPDATE SKIP LOCKED` faz o segundo relay pular as linhas travadas pelo primeiro, e o `published_at` é gravado na mesma transação que as trava. Depois do commit as linhas já não casam com `published_at IS NULL`. O número 0 acima confirma isso, mas o que protege é o desenho, não a sorte.
+- A ordem por agregado vale entre lotes e entre relays: a trava deixa um relay ativo por vez, e ele lê as pendentes por `id`. Ver ADR-0018.
+- Duplicados em um mesmo ciclo continuam impossíveis por construção: a trava serializa os relays e, como segunda proteção, `FOR UPDATE SKIP LOCKED` faz qualquer trabalhador manual pular linhas já travadas. O `published_at` é gravado na mesma transação que as trava.
 - A entrega continua sendo ao menos uma vez: se o processo cair entre o ack do broker e o commit, o lote é publicado de novo. O consumidor é idempotente pelo Inbox.
-- A ordem por agregado vale dentro de um lote e com um relay ativo. Com dois relays a ordem entre lotes não é garantida (ver ADR-0018).
+- O custo é a vazão de um relay só. Se não bastar, a alternativa é particionar os relays por `hash(aggregate_id) mod N` (ADR-0018) ou trocar o polling por CDC (PR 8.3).

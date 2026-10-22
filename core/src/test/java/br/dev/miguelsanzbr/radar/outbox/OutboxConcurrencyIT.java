@@ -9,6 +9,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -32,76 +33,80 @@ class OutboxConcurrencyIT {
     jdbc.update("DELETE FROM outbox.outbox_event");
   }
 
-  /** One relay thread: every relayOnce call is a cycle, recorded as the ids it published. */
-  private List<List<Long>> drain(
-      OutboxRelay own, InMemoryEventPublisher publisher, CountDownLatch go)
-      throws InterruptedException {
-    var cycles = new ArrayList<List<Long>>();
+  /** One relay thread: every relayOnce call is a cycle, recorded as how many messages it sent. */
+  private List<Integer> drain(OutboxRelay own, CountDownLatch go) throws InterruptedException {
+    var cycles = new ArrayList<Integer>();
     go.await();
     while (OutboxRows.count(jdbc, "published_at IS NULL") > 0) {
-      var before = publisher.published().size();
-      own.relayOnce();
-      cycles.add(publisher.publishedIds().subList(before, publisher.published().size()));
+      cycles.add(own.relayOnce());
     }
     return cycles;
   }
 
   @Test
-  void twoConcurrentRelaysPublishEveryEventExactlyOnceAndNeverShareACycle() throws Exception {
+  void twoConcurrentRelaysAreSerializedSoEveryAggregateIsPublishedOnceAndInIdOrder()
+      throws Exception {
     jdbc.update(
         """
         INSERT INTO outbox.outbox_event
           (event_id, aggregate_type, aggregate_id, event_type, schema_version, payload, headers)
-        SELECT gen_random_uuid(), 'Procurement', 'agg-' || (g % 500), 'ProcurementUpdated', 1,
+        SELECT gen_random_uuid(), 'Procurement', 'agg-' || (g % 50), 'ProcurementUpdated', 1,
                '{}'::jsonb, '{}'::jsonb
         FROM generate_series(1, ?) g
         """,
         EVENTS);
-    var publisherA = new InMemoryEventPublisher();
-    var publisherB = new InMemoryEventPublisher();
-    publisherA.latency(Duration.ofMillis(1));
-    publisherB.latency(Duration.ofMillis(1));
-    var relayA = new OutboxRelay(jdbc, transactionManager, publisherA, properties, registry);
-    var relayB = new OutboxRelay(jdbc, transactionManager, publisherB, properties, registry);
+    // one shared record: its order is the order in which consumers would see the events
+    var publisher = new InMemoryEventPublisher();
+    publisher.latency(Duration.ofMillis(1));
+    var relayA = new OutboxRelay(jdbc, transactionManager, publisher, properties, registry);
+    var relayB = new OutboxRelay(jdbc, transactionManager, publisher, properties, registry);
     var go = new CountDownLatch(1);
 
     var started = System.nanoTime();
-    var a = CompletableFuture.supplyAsync(() -> run(relayA, publisherA, go));
-    var b = CompletableFuture.supplyAsync(() -> run(relayB, publisherB, go));
+    var a = CompletableFuture.supplyAsync(() -> run(relayA, go));
+    var b = CompletableFuture.supplyAsync(() -> run(relayB, go));
     go.countDown();
     var cyclesA = a.get();
     var cyclesB = b.get();
     var millis = (System.nanoTime() - started) / 1_000_000;
 
-    var idsA = publisherA.publishedIds();
-    var idsB = publisherB.publishedIds();
-    var union = new HashSet<Long>(idsA);
-    union.addAll(idsB);
-    var duplicates = idsA.size() + idsB.size() - union.size();
-    var sharedCycleIds = new HashSet<>(idsA);
-    sharedCycleIds.retainAll(idsB);
+    var published = publisher.published();
+    var ids = published.stream().map(OutboxMessage::id).toList();
+    var idsByAggregate =
+        published.stream()
+            .collect(
+                Collectors.groupingBy(
+                    OutboxMessage::aggregateId,
+                    Collectors.mapping(OutboxMessage::id, Collectors.toList())));
+    var skippedCycles =
+        Stream.concat(cyclesA.stream(), cyclesB.stream()).filter(n -> n == 0).count();
 
     System.out.printf(
-        "OUTBOX_CONCURRENCY events=%d relayA=%d relayB=%d cyclesA=%d cyclesB=%d duplicates=%d timeMs=%d%n",
-        EVENTS, idsA.size(), idsB.size(), cyclesA.size(), cyclesB.size(), duplicates, millis);
+        "OUTBOX_CONCURRENCY events=%d aggregates=%d published=%d distinct=%d cyclesA=%d cyclesB=%d"
+            + " skippedCycles=%d timeMs=%d%n",
+        EVENTS,
+        idsByAggregate.size(),
+        ids.size(),
+        new HashSet<>(ids).size(),
+        cyclesA.size(),
+        cyclesB.size(),
+        skippedCycles,
+        millis);
 
-    assertThat(union).hasSize(EVENTS);
-    assertThat(duplicates).isZero();
-    assertThat(sharedCycleIds).isEmpty();
-    assertThat(idsA).isNotEmpty();
-    assertThat(idsB).isNotEmpty();
+    assertThat(ids).hasSize(EVENTS).doesNotHaveDuplicates();
+    assertThat(idsByAggregate).hasSize(50);
+    idsByAggregate.values().forEach(aggregateIds -> assertThat(aggregateIds).isSorted());
+    assertThat(skippedCycles).isPositive();
     assertThat(OutboxRows.count(jdbc, "published_at IS NULL")).isZero();
     assertThat(millis).isLessThan(60_000);
-    // every cycle is one bounded batch published in id order
     for (var cycle : Stream.concat(cyclesA.stream(), cyclesB.stream()).toList()) {
-      assertThat(cycle).hasSizeLessThanOrEqualTo(properties.batchSize()).isSorted();
+      assertThat(cycle).isLessThanOrEqualTo(properties.batchSize());
     }
   }
 
-  private List<List<Long>> run(
-      OutboxRelay own, InMemoryEventPublisher publisher, CountDownLatch go) {
+  private List<Integer> run(OutboxRelay own, CountDownLatch go) {
     try {
-      return drain(own, publisher, go);
+      return drain(own, go);
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       throw new IllegalStateException(e);

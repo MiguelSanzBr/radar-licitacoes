@@ -17,9 +17,10 @@ import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * Publishes pending rows in id order. Delivery is at-least-once: a crash between the broker ack and
- * the commit republishes the batch. A failure of one message (a {@link PublishException} or any
- * runtime exception) is retried up to {@code maxAttempts} times; an {@link Error} aborts the batch.
+ * Publishes pending rows in id order, one relay at a time. Delivery is at-least-once: a crash
+ * between the broker ack and the commit republishes the batch. A failure of one message (a {@link
+ * PublishException} or any runtime exception) is retried up to {@code maxAttempts} times; an {@link
+ * Error} aborts the batch.
  */
 @Component
 public class OutboxRelay {
@@ -37,6 +38,11 @@ public class OutboxRelay {
       LIMIT ?
       FOR UPDATE SKIP LOCKED
       """;
+
+  // why: one transaction-scoped lock for all relays; the key is a hash of a fixed string, so it
+  // needs no registry and is released at commit or rollback, even if the process dies
+  private static final String TRY_LOCK =
+      "SELECT pg_try_advisory_xact_lock(hashtextextended('radar.outbox.relay', 0))";
 
   private final JdbcTemplate jdbc;
   private final TransactionTemplate transaction;
@@ -57,12 +63,19 @@ public class OutboxRelay {
     this.poison = registry.counter("outbox_poison_total");
   }
 
-  /** Publishes one batch in its own transaction and returns how many messages went out. */
+  /**
+   * Publishes one batch in its own transaction and returns how many messages went out. Relays are
+   * serialized by an advisory lock so per-aggregate order holds: if another relay is active this
+   * returns 0 at once.
+   */
   public int relayOnce() {
     return transaction.execute(status -> publishBatch());
   }
 
   private int publishBatch() {
+    if (!Boolean.TRUE.equals(jdbc.queryForObject(TRY_LOCK, Boolean.class))) {
+      return 0;
+    }
     var batch =
         jdbc.query(
             SELECT, OutboxRelay::toMessage, properties.maxAttempts(), properties.batchSize());

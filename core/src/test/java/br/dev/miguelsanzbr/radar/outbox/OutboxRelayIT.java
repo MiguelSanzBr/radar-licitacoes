@@ -6,6 +6,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -295,5 +297,47 @@ class OutboxRelayIT {
             jdbc.queryForObject(
                 "SELECT attempts FROM outbox.outbox_event WHERE id = ?", Integer.class, poison))
         .isEqualTo(properties.maxAttempts() - 1);
+  }
+
+  @Test
+  void aRelayHoldingTheLockMakesASecondRelayReturnZeroUntilItCommits() throws Exception {
+    // one row beyond the batch: without the lock the second relay would take it
+    for (var i = 0; i <= properties.batchSize(); i++) {
+      insert("A" + i);
+    }
+    var secondPublisher = new InMemoryEventPublisher();
+    var second = new OutboxRelay(jdbc, transactionManager, secondPublisher, properties, registry);
+    var duringFirstBatch = new AtomicInteger(-1);
+    EventPublisher firstPublisher =
+        message -> {
+          try {
+            if (duringFirstBatch.get() < 0) {
+              duringFirstBatch.set(CompletableFuture.supplyAsync(second::relayOnce).get());
+            }
+          } catch (InterruptedException | ExecutionException e) {
+            throw new IllegalStateException(e);
+          }
+        };
+    var first = new OutboxRelay(jdbc, transactionManager, firstPublisher, properties, registry);
+
+    assertThat(first.relayOnce()).isEqualTo(properties.batchSize());
+
+    assertThat(duringFirstBatch).hasValue(0);
+    assertThat(secondPublisher.attempts()).isZero();
+    assertThat(second.relayOnce()).isEqualTo(1);
+  }
+
+  @Test
+  void theLockIsReleasedWhenTheBatchTransactionRollsBack() {
+    insert("A");
+    EventPublisher dies =
+        message -> {
+          throw new AssertionError("fatal");
+        };
+    var dyingRelay = new OutboxRelay(jdbc, transactionManager, dies, properties, registry);
+
+    assertThatThrownBy(dyingRelay::relayOnce).isInstanceOf(AssertionError.class);
+
+    assertThat(relay.relayOnce()).isEqualTo(1);
   }
 }
