@@ -863,7 +863,10 @@ components:
           type: string
         snippet:
           type: [string, 'null']
-          description: Trecho do objeto com os termos da busca entre `<b>` e `</b>`. Nulo sem `q`.
+          description: >-
+            Trecho do objeto com os termos da busca entre `<b>` e `</b>`. Nulo sem `q`.
+            O texto vem do órgão contratante e não é confiável: quem o exibe como HTML
+            deve escapar tudo, exceto os marcadores `<b>` e `</b>`.
         organName:
           type: string
         unitName:
