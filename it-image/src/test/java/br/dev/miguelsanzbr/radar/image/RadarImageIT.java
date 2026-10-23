@@ -10,8 +10,10 @@ import java.net.http.HttpResponse;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.testcontainers.containers.ContainerLaunchException;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.Network;
+import org.testcontainers.containers.output.ToStringConsumer;
 import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
@@ -25,8 +27,24 @@ class RadarImageIT {
   private static final PostgreSQLContainer DB =
       new PostgreSQLContainer("postgres:18").withNetwork(NETWORK).withNetworkAliases("db");
 
+  // same source as the Makefile and the compose file: RADAR_TAG in the environment
+  private static final String IMAGE =
+      "radar-licitacoes:" + System.getenv().getOrDefault("RADAR_TAG", "local");
+
+  // the app service limit in infra/compose/docker-compose.yml: the JVM ergonomics (collector and
+  // initial heap) depend on it, so the image has to start under the same limit
+  private static final long MEM_LIMIT_BYTES = 640L * 1024 * 1024;
+
+  // the failed container is removed before the catch in start(), so keep its output apart
+  private static final ToStringConsumer BOOT_LOG = new ToStringConsumer();
+
   private static final GenericContainer<?> APP =
-      new GenericContainer<>("radar-licitacoes:local")
+      new GenericContainer<>(IMAGE)
+          .withCreateContainerCmdModifier(cmd -> cmd.getHostConfig().withMemory(MEM_LIMIT_BYTES))
+          // makes the JVM log whether it mapped the AOT cache (JAVA_TOOL_OPTIONS of the image
+          // stays)
+          .withEnv("JDK_JAVA_OPTIONS", "-Xlog:aot:stdout")
+          .withLogConsumer(BOOT_LOG)
           .withNetwork(NETWORK)
           .withEnv("SPRING_PROFILES_ACTIVE", "noop")
           .withEnv("SPRING_DATASOURCE_URL", "jdbc:postgresql://db:5432/" + DB.getDatabaseName())
@@ -45,7 +63,13 @@ class RadarImageIT {
   @BeforeAll
   static void start() {
     DB.start();
-    APP.start();
+    try {
+      APP.start();
+    } catch (ContainerLaunchException e) {
+      // the JVM can die at boot (AOT cache that cannot be loaded): show why instead of a timeout
+      throw new IllegalStateException(
+          "image did not come up; JVM output:\n" + BOOT_LOG.toUtf8String(), e);
+    }
   }
 
   @AfterAll
@@ -75,7 +99,9 @@ class RadarImageIT {
   @Test
   void usesTheAotCache() throws Exception {
     assertThat(APP.execInContainer("test", "-s", "/app/app.aot").getExitCode()).isZero();
-    assertThat(APP.getLogs()).doesNotContain("[warning][aot]");
+    assertThat(APP.getLogs())
+        .contains("Using AOT-linked classes: true")
+        .doesNotContain("cannot be loaded", "[error][aot]", "[warning][aot]");
   }
 
   @Test
