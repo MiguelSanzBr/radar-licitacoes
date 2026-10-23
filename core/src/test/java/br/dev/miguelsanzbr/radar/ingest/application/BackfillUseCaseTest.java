@@ -31,12 +31,15 @@ import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.function.IntConsumer;
 import java.util.function.Predicate;
 import org.junit.jupiter.api.Test;
 import org.springframework.transaction.support.TransactionOperations;
@@ -82,9 +85,10 @@ class BackfillUseCaseTest {
   }
 
   static final class FakeGateway implements PncpGateway {
-    final Map<String, Object> responses = new HashMap<>();
-    final List<String> calls = new ArrayList<>();
+    final Map<String, Object> responses = new ConcurrentHashMap<>();
+    final List<String> calls = Collections.synchronizedList(new ArrayList<>());
     Runnable beforeCall = () -> {};
+    IntConsumer beforePage = page -> {};
 
     void stub(LocalDate day, int page, Object response) {
       responses.put(day + "/" + page, response);
@@ -96,6 +100,7 @@ class BackfillUseCaseTest {
       assertThat(modalityId).isEqualTo(6);
       beforeCall.run();
       calls.add(from + "/" + page);
+      beforePage.accept(page);
       var response = responses.get(from + "/" + page);
       return switch (response) {
         case null -> new PncpPage(List.of(), page, 0, 0, 0);
@@ -242,18 +247,13 @@ class BackfillUseCaseTest {
   private final RecordingOutbox outbox = new RecordingOutbox();
   private final RecordingMetrics metrics = new RecordingMetrics();
   private final Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
+  private final PageProcessor processor =
+      new PageProcessor(
+          procurements, runs, outbox, TransactionOperations.withoutTransaction(), metrics, clock);
   private final BackfillUseCase useCase =
-      new BackfillUseCase(
-          gateway,
-          runs,
-          new PageProcessor(
-              procurements,
-              runs,
-              outbox,
-              TransactionOperations.withoutTransaction(),
-              metrics,
-              clock),
-          clock);
+      new BackfillUseCase(gateway, runs, processor, PageFetcher.virtualThreads(1), clock);
+  private final BackfillUseCase fetchingAhead =
+      new BackfillUseCase(gateway, runs, processor, PageFetcher.virtualThreads(3), clock);
 
   @Test
   void eachPageCountsItsOutcomesUnderTheBackfillKind() {
@@ -423,6 +423,58 @@ class BackfillUseCaseTest {
     assertThat(run.finishedAt()).isEqualTo(NOW);
     assertThat(gateway.calls).doesNotContain("2026-10-21/1");
     assertThat(procurements.store).hasSize(2);
+  }
+
+  @Test
+  void pagesFetchedAheadAreStillProcessedInPageOrder() {
+    var pageFourFetched = new CountDownLatch(1);
+    gateway.beforePage =
+        page -> {
+          if (page == 4) {
+            pageFourFetched.countDown();
+          }
+          if (page == 2) {
+            // page 2 only returns once page 4 is already fetched
+            await(pageFourFetched);
+          }
+        };
+    for (var n = 1; n <= 5; n++) {
+      gateway.stub(D20, n, page(n, 5, snapshot(n)));
+    }
+
+    var run = fetchingAhead.run(D20, D20, 6).getFirst();
+
+    assertThat(run.status()).isEqualTo(RunStatus.DONE);
+    assertThat(run.cursorPage()).isEqualTo(5);
+    assertThat(outbox.appended)
+        .extracting(a -> a.events().getFirst().aggregateId())
+        .containsExactly(id(1).value(), id(2).value(), id(3).value(), id(4).value(), id(5).value());
+  }
+
+  @Test
+  void aFailureOnPageThreeWhileFetchingAheadStillCommitsPagesOneAndTwoAndResumesAtThree() {
+    for (var n = 1; n <= 5; n++) {
+      gateway.stub(D20, n, page(n, 5, snapshot(n)));
+    }
+    gateway.stub(D20, 3, new PncpUnavailableException(503, "down", null));
+
+    assertThatThrownBy(() -> fetchingAhead.run(D20, D20, 6))
+        .isInstanceOf(BackfillFailedException.class)
+        .hasMessageContaining("page 3");
+
+    var failed = runs.store.values().iterator().next();
+    assertThat(failed.status()).isEqualTo(RunStatus.FAILED);
+    assertThat(failed.cursorPage()).isEqualTo(2);
+    assertThat(procurements.store).hasSize(2);
+
+    gateway.stub(D20, 3, page(3, 5, snapshot(3)));
+    gateway.calls.clear();
+    var resumed = fetchingAhead.run(D20, D20, 6).getFirst();
+
+    assertThat(resumed.status()).isEqualTo(RunStatus.DONE);
+    assertThat(resumed.cursorPage()).isEqualTo(5);
+    assertThat(gateway.calls).doesNotContain("2026-10-20/1", "2026-10-20/2");
+    assertThat(procurements.store).hasSize(5);
   }
 
   @Test

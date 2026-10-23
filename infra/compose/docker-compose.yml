@@ -168,7 +168,7 @@ services:
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWKSETURI: http://keycloak:8080/realms/radar/protocol/openid-connect/certs
       SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_KEYCLOAK_JWKSETURI: http://keycloak:8080/realms/radar/protocol/openid-connect/certs
       SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_KEYCLOAK_TOKENURI: http://keycloak:8080/realms/radar/protocol/openid-connect/token
-      # O PNCP do compose e a fixture (sem rede externa); o limite de 1 req/s vale so para o PNCP real
+      # O PNCP do compose e a fixture (sem rede externa); o padrao de 0,2 req/s (ADR-0017) vale so para o PNCP real
       RADAR_PNCP_BASE_URL: http://pncp-fixture:8080
       RADAR_PNCP_REQUESTS_PER_SECOND: "20"
       # Telemetria por push para o otel-lgtm (o /actuator/prometheus exige o papel operator)

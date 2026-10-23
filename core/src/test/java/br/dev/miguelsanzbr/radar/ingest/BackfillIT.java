@@ -15,18 +15,24 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import br.dev.miguelsanzbr.radar.ingest.application.BackfillFailedException;
 import br.dev.miguelsanzbr.radar.ingest.application.BackfillUseCase;
 import br.dev.miguelsanzbr.radar.ingest.application.BackfillWindowBusyException;
+import br.dev.miguelsanzbr.radar.perf.PinningProbe;
 import com.github.tomakehurst.wiremock.stubbing.Scenario;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 
 @BackfillSpringBootTest
@@ -38,7 +44,7 @@ class BackfillIT {
   @Autowired BackfillUseCase backfill;
   @Autowired JdbcTemplate jdbc;
   @Autowired BackfillTestConfig.FlakyRunRepository flaky;
-  @Autowired ThreadPoolTaskScheduler scheduler;
+  @Autowired TaskScheduler scheduler;
 
   @BeforeEach
   @AfterEach
@@ -290,9 +296,96 @@ class BackfillIT {
     action.run();
   }
 
+  /**
+   * Boot's virtual-thread scheduler would run every fixed-delay task on one platform thread, so a
+   * slow task would starve the outbox relay. The app declares a pool of its own instead.
+   */
   @Test
-  void scheduledTasksGetAPoolSoTheRelayIsNeverStarved() {
-    assertThat(scheduler.getScheduledThreadPoolExecutor().getCorePoolSize()).isEqualTo(4);
+  void scheduledTasksGetAPoolOfFourSoASlowOneNeverStarvesTheRelay() {
+    assertThat(scheduler).isInstanceOf(ThreadPoolTaskScheduler.class);
+    assertThat(
+            ((ThreadPoolTaskScheduler) scheduler)
+                .getScheduledThreadPoolExecutor()
+                .getCorePoolSize())
+        .isEqualTo(4);
+  }
+
+  @Test
+  void aFixedDelayTaskThatBlocksDoesNotStopAnotherOne() throws Exception {
+    var release = new CountDownLatch(1);
+    var blocked = new CountDownLatch(1);
+    var ticks = new AtomicInteger();
+    var tickThread = new AtomicReference<String>();
+    var blocker =
+        scheduler.scheduleWithFixedDelay(
+            () -> {
+              blocked.countDown();
+              await(release, () -> {});
+            },
+            Duration.ofMillis(10));
+    var ticker =
+        scheduler.scheduleWithFixedDelay(
+            () -> {
+              tickThread.set(Thread.currentThread().getName());
+              ticks.incrementAndGet();
+            },
+            Duration.ofMillis(10));
+    try {
+      assertThat(blocked.await(5, TimeUnit.SECONDS)).isTrue();
+      var seen = ticks.get();
+      var deadline = System.nanoTime() + Duration.ofSeconds(5).toNanos();
+      while (ticks.get() < seen + 3 && System.nanoTime() < deadline) {
+        Thread.sleep(10);
+      }
+
+      assertThat(ticks.get()).isGreaterThanOrEqualTo(seen + 3);
+      assertThat(tickThread.get()).startsWith("radar-sched-");
+    } finally {
+      release.countDown();
+      blocker.cancel(true);
+      ticker.cancel(true);
+    }
+  }
+
+  @Test
+  void pagesOfADayAreFetchedConcurrentlyYetLandInOrder() {
+    for (var page = 1; page <= 8; page++) {
+      var n = page;
+      PNCP.stubFor(
+          pageRequest("20261020", page)
+              .willReturn(
+                  aResponse()
+                      .withFixedDelay(300)
+                      .withHeader("Content-Type", "application/json")
+                      .withBody(pageJson(n, 8, 10 * n, 10 * n + 1))));
+    }
+
+    var started = System.nanoTime();
+    var run = backfill.run(D20, D20, 6).getFirst();
+    var elapsedMillis = Duration.ofNanos(System.nanoTime() - started).toMillis();
+
+    assertThat(run.cursorPage()).isEqualTo(8);
+    assertThat(run.discovered()).isEqualTo(16);
+    // one page, then two waves of four (the bulkhead): about 900 ms against 2400 ms in sequence
+    assertThat(elapsedMillis).isLessThan(1800);
+    assertThat(
+            jdbc.queryForList(
+                "SELECT aggregate_id FROM outbox.outbox_event ORDER BY id", String.class))
+        .isSorted();
+  }
+
+  @Test
+  void noVirtualThreadIsPinnedForLongOnTheIngestionPath() throws Exception {
+    for (var page = 1; page <= 6; page++) {
+      stubPage("20261020", page, 6, 10 * page, 10 * page + 1);
+      stubPage("20261021", page, 6, 100 + 10 * page, 101 + 10 * page);
+    }
+
+    var pins = PinningProbe.pinsDuring(() -> backfill.run(D20, D21, 6));
+
+    assertThat(pins)
+        .as("pins of 20 ms or more through the ingestion code")
+        .noneMatch(pin -> PinningProbe.passesThrough(pin, "br.dev.miguelsanzbr.radar.ingest."));
   }
 
   private void scenarioPage(int page, String from, String to, String body) {

@@ -27,12 +27,12 @@ class PncpPropertiesTest {
 
     assertThat(p.baseUrl()).isEqualTo("https://pncp.gov.br");
     assertThat(p.pageSize()).isEqualTo(50);
-    assertThat(p.requestsPerSecond()).isEqualTo(1.0);
+    assertThat(p.requestsPerSecond()).isEqualTo(0.2);
     assertThat(p.requestTimeout()).isEqualTo(Duration.ofSeconds(15));
     assertThat(p.connectTimeout()).isEqualTo(Duration.ofSeconds(5));
     assertThat(p.maxConcurrentCalls()).isEqualTo(4);
     assertThat(p.bulkheadMaxWait()).isEqualTo(Duration.ofSeconds(30));
-    assertThat(p.rateLimiterMaxWait()).isEqualTo(Duration.ofSeconds(60));
+    assertThat(p.rateLimiterMaxWait()).isEqualTo(Duration.ofSeconds(120));
     assertThat(p.retry()).isEqualTo(new PncpProperties.Retry(4, Duration.ofSeconds(1), 2.0, 0.5));
     assertThat(p.circuitBreaker())
         .isEqualTo(

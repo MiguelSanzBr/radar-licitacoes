@@ -17,7 +17,7 @@ Cliente `java.net.http.HttpClient` com executor de threads virtuais, Jackson par
 |---|---|---|
 | URL base | `https://pncp.gov.br` | API de consulta pública |
 | Tamanho de página | 50 | máximo aceito (10 a 50): menos chamadas por janela |
-| Taxa | 1 req/s | padrão do plano, bem abaixo de qualquer limite razoável; a sonda confirma ou reduz |
+| Taxa | 0,2 req/s (1 requisição a cada 5 s) | **provisória até a decisão da sonda**: a API real respondeu 429 (corpo HTML, sem `Retry-After`) a 0,5 req/s sustentados, então o padrão de 1 req/s do plano não vale mais |
 | Retry | 4 tentativas (a 1ª incluída), backoff exponencial de 1 s, multiplicador 2, jitter 0,5 | absorve falha transitória sem sincronizar clientes |
 | Retentável | falha de transporte, timeout, 5xx e 429 | só o que pode dar certo depois |
 | `Retry-After` no 429 | espera o maior entre o backoff e o valor do cabeçalho, em segundos, com teto de 300 s | respeita o pedido do servidor sem travar uma thread por tempo indefinido |
@@ -25,7 +25,7 @@ Cliente `java.net.http.HttpClient` com executor de threads virtuais, Jackson par
 | Disjuntor | janela de 20 chamadas (mínimo de 20), falha em 50%, aberto por 60 s, chamada lenta acima de 10 s; a taxa de chamadas lentas que abre o circuito é a mesma de falhas (50%) | para de martelar um serviço fora do ar, ou muito lento, e volta a testar sozinho |
 | O que o disjuntor conta | falhas retentáveis | um 400 por erro nosso não deve abrir o circuito |
 | Bulkhead | 4 chamadas simultâneas, espera de até 30 s por vaga | limita a concorrência da coleta; excedente espera |
-| Espera por permissão de taxa | até 60 s | com taxa de 1 req/s a fila normal é de poucos segundos |
+| Espera por permissão de taxa | até 120 s | a 0,2 req/s cada permissão custa 5 s; a espera cobre cerca de 24 chamadas na fila (a leitura adiantada do backfill põe até 2, a sincronização incremental outras 2, mais as novas tentativas) |
 | Timeout | 15 s por requisição (também limita a leitura do corpo, verificado por teste), 5 s para conectar | a verificação manual mediu cerca de 0,22 s em chamada normal; 15 s cobre cauda longa |
 | User-Agent | `radar-licitacoes/0.1 (+https://github.com/miguelsanzbr/radar-licitacoes; contato: miguelsanzb.p@gmail.com)` | identificável, com contato para o operador do PNCP |
 
@@ -45,6 +45,8 @@ Etiqueta de coleta: a taxa acima vale para todo o tráfego do cliente. O backfil
 
 ## Consequências
 
+- O limitador é a única fonte da taxa. A leitura de páginas em paralelo (ADR-0020) reduz latência, mas nunca eleva as requisições por segundo acima dele: cada tentativa, inclusive a nova tentativa, paga uma permissão antes de entrar no bulkhead.
+- Permissões reservadas não voltam: o `RateLimiter` do Resilience4j reserva a permissão antes de a thread esperar, e uma espera interrompida (leitura adiantada cancelada porque uma página falhou ou a janela acabou) não devolve a reserva. As páginas canceladas continuam ocupando suas vagas no tempo (até `fetch-ahead` × 5 s a 0,2 req/s) e atrasam as chamadas seguintes; a taxa real só cai, nunca passa do limite. É o motivo de `radar.ingest.fetch-ahead` valer 2 por padrão.
 - Os padrões são conservadores e podem ser mudados por configuração, sem recompilar. Quando a sonda rodar, o ADR-0005 registra o que mudou.
 - Quem chama enxerga só dois tipos de falha, ambos em `ingest.application.port`, sem tipo de biblioteca ou de adapter: `PncpUnavailableException` (tentativas esgotadas, circuito aberto, rejeição local por taxa ou concorrência, falha de transporte, timeout, 5xx ou 429; vale tentar de novo mais tarde) e `PncpProtocolException` (4xx diferente de 429, ou resposta fora do formato esperado; repetir não ajuda). Os dois trazem o status HTTP quando existe (0 quando não). As exceções do Resilience4j são convertidas na fronteira do cliente e ficam como causa.
 - Os parâmetros de `radar.pncp.*` são validados na construção (taxa positiva, tentativas e janela maiores ou iguais a 1, timeouts positivos); valor inválido impede a aplicação de subir.

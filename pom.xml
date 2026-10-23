@@ -51,6 +51,13 @@
     <openapi-generator.version>7.26.0</openapi-generator.version>
     <openapi-request-validator.version>3.0.0</openapi-request-validator.version>
 
+    <!-- why: testes com @Tag("bench") medem tempo e ficam fora do verify; -Pbench troca os dois filtros -->
+    <test.groups></test.groups>
+    <test.excluded.groups>bench</test.excluded.groups>
+
+    <!-- why: o JaCoCo prepende o agente a este valor; o perfil jfr acrescenta flags via @{argLine} -->
+    <argLine></argLine>
+
     <jacoco.version>0.8.15</jacoco.version>
     <pitest-maven.version>1.30.1</pitest-maven.version>
     <pitest-junit5-plugin.version>1.2.3</pitest-junit5-plugin.version>
@@ -104,6 +111,8 @@
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-surefire-plugin</artifactId>
           <configuration>
+            <groups>${test.groups}</groups>
+            <excludedGroups>${test.excluded.groups}</excludedGroups>
             <includes>
               <include>**/*Test.java</include>
             </includes>
@@ -200,6 +209,9 @@
             <mutationThreshold>85</mutationThreshold>
             <coverageThreshold>100</coverageThreshold>
             <timestampedReports>false</timestampedReports>
+            <excludedGroups>
+              <param>bench</param>
+            </excludedGroups>
           </configuration>
         </plugin>
 
@@ -298,6 +310,48 @@
       <modules>
         <module>it-image</module>
       </modules>
+    </profile>
+    <profile>
+      <!--
+        ./mvnw -Pbench test -pl core -am -Dtest=VirtualThreadsBenchTest: roda so os testes com
+        @Tag("bench") (ex.: docs/benchmarks/jvm/virtual-threads.md). Sem cobertura: nao e verify.
+      -->
+      <id>bench</id>
+      <properties>
+        <test.groups>bench</test.groups>
+        <test.excluded.groups></test.excluded.groups>
+        <jacoco.skip>true</jacoco.skip>
+      </properties>
+    </profile>
+    <profile>
+      <!--
+        ./mvnw -Pjfr verify -pl core -am -Dit.test=BackfillIT: os ITs rodam sob uma gravacao JFR
+        chamada "pinning" (jdk.VirtualThreadPinned a partir de 20 ms), tambem nos testes de unidade. O
+        teste de pinning do BackfillIT le o snapshot dela; os arquivos finais ficam em
+        core/target/pinning.jfr (ITs) e pinning-unit.jfr (unidade).
+        @{argLine} e o agente do JaCoCo, resolvido so na hora de iniciar o failsafe.
+      -->
+      <id>jfr</id>
+      <build>
+        <pluginManagement>
+          <plugins>
+            <plugin>
+              <groupId>org.apache.maven.plugins</groupId>
+              <artifactId>maven-failsafe-plugin</artifactId>
+              <configuration>
+                <argLine>@{argLine} -XX:FlightRecorderOptions=stackdepth=256 -XX:StartFlightRecording=name=pinning,filename=${project.build.directory}/pinning.jfr,dumponexit=true,jdk.VirtualThreadPinned#threshold=20ms</argLine>
+              </configuration>
+            </plugin>
+            <plugin>
+              <groupId>org.apache.maven.plugins</groupId>
+              <artifactId>maven-surefire-plugin</artifactId>
+              <configuration>
+                <argLine>@{argLine} -XX:FlightRecorderOptions=stackdepth=256 -XX:StartFlightRecording=name=pinning,filename=${project.build.directory}/pinning-unit.jfr,dumponexit=true,jdk.VirtualThreadPinned#threshold=20ms</argLine>
+              </configuration>
+            </plugin>
+          </plugins>
+        </pluginManagement>
+      </build>
     </profile>
     <profile>
       <!--

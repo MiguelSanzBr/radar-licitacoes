@@ -26,4 +26,9 @@
     <Class name="br.dev.miguelsanzbr.radar.observability.CorrelationIdFilter"/>
     <Bug pattern="HRS_REQUEST_PARAMETER_TO_HTTP_HEADER"/>
   </Match>
+  <!-- PageFetcher devolve ao chamador a mesma excecao nao verificada que a busca da pagina lancou (a funcao de busca nao lanca excecao verificada); o analisador nao enxerga isso. -->
+  <Match>
+    <Class name="~br\.dev\.miguelsanzbr\.radar\.ingest\.application\.PageFetcher\$Pages"/>
+    <Bug pattern="BC_UNCONFIRMED_CAST_OF_RETURN_VALUE,THROWS_METHOD_THROWS_RUNTIMEEXCEPTION"/>
+  </Match>
 </FindBugsFilter>

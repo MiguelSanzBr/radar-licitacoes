@@ -23,10 +23,12 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 import org.assertj.core.api.InstanceOfAssertFactories;
 import org.junit.jupiter.api.Test;
 import org.springframework.transaction.support.TransactionOperations;
@@ -42,8 +44,8 @@ class IncrementalSyncUseCaseTest {
   record Call(LocalDate from, LocalDate to, int modalityId, int page) {}
 
   static final class FakeUpdates implements PncpGateway {
-    final Map<Integer, Object> pages = new HashMap<>();
-    final List<Call> calls = new ArrayList<>();
+    final Map<Integer, Object> pages = new ConcurrentHashMap<>();
+    final List<Call> calls = Collections.synchronizedList(new ArrayList<>());
 
     @Override
     public PncpPage publications(LocalDate from, LocalDate to, int modalityId, int page) {
@@ -83,21 +85,22 @@ class IncrementalSyncUseCaseTest {
   private final RecordingMetrics metrics = new RecordingMetrics();
   private final InMemoryCursors cursors = new InMemoryCursors();
   private final Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
-  private final IncrementalSyncUseCase useCase =
-      new IncrementalSyncUseCase(
-          gateway,
-          cursors,
-          runs,
-          new PageProcessor(
-              procurements,
-              runs,
-              outbox,
-              TransactionOperations.withoutTransaction(),
-              metrics,
-              clock),
-          clock,
-          Duration.ofDays(1),
-          OVERLAP);
+  private final PageProcessor processor =
+      new PageProcessor(
+          procurements, runs, outbox, TransactionOperations.withoutTransaction(), metrics, clock);
+  private final IncrementalSyncUseCase useCase = syncWith(1);
+
+  private IncrementalSyncUseCase syncWith(int fetchAhead) {
+    return new IncrementalSyncUseCase(
+        gateway,
+        cursors,
+        runs,
+        processor,
+        PageFetcher.virtualThreads(fetchAhead),
+        clock,
+        Duration.ofDays(1),
+        OVERLAP);
+  }
 
   private void cursorAt(Instant watermark) {
     cursors.save(new IngestionCursor(6, watermark, OVERLAP, watermark));
@@ -233,6 +236,28 @@ class IncrementalSyncUseCaseTest {
     assertThat(second.updated()).isEqualTo(1);
     assertThat(outbox.eventCount()).isEqualTo(3);
     assertThat(cursors.store.get(6).watermark()).isEqualTo(Instant.parse("2026-10-21T21:00:00Z"));
+  }
+
+  @Test
+  void fetchingAheadAppliesPagesInOrderAndTheWatermarkStillTakesTheNewestUpdate() {
+    cursorAt(WATERMARK);
+    for (var n = 1; n <= 4; n++) {
+      gateway.pages.put(
+          n, page(n, 4, snapshot(n, 1, Instant.parse("2026-10-21T1" + n + ":00:00Z"))));
+    }
+
+    var run = syncWith(3).sync(6);
+
+    assertThat(run.cursorPage()).isEqualTo(4);
+    assertThat(run.fetched()).isEqualTo(4);
+    assertThat(outbox.appended)
+        .extracting(a -> a.events().getFirst().aggregateId())
+        .containsExactly(
+            BackfillUseCaseTest.id(1).value(),
+            BackfillUseCaseTest.id(2).value(),
+            BackfillUseCaseTest.id(3).value(),
+            BackfillUseCaseTest.id(4).value());
+    assertThat(cursors.store.get(6).watermark()).isEqualTo(Instant.parse("2026-10-21T14:00:00Z"));
   }
 
   @Test

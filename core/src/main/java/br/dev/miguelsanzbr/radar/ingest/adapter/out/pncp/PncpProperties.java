@@ -4,19 +4,23 @@ import java.time.Duration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 
-/** Client and resilience settings; the defaults are the policy of ADR-0017. */
+/**
+ * Client and resilience settings; the defaults are the policy of ADR-0017. The rate is 0.2 req/s
+ * because the real PNCP answered 429 at a sustained 0.5 req/s (provisional until the probe
+ * decides); it is the one cap on requests per second, whatever the page fetch concurrency.
+ */
 @ConfigurationProperties("radar.pncp")
 public record PncpProperties(
     @DefaultValue("https://pncp.gov.br") String baseUrl,
     @DefaultValue("50") int pageSize,
-    @DefaultValue("1") double requestsPerSecond,
+    @DefaultValue("0.2") double requestsPerSecond,
     @DefaultValue("15s") Duration requestTimeout,
     @DefaultValue("5s") Duration connectTimeout,
     @DefaultValue Retry retry,
     @DefaultValue CircuitBreaker circuitBreaker,
     @DefaultValue("4") int maxConcurrentCalls,
     @DefaultValue("30s") Duration bulkheadMaxWait,
-    @DefaultValue("60s") Duration rateLimiterMaxWait) {
+    @DefaultValue("120s") Duration rateLimiterMaxWait) {
 
   public PncpProperties {
     check(pageSize >= 10, "pageSize must be >= 10");

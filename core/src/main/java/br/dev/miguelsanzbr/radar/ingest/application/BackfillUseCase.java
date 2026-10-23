@@ -16,7 +16,8 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * Loads a range of days from the PNCP, one window per day and one transaction per page: the page's
  * notices, their outbox events and the run's cursor commit together, so a crash resumes at the
- * first page that did not commit.
+ * first page that did not commit. Pages are fetched ahead (see {@link PageFetcher}) but always
+ * processed in page order.
  */
 public final class BackfillUseCase {
 
@@ -29,13 +30,19 @@ public final class BackfillUseCase {
   private final PncpGateway gateway;
   private final IngestionRunRepository runs;
   private final PageProcessor pages;
+  private final PageFetcher fetcher;
   private final Clock clock;
 
   public BackfillUseCase(
-      PncpGateway gateway, IngestionRunRepository runs, PageProcessor pages, Clock clock) {
+      PncpGateway gateway,
+      IngestionRunRepository runs,
+      PageProcessor pages,
+      PageFetcher fetcher,
+      Clock clock) {
     this.gateway = gateway;
     this.runs = runs;
     this.pages = pages;
+    this.fetcher = fetcher;
     this.clock = clock;
   }
 
@@ -100,9 +107,10 @@ public final class BackfillUseCase {
             open.orElseGet(
                 () -> IngestionRun.start(IngestionKind.BACKFILL, modalityId, start, end, clock)));
     var page = run.nextPage();
+    var reading = fetcher.open(page, p -> gateway.publications(day, day, modalityId, p));
     try {
       while (true) {
-        var result = gateway.publications(day, day, modalityId, page);
+        var result = reading.next();
         if (result.totalPages() == 0) {
           return pages.finishEmpty(run);
         }
@@ -115,6 +123,8 @@ public final class BackfillUseCase {
     } catch (RuntimeException e) {
       pages.fail(run, e);
       throw new BackfillFailedException(day, page, e);
+    } finally {
+      reading.close();
     }
   }
 }

@@ -27,6 +27,7 @@ public final class IncrementalSyncUseCase {
   private final IngestionCursorRepository cursors;
   private final IngestionRunRepository runs;
   private final PageProcessor pages;
+  private final PageFetcher fetcher;
   private final Clock clock;
   private final Duration initialLookback;
   private final Duration overlap;
@@ -36,6 +37,7 @@ public final class IncrementalSyncUseCase {
       IngestionCursorRepository cursors,
       IngestionRunRepository runs,
       PageProcessor pages,
+      PageFetcher fetcher,
       Clock clock,
       Duration initialLookback,
       Duration overlap) {
@@ -43,6 +45,7 @@ public final class IncrementalSyncUseCase {
     this.cursors = cursors;
     this.runs = runs;
     this.pages = pages;
+    this.fetcher = fetcher;
     this.clock = clock;
     this.initialLookback = initialLookback;
     this.overlap = overlap;
@@ -71,9 +74,9 @@ public final class IncrementalSyncUseCase {
                 IngestionKind.INCREMENTAL, modalityId, window.start(), window.end(), clock));
     var newest = cursor.watermark();
     var page = run.nextPage();
-    try {
+    try (var reading = fetcher.open(page, p -> gateway.updates(from, to, modalityId, p))) {
       while (true) {
-        var result = gateway.updates(from, to, modalityId, page);
+        var result = reading.next();
         if (result.totalPages() == 0) {
           run = pages.finishEmpty(run);
           break;

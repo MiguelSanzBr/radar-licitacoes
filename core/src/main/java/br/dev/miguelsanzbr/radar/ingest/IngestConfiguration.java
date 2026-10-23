@@ -3,10 +3,12 @@ package br.dev.miguelsanzbr.radar.ingest;
 import br.dev.miguelsanzbr.radar.ingest.adapter.in.ops.BackfillProperties;
 import br.dev.miguelsanzbr.radar.ingest.adapter.in.scheduler.IngestScheduleProperties;
 import br.dev.miguelsanzbr.radar.ingest.adapter.in.scheduler.PartitionProperties;
+import br.dev.miguelsanzbr.radar.ingest.adapter.out.pncp.PncpProperties;
 import br.dev.miguelsanzbr.radar.ingest.application.BackfillUseCase;
 import br.dev.miguelsanzbr.radar.ingest.application.BackfillWindowPolicy;
 import br.dev.miguelsanzbr.radar.ingest.application.CloseExpiredUseCase;
 import br.dev.miguelsanzbr.radar.ingest.application.IncrementalSyncUseCase;
+import br.dev.miguelsanzbr.radar.ingest.application.PageFetcher;
 import br.dev.miguelsanzbr.radar.ingest.application.PageProcessor;
 import br.dev.miguelsanzbr.radar.ingest.application.PartitionMaintenance;
 import br.dev.miguelsanzbr.radar.ingest.application.port.IngestMetrics;
@@ -28,7 +30,8 @@ import org.springframework.transaction.support.TransactionOperations;
 @EnableConfigurationProperties({
   BackfillProperties.class,
   IngestScheduleProperties.class,
-  PartitionProperties.class
+  PartitionProperties.class,
+  IngestFetchProperties.class
 })
 class IngestConfiguration {
 
@@ -51,10 +54,25 @@ class IngestConfiguration {
     return new PageProcessor(procurements, runs, outbox, transactions, metrics, clock);
   }
 
+  /**
+   * Pages are fetched ahead on virtual threads, {@code radar.ingest.fetch-ahead} of them (never
+   * more than the PNCP bulkhead lets through at once). The rate limiter, not this number, caps
+   * requests per second.
+   */
+  @Bean
+  PageFetcher pageFetcher(PncpProperties pncp, IngestFetchProperties fetch) {
+    return PageFetcher.virtualThreads(
+        IngestFetchProperties.effective(fetch.fetchAhead(), pncp.maxConcurrentCalls()));
+  }
+
   @Bean
   BackfillUseCase backfillUseCase(
-      PncpGateway gateway, IngestionRunRepository runs, PageProcessor pages, Clock clock) {
-    return new BackfillUseCase(gateway, runs, pages, clock);
+      PncpGateway gateway,
+      IngestionRunRepository runs,
+      PageProcessor pages,
+      PageFetcher fetcher,
+      Clock clock) {
+    return new BackfillUseCase(gateway, runs, pages, fetcher, clock);
   }
 
   @Bean
@@ -63,6 +81,7 @@ class IngestConfiguration {
       IngestionCursorRepository cursors,
       IngestionRunRepository runs,
       PageProcessor pages,
+      PageFetcher fetcher,
       Clock clock,
       IngestScheduleProperties properties) {
     return new IncrementalSyncUseCase(
@@ -70,6 +89,7 @@ class IngestConfiguration {
         cursors,
         runs,
         pages,
+        fetcher,
         clock,
         properties.incremental().initialLookback(),
         properties.incremental().overlap());

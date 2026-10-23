@@ -23,6 +23,7 @@ import org.springframework.test.context.TestPropertySource;
 @TestPropertySource(
     properties = {
       "radar.pncp.requests-per-second=1000",
+      "radar.ingest.fetch-ahead=4",
       "radar.pncp.retry.max-attempts=2",
       "radar.pncp.retry.initial-backoff=10ms"
     })
