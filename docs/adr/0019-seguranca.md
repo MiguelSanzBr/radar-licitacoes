@@ -44,6 +44,7 @@ O arquivo do realm serve só ao ambiente local: segredo do cliente e senhas são
 ## Consequências
 
 - Fora do escopo: MFA, WebAuthn, autocadastro de usuários (desligado no realm), logout federado. O logout encerra a sessão da aplicação, mas não a do Keycloak; no mesmo navegador, o próximo login entra sem pedir senha. Sem descoberta OIDC o cliente web não conhece o `end_session_endpoint`.
+- Chaves do Keycloak inalcançáveis: um token que não pôde ser verificado não foi julgado, então a resposta é 503 `unavailable` com `Retry-After: 5` (`KeysUnavailableFilter`), não 401 nem 500; vale também para leitura pública que traga `Authorization`. O contrato OpenAPI não lista o 503 em cada operação (ele nasce do filtro de segurança, antes do controlador); o tipo está descrito em `docs/problems/unavailable.md`.
 - Cache: CSS e JS das páginas saem com `Cache-Control: max-age=3600` (`spring.web.resources.cache.cachecontrol.max-age`). Nas demais respostas o Spring Security grava `no-cache, no-store` quando o handler não define nada. Os controladores de busca precisam declarar o próprio `Cache-Control` (por exemplo `no-cache`) junto com o `ETag`, senão o `no-store` impede a revalidação; o que o controlador define é mantido.
 - O scrape do Prometheus em `/actuator/prometheus` exige token com o papel `operator` (ou, no deploy, porta de gerenciamento separada fora da rede pública).
 - Toda rota nova precisa entrar nas regras de `SecurityConfig` e em `AuthorizationMatrixIT`; rota de API não listada e não `GET` é negada por padrão.
@@ -53,3 +54,4 @@ O arquivo do realm serve só ao ambiente local: segredo do cliente e senhas são
 - `docs/security/authz-matrix.md`, gerada por `core/src/test/java/br/dev/miguelsanzbr/radar/identity/AuthorizationMatrixIT.java` com o resultado real de cada rota para visitante, `supplier` e `operator`.
 - `core/src/test/java/br/dev/miguelsanzbr/radar/identity/KeycloakIT.java`: token real do Keycloak (Testcontainers) do `fornecedor` grava busca salva (201); o do `operador` recebe 403; token adulterado ou emitido para `admin-cli` (sem a audiência) recebe 401. `KeycloakIssuerMismatchIT`: token válido com emissor diferente do configurado recebe 401.
 - `core/src/test/java/br/dev/miguelsanzbr/radar/identity/SecurityConfigTest.java`: papéis do token, 401/403 em problem+json, CSRF nas páginas e não na API, cabeçalhos de segurança.
+- Checklist OWASP Top 10 com a mitigação e o teste de cada item, e os itens pendentes: `docs/security/owasp.md`.

@@ -91,4 +91,21 @@ class ArchitectureRulesSeeViolationsTest {
             "adapter.in.JakartaTransactionalMethod.handle()>")
         .doesNotContain("PlainController", "TransactionalOutboundAdapter");
   }
+
+  @Test
+  void outboundRuleFlagsEveryWayToOpenAConnectionOutsideThePncpGateway() {
+    var failures = failures(ArchitectureRules.onlyThePncpGatewayCallsOut(FIXTURES));
+
+    assertThat(failures)
+        .contains(
+            "UsesJdkHttpClient",
+            "UsesRestClient",
+            "UsesRestTemplate",
+            "OpensAUrlContent",
+            "UsesAnyUrlConnection",
+            "UsesHttpUrlConnection",
+            "OpensAUrlConnection",
+            "OpensAUrlStream")
+        .doesNotContain("PncpGatewayFixture", "KnowsATimeoutException", "SearchOnItsOwn");
+  }
 }

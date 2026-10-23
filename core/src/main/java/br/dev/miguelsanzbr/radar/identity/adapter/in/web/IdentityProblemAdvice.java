@@ -2,6 +2,7 @@ package br.dev.miguelsanzbr.radar.identity.adapter.in.web;
 
 import br.dev.miguelsanzbr.radar.identity.application.ApiKeyNotFoundException;
 import br.dev.miguelsanzbr.radar.identity.domain.ApiKeyLimitExceededException;
+import jakarta.validation.ConstraintViolationException;
 import java.net.URI;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -24,6 +25,25 @@ class IdentityProblemAdvice {
   @ExceptionHandler(ApiKeyNotFoundException.class)
   ResponseEntity<ProblemDetail> notFound(ApiKeyNotFoundException e) {
     return problem(e, HttpStatus.NOT_FOUND, "not-found", "Não encontrado");
+  }
+
+  /**
+   * A wrong-sized prefix names no key (the contract has only 404 here); any other input is a 400.
+   */
+  @ExceptionHandler(ConstraintViolationException.class)
+  ResponseEntity<ProblemDetail> invalid(ConstraintViolationException e) {
+    var onlyThePrefix =
+        e.getConstraintViolations().stream()
+            .allMatch(violation -> violation.getPropertyPath().toString().endsWith(".prefix"));
+    if (onlyThePrefix) {
+      return problem(
+          new ApiKeyNotFoundException(), HttpStatus.NOT_FOUND, "not-found", "Não encontrado");
+    }
+    return problem(
+        new IllegalArgumentException("Um ou mais parâmetros são inválidos."),
+        HttpStatus.BAD_REQUEST,
+        "validation",
+        "Requisição inválida");
   }
 
   private static ResponseEntity<ProblemDetail> problem(

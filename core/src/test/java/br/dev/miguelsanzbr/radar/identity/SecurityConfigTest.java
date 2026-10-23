@@ -2,6 +2,7 @@ package br.dev.miguelsanzbr.radar.identity;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.hamcrest.Matchers.containsString;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -40,6 +41,7 @@ import org.springframework.security.oauth2.jwt.BadJwtException;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtDecoderFactory;
+import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.security.oauth2.jwt.JwtValidationException;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -143,6 +145,22 @@ class SecurityConfigTest {
     mvc.perform(get("/api/v1/procurements").header("Authorization", "Bearer forged"))
         .andExpect(problem(401, "unauthorized"))
         .andExpect(header().string("WWW-Authenticate", "Bearer"));
+  }
+
+  /**
+   * The decoder cannot reach the identity provider's keys: the token was not judged, so not a 401.
+   */
+  @Test
+  void aTokenThatCannotBeCheckedBecauseTheKeysAreUnreachableIs503WithoutDetail() throws Exception {
+    when(decoder.decode("keys-down"))
+        .thenThrow(new JwtException("An error occurred while attempting to decode the Jwt: I/O"));
+
+    for (var path : List.of("/api/v1/me", "/ops/probe", "/api/v1/procurements")) {
+      mvc.perform(get(path).header("Authorization", "Bearer keys-down"))
+          .andExpect(problem(503, "unavailable"))
+          .andExpect(header().string("Retry-After", "5"))
+          .andExpect(content().string(org.hamcrest.Matchers.not(containsString("I/O"))));
+    }
   }
 
   @Test

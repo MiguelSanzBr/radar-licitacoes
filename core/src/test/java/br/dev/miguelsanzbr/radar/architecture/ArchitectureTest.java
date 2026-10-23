@@ -40,4 +40,8 @@ class ArchitectureTest {
   @ArchTest
   static final ArchRule inbound_adapters_have_no_transaction_boundary =
       ArchitectureRules.inboundAdaptersAreNotTransactional();
+
+  @ArchTest
+  static final ArchRule only_the_pncp_gateway_calls_out =
+      ArchitectureRules.onlyThePncpGatewayCallsOut(ROOT);
 }

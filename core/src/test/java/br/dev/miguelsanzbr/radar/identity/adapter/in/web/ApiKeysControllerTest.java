@@ -4,6 +4,7 @@ import static br.dev.miguelsanzbr.radar.api.OpenApiConformance.conforms;
 import static org.hamcrest.Matchers.containsString;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -20,6 +21,7 @@ import br.dev.miguelsanzbr.radar.identity.domain.ApiKey;
 import br.dev.miguelsanzbr.radar.identity.domain.ApiKeyLimitExceededException;
 import br.dev.miguelsanzbr.radar.identity.domain.Tier;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -81,5 +83,18 @@ class ApiKeysControllerTest {
         .andExpect(content().contentTypeCompatibleWith("application/problem+json"))
         .andExpect(jsonPath("$.type").value(DOCS + "not-found.md"))
         .andExpect(conforms());
+  }
+
+  @Test
+  void aPrefixOfTheWrongSizeNamesNoKeyAndIsA404() throws Exception {
+    for (var prefix : List.of("a", "abc", "x".repeat(300))) {
+      mvc.perform(delete("/api/v1/api-keys/" + prefix).with(Auth.supplier("kc-1")))
+          .andExpect(status().isNotFound())
+          .andExpect(content().contentTypeCompatibleWith("application/problem+json"))
+          .andExpect(jsonPath("$.type").value(DOCS + "not-found.md"))
+          .andExpect(conforms());
+    }
+
+    verifyNoInteractions(manage);
   }
 }

@@ -1,5 +1,6 @@
 package br.dev.miguelsanzbr.radar.identity;
 
+import br.dev.miguelsanzbr.radar.identity.adapter.in.web.KeysUnavailableFilter;
 import br.dev.miguelsanzbr.radar.identity.adapter.in.web.Problems;
 import br.dev.miguelsanzbr.radar.identity.adapter.in.web.RateLimitFilter;
 import jakarta.servlet.DispatcherType;
@@ -27,6 +28,7 @@ import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
 import org.springframework.security.oauth2.core.oidc.user.OidcUserAuthority;
 import org.springframework.security.oauth2.jwt.JwtIssuerValidator;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
+import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
@@ -107,6 +109,7 @@ public class SecurityConfig {
                                 "forbidden",
                                 "Acesso negado",
                                 "O papel do usuário não permite esta rota.")))
+        .addFilterBefore(new KeysUnavailableFilter(), BearerTokenAuthenticationFilter.class)
         .sessionManagement(
             session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .csrf(csrf -> csrf.disable())

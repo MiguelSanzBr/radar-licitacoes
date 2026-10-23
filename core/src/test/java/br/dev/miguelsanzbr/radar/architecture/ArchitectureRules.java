@@ -1,13 +1,20 @@
 package br.dev.miguelsanzbr.radar.architecture;
 
+import static com.tngtech.archunit.base.DescribedPredicate.not;
+import static com.tngtech.archunit.core.domain.JavaClass.Predicates.assignableTo;
 import static com.tngtech.archunit.core.domain.JavaClass.Predicates.equivalentTo;
 import static com.tngtech.archunit.core.domain.JavaClass.Predicates.resideInAnyPackage;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noMethods;
 
+import com.tngtech.archunit.core.domain.JavaAccess;
+import com.tngtech.archunit.core.domain.JavaClass;
+import com.tngtech.archunit.core.domain.properties.HasName;
 import com.tngtech.archunit.lang.ArchRule;
 import com.tngtech.archunit.lang.CompositeArchRule;
+import java.net.URL;
+import java.net.URLConnection;
 import org.springframework.transaction.support.TransactionOperations;
 
 /** The hexagonal and context-isolation rules, as functions so fixtures can exercise them. */
@@ -114,5 +121,36 @@ final class ArchitectureRules {
             .beAnnotatedWith(JAKARTA_TRANSACTIONAL)
             .because(because);
     return CompositeArchRule.of(classes).and(methods);
+  }
+
+  /**
+   * The one outbound HTTP client of the application code is the PNCP gateway, whose address comes
+   * from configuration. Nothing else opens a connection, so no request field can pick a host (OWASP
+   * A10). Libraries that fetch from addresses of the configuration (the identity provider's keys,
+   * the schema registry) are not application code and are not covered.
+   */
+  static ArchRule onlyThePncpGatewayCallsOut(String root) {
+    return noClasses()
+        .that()
+        .resideOutsideOfPackage(root + ".ingest.adapter.out.pncp..")
+        .should()
+        .dependOnClassesThat(
+            JavaClass.Predicates.resideInAnyPackage(
+                    "java.net.http..",
+                    "org.springframework.web.client..",
+                    "org.springframework.web.reactive.function.client..",
+                    "org.apache.hc..",
+                    "okhttp3..")
+                // exception types (the registry client's timeouts are told apart by type) are no
+                // client
+                .and(not(assignableTo(Throwable.class)))
+                .or(assignableTo(URLConnection.class)))
+        .orShould()
+        .callMethodWhere(
+            JavaAccess.Predicates.targetOwner(equivalentTo(URL.class))
+                .and(
+                    JavaAccess.Predicates.target(
+                        HasName.Predicates.nameMatching("openConnection|openStream|getContent"))))
+        .because("a host taken from a request would make the server fetch for the caller");
   }
 }

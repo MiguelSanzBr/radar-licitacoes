@@ -1,6 +1,6 @@
 # Varreduras de cadeia de suprimento e segredos
 
-Este documento descreve as varreduras de SBOM, dependências, imagem e segredos do projeto. O ADR 0019 ainda não existe na `main`, então a parte de varreduras fica aqui. A checklist OWASP e os testes de injeção ficam para a parte 2 do PR 5.4.
+Este documento descreve as varreduras de SBOM, dependências, imagem e segredos do projeto. A decisão de identidade e acesso está no ADR 0019 (`docs/adr/0019-seguranca.md`); a checklist OWASP Top 10, com o teste ou a mitigação de cada item, está em `docs/security/owasp.md`.
 
 ## O que cada varredura cobre
 
