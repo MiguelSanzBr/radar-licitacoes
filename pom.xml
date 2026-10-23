@@ -51,9 +51,9 @@
     <openapi-generator.version>7.26.0</openapi-generator.version>
     <openapi-request-validator.version>3.0.0</openapi-request-validator.version>
 
-    <!-- why: testes com @Tag("bench") medem tempo e ficam fora do verify; -Pbench troca os dois filtros -->
+    <!-- why: testes com @Tag("bench") medem tempo e @Tag("chaos") derruba infraestrutura: ficam fora do verify; -Pbench e -Pchaos trocam os dois filtros -->
     <test.groups></test.groups>
-    <test.excluded.groups>bench</test.excluded.groups>
+    <test.excluded.groups>bench,chaos</test.excluded.groups>
 
     <!-- why: o JaCoCo prepende o agente a este valor; o perfil jfr acrescenta flags via @{argLine} -->
     <argLine></argLine>
@@ -122,6 +122,8 @@
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-failsafe-plugin</artifactId>
           <configuration>
+            <groups>${test.groups}</groups>
+            <excludedGroups>${test.excluded.groups}</excludedGroups>
             <includes>
               <include>**/*IT.java</include>
             </includes>
@@ -211,6 +213,7 @@
             <timestampedReports>false</timestampedReports>
             <excludedGroups>
               <param>bench</param>
+              <param>chaos</param>
             </excludedGroups>
           </configuration>
         </plugin>
@@ -322,6 +325,35 @@
         <test.excluded.groups></test.excluded.groups>
         <jacoco.skip>true</jacoco.skip>
       </properties>
+    </profile>
+    <profile>
+      <!--
+        ./mvnw -Pchaos verify -pl core -am -Dit.test=ChaosIT (make chaos): roda so os testes com
+        @Tag("chaos"), que sobem Postgres e Kafka proprios atras do Toxiproxy e os derrubam. Fora do
+        verify padrao e sem o gate de cobertura.
+      -->
+      <id>chaos</id>
+      <properties>
+        <test.groups>chaos</test.groups>
+        <test.excluded.groups></test.excluded.groups>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <!-- O agente continua ligado (o enforcer exige jacoco.exec); so o gate de 100% sai. -->
+            <groupId>org.jacoco</groupId>
+            <artifactId>jacoco-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>check</id>
+                <configuration>
+                  <skip>true</skip>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
     </profile>
     <profile>
       <!--

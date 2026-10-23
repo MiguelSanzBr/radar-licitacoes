@@ -1,7 +1,12 @@
-.PHONY: verify mutation check-coverage-policy lint-openapi audit-repo tf-fmt tf-validate tf-lint tf-plan up down logs seed e2e replay bench slo synth probe deploy rollback test-scripts profile image image-size image-scan image-test lint-observability probe-report backfill helm-lint helm-smoke sbom sbom-scan secrets-scan
+.PHONY: verify chaos mutation check-coverage-policy lint-openapi audit-repo tf-fmt tf-validate tf-lint tf-plan up down logs seed e2e replay bench slo synth probe deploy rollback test-scripts profile image image-size image-scan image-test lint-observability probe-report backfill helm-lint helm-smoke sbom sbom-scan secrets-scan
 
 verify:
 	./mvnw verify
+
+# Prova de caos (ADR-0017): 10 mil eventos com Toxiproxy; Postgres e Kafka proprios, nunca os compartilhados.
+# Rode sozinho (uns 4 GB livres) e leia as perdas e duplicatas impressas no fim (ambas devem ser 0).
+chaos:
+	./mvnw -Pchaos verify -pl core -am -Dit.test=ChaosIT
 
 TRIVY_IMAGE := aquasec/trivy:0.76.0@sha256:2416d1f74045b57274df1a340eee6b510cacd73c66a6ccb8da092b117eb7d222
 

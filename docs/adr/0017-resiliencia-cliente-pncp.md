@@ -57,3 +57,9 @@ Etiqueta de coleta: a taxa acima vale para todo o tráfego do cliente. O backfil
 
 - `core/src/test/java/br/dev/miguelsanzbr/radar/ingest/adapter/out/pncp/PncpHttpGatewayTest.java` e `PncpMapperTest.java`.
 - Tempos e contagem de tentativas por cenário: `docs/benchmarks/pncp-client/resilience-scenarios.md`.
+
+## Prova sob caos
+
+A PR 4.4 pôs à prova a entrega do outbox ao Kafka e do Kafka à view de busca, com falhas reais: 10 mil avisos passam pela coleta, pelo outbox, pelo Kafka e pelo projetor enquanto o Toxiproxy e reinícios de contêiner derrubam, um por vez, o Postgres (latência de 2 s e reinício no meio de um lote do relay) e o Kafka (corte de 10 s, 5% das conexões derrubadas e reinício do broker). Resultado: zero perdas, zero efeitos duplicados e zero mensagens na DLQ; o projetor aplicou exatamente 10 000 eventos de 10 051 registros no tópico, e o inbox recusou os 51 a mais.
+
+O que isso não cobre do cliente PNCP: a latência de 2 s no PNCP ficou dentro dos limites do cliente (timeout de 15 s), com o limitador de taxa elevado só para o teste, e não exercitou a nova tentativa nem o disjuntor. Os valores deste ADR seguem provisórios até a sonda. Números, montagem e limites em `docs/benchmarks/chaos/2026-10-23.md`; rode com `make chaos`.
