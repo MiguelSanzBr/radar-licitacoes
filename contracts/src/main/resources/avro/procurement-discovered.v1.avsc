@@ -1,0 +1,264 @@
+{
+  "type": "record",
+  "name": "ProcurementDiscovered",
+  "namespace": "br.dev.miguelsanzbr.radar.events",
+  "doc": "A procurement was seen for the first time.",
+  "fields": [
+    {
+      "name": "eventId",
+      "type": "string",
+      "doc": "UUID v7, unique per event."
+    },
+    {
+      "name": "eventType",
+      "type": "string"
+    },
+    {
+      "name": "schemaVersion",
+      "type": "int"
+    },
+    {
+      "name": "aggregateType",
+      "type": "string"
+    },
+    {
+      "name": "aggregateId",
+      "type": "string",
+      "doc": "Also the Kafka record key."
+    },
+    {
+      "name": "aggregateVersion",
+      "type": "long"
+    },
+    {
+      "name": "occurredAt",
+      "type": "string",
+      "doc": "ISO-8601 instant."
+    },
+    {
+      "name": "traceparent",
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null,
+      "doc": "W3C trace context; null until tracing is on."
+    },
+    {
+      "name": "payload",
+      "type": {
+        "type": "record",
+        "name": "ProcurementDiscoveredPayload",
+        "fields": [
+          {
+            "name": "aggregateId",
+            "type": "string"
+          },
+          {
+            "name": "occurredAt",
+            "type": "string",
+            "doc": "ISO-8601 instant."
+          },
+          {
+            "name": "snapshot",
+            "type": {
+              "type": "record",
+              "name": "ProcurementSnapshot",
+              "doc": "Normalised state of a procurement, everything but the raw PNCP JSON.",
+              "fields": [
+                {
+                  "name": "id",
+                  "type": "string",
+                  "doc": "PNCP control number."
+                },
+                {
+                  "name": "status",
+                  "type": "string",
+                  "doc": "PUBLISHED, SUSPENDED, REVOKED or ANNULLED; a string, not an enum, so a new status is not a breaking change."
+                },
+                {
+                  "name": "situation",
+                  "type": {
+                    "type": "record",
+                    "name": "IdName",
+                    "doc": "Numeric code and name pair, as PNCP names situations, modalities and dispute modes.",
+                    "fields": [
+                      {
+                        "name": "id",
+                        "type": "int"
+                      },
+                      {
+                        "name": "name",
+                        "type": "string"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "name": "organ",
+                  "type": {
+                    "type": "record",
+                    "name": "Organ",
+                    "fields": [
+                      {
+                        "name": "cnpj",
+                        "type": "string"
+                      },
+                      {
+                        "name": "name",
+                        "type": "string"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "name": "unit",
+                  "type": {
+                    "type": "record",
+                    "name": "Unit",
+                    "fields": [
+                      {
+                        "name": "code",
+                        "type": "string"
+                      },
+                      {
+                        "name": "name",
+                        "type": "string"
+                      },
+                      {
+                        "name": "uf",
+                        "type": [
+                          "null",
+                          "string"
+                        ],
+                        "default": null
+                      },
+                      {
+                        "name": "municipalityName",
+                        "type": [
+                          "null",
+                          "string"
+                        ],
+                        "default": null
+                      },
+                      {
+                        "name": "ibgeCode",
+                        "type": [
+                          "null",
+                          "string"
+                        ],
+                        "default": null
+                      }
+                    ]
+                  }
+                },
+                {
+                  "name": "modality",
+                  "type": "IdName"
+                },
+                {
+                  "name": "disputeMode",
+                  "type": [
+                    "null",
+                    "IdName"
+                  ],
+                  "default": null
+                },
+                {
+                  "name": "legalBasis",
+                  "type": [
+                    "null",
+                    {
+                      "type": "record",
+                      "name": "LegalBasis",
+                      "fields": [
+                        {
+                          "name": "code",
+                          "type": "int"
+                        },
+                        {
+                          "name": "name",
+                          "type": "string"
+                        }
+                      ]
+                    }
+                  ],
+                  "default": null
+                },
+                {
+                  "name": "srp",
+                  "type": "boolean"
+                },
+                {
+                  "name": "estimatedValue",
+                  "type": [
+                    "null",
+                    "string"
+                  ],
+                  "default": null,
+                  "doc": "Decimal string with two places."
+                },
+                {
+                  "name": "awardedValue",
+                  "type": [
+                    "null",
+                    "string"
+                  ],
+                  "default": null,
+                  "doc": "Decimal string with two places."
+                },
+                {
+                  "name": "proposalWindow",
+                  "type": [
+                    "null",
+                    {
+                      "type": "record",
+                      "name": "ProposalWindow",
+                      "fields": [
+                        {
+                          "name": "openingAt",
+                          "type": [
+                            "null",
+                            "string"
+                          ],
+                          "default": null
+                        },
+                        {
+                          "name": "closingAt",
+                          "type": [
+                            "null",
+                            "string"
+                          ],
+                          "default": null
+                        }
+                      ]
+                    }
+                  ],
+                  "default": null
+                },
+                {
+                  "name": "publishedAt",
+                  "type": "string",
+                  "doc": "ISO-8601 instant."
+                },
+                {
+                  "name": "pncpUpdatedAt",
+                  "type": "string",
+                  "doc": "ISO-8601 instant."
+                },
+                {
+                  "name": "objectDescription",
+                  "type": "string"
+                },
+                {
+                  "name": "revision",
+                  "type": "int"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

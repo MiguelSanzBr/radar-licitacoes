@@ -5,6 +5,7 @@
 |Spring components
 |_Configuration properties_
 
+* `b.d.m.r.o.MessagingProperties`
 * `b.d.m.r.o.OutboxProperties`
 
 _Others_

@@ -6,6 +6,7 @@ import br.dev.miguelsanzbr.radar.alerts.application.port.NotifierMetrics;
 import br.dev.miguelsanzbr.radar.alerts.domain.Frequency;
 import br.dev.miguelsanzbr.radar.observability.TraceparentExtractor;
 import br.dev.miguelsanzbr.radar.ops.DeadLetters;
+import br.dev.miguelsanzbr.radar.shared.RegistryUnavailableException;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Duration;
@@ -86,6 +87,7 @@ class AlertMatchedListener {
   }
 
   private static AlertEnvelope parse(String message) {
+    RegistryUnavailableException.rejectIfMarked(message);
     try {
       return JSON.readValue(message, AlertEnvelope.class);
     } catch (JacksonException e) {

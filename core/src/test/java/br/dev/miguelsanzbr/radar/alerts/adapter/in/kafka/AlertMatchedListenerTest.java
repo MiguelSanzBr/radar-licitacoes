@@ -16,6 +16,7 @@ import br.dev.miguelsanzbr.radar.alerts.domain.AlertMatched;
 import br.dev.miguelsanzbr.radar.alerts.domain.Frequency;
 import br.dev.miguelsanzbr.radar.alerts.domain.SearchMatch;
 import br.dev.miguelsanzbr.radar.observability.TraceparentExtractor;
+import br.dev.miguelsanzbr.radar.outbox.adapter.kafka.AvroWire;
 import io.micrometer.tracing.Tracer;
 import io.micrometer.tracing.propagation.Propagator;
 import java.nio.charset.StandardCharsets;
@@ -220,5 +221,55 @@ class AlertMatchedListenerTest {
 
     verify(instant).send(any(), any());
     assertThat(metrics.stale).isZero();
+  }
+
+  @Test
+  void anAvroInstantAlertIsSentLikeItsJsonTwin() {
+    var event = UUID.randomUUID();
+    var alert = alert(Frequency.INSTANT);
+    var json = JSON.writeValueAsString(AlertEnvelopes.node(event, alert, TRACE, Facts.NOW));
+
+    listener.onMessage(
+        new ConsumerRecord<>("radar.alert.v1", 2, 0L, "key", new AvroWire().roundTrip(json)));
+
+    verify(instant).send(event, alert);
+    verifyNoInteractions(digest);
+    assertThat(traces).containsExactly(TRACE + "|notify alert");
+  }
+
+  @Test
+  void anAvroDailyAlertIsLeftForTheDigest() {
+    var event = UUID.randomUUID();
+    var alert = alert(Frequency.DAILY);
+    var json = JSON.writeValueAsString(AlertEnvelopes.node(event, alert, TRACE, Facts.NOW));
+
+    listener.onMessage(
+        new ConsumerRecord<>("radar.alert.v1", 2, 0L, "key", new AvroWire().roundTrip(json)));
+
+    verify(digest).queue(event, alert);
+    verifyNoInteractions(instant);
+  }
+
+  @Test
+  void anAvroRecordTheDeserializerCouldNotDecodeIsMalformed() {
+    var record = new ConsumerRecord<>("radar.alert.v1", 2, 0L, "key", "avro-undecodable:AAAAAQ==");
+
+    assertThatThrownBy(() -> listener.onMessage(record))
+        .isInstanceOf(MalformedEventException.class);
+  }
+
+  @Test
+  void aRecordLeftMarkedForARegistryRetryIsRejectedAsAnOutage() {
+    var record =
+        new ConsumerRecord<>(
+            "radar.alert.v1",
+            2,
+            0L,
+            "key",
+            br.dev.miguelsanzbr.radar.shared.RegistryUnavailableException.MARKER + "AAAA");
+
+    assertThatThrownBy(() -> listener.onMessage(record))
+        .isInstanceOf(br.dev.miguelsanzbr.radar.shared.RegistryUnavailableException.class);
+    verifyNoInteractions(instant, digest);
   }
 }

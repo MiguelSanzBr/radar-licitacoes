@@ -1,0 +1,71 @@
+{
+  "type": "record",
+  "name": "ProcurementClosed",
+  "namespace": "br.dev.miguelsanzbr.radar.events",
+  "doc": "The proposal window of a procurement closed.",
+  "fields": [
+    {
+      "name": "eventId",
+      "type": "string",
+      "doc": "UUID v7, unique per event."
+    },
+    {
+      "name": "eventType",
+      "type": "string"
+    },
+    {
+      "name": "schemaVersion",
+      "type": "int"
+    },
+    {
+      "name": "aggregateType",
+      "type": "string"
+    },
+    {
+      "name": "aggregateId",
+      "type": "string",
+      "doc": "Also the Kafka record key."
+    },
+    {
+      "name": "aggregateVersion",
+      "type": "long"
+    },
+    {
+      "name": "occurredAt",
+      "type": "string",
+      "doc": "ISO-8601 instant."
+    },
+    {
+      "name": "traceparent",
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null,
+      "doc": "W3C trace context; null until tracing is on."
+    },
+    {
+      "name": "payload",
+      "type": {
+        "type": "record",
+        "name": "ProcurementClosedPayload",
+        "fields": [
+          {
+            "name": "aggregateId",
+            "type": "string"
+          },
+          {
+            "name": "occurredAt",
+            "type": "string",
+            "doc": "ISO-8601 instant."
+          },
+          {
+            "name": "closingAt",
+            "type": "string",
+            "doc": "ISO-8601 instant."
+          }
+        ]
+      }
+    }
+  ]
+}

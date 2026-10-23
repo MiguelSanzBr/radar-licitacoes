@@ -6,6 +6,8 @@ import br.dev.miguelsanzbr.radar.ops.DeadLetters;
 import br.dev.miguelsanzbr.radar.ops.application.port.DlqMessages;
 import br.dev.miguelsanzbr.radar.ops.domain.DeadMessage;
 import br.dev.miguelsanzbr.radar.ops.domain.DlqCount;
+import br.dev.miguelsanzbr.radar.outbox.adapter.kafka.AvroWire;
+import br.dev.miguelsanzbr.radar.outbox.adapter.kafka.EventSamples;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Instant;
@@ -161,5 +163,42 @@ class DlqRecorderListenerTest {
     listener.onMessage(record);
 
     assertThat(recorded.getFirst().headers()).isEmpty();
+  }
+
+  @Test
+  void anAvroRecordIsStoredAsTheJsonTextTheDeserializerGaveIt() {
+    var json = EventSamples.closed();
+    var record =
+        new ConsumerRecord<>(
+            "radar.procurement.v1.dlq", 0, 3L, "key", new AvroWire().roundTrip(json));
+
+    listener.onMessage(record);
+
+    assertThat(recorded.getFirst().value()).isEqualTo(record.value());
+    var mapper = tools.jackson.databind.json.JsonMapper.builder().build();
+    assertThat(mapper.readTree(record.value())).isEqualTo(mapper.readTree(json));
+  }
+
+  @Test
+  void anAvroRecordThatCouldNotBeDecodedIsStoredWithItsBytesInBase64() {
+    listener.onMessage(
+        new ConsumerRecord<>("radar.alert.v1.dlq", 0, 3L, "key", "avro-undecodable:AAAAAQ=="));
+
+    assertThat(recorded.getFirst().value()).isEqualTo("avro-undecodable:AAAAAQ==");
+  }
+
+  @Test
+  void aRecordLeftMarkedForARegistryRetryIsRejectedAsAnOutageAndNothingIsStored() {
+    var record =
+        new ConsumerRecord<>(
+            "radar.alert.v1.dlq",
+            0,
+            3L,
+            "key",
+            br.dev.miguelsanzbr.radar.shared.RegistryUnavailableException.MARKER + "AAAA");
+
+    org.assertj.core.api.Assertions.assertThatThrownBy(() -> listener.onMessage(record))
+        .isInstanceOf(br.dev.miguelsanzbr.radar.shared.RegistryUnavailableException.class);
+    assertThat(recorded).isEmpty();
   }
 }

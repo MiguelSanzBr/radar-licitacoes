@@ -129,7 +129,7 @@ class KafkaEventPublisherIT {
     assertThat(config.get(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG))
         .isEqualTo(StringSerializer.class);
     assertThat(config.get(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG))
-        .isEqualTo(StringSerializer.class);
+        .isEqualTo(EnvelopeSerializer.class);
   }
 
   @Test

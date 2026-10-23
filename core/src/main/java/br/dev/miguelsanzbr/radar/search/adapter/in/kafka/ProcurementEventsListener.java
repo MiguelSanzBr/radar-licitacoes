@@ -3,6 +3,7 @@ package br.dev.miguelsanzbr.radar.search.adapter.in.kafka;
 import br.dev.miguelsanzbr.radar.observability.TraceparentExtractor;
 import br.dev.miguelsanzbr.radar.search.application.ProcurementProjector;
 import br.dev.miguelsanzbr.radar.search.application.ProjectionOutcome;
+import br.dev.miguelsanzbr.radar.shared.RegistryUnavailableException;
 import java.nio.charset.StandardCharsets;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.slf4j.Logger;
@@ -40,6 +41,7 @@ class ProcurementEventsListener {
       containerFactory = "searchKafkaListenerContainerFactory",
       properties = "auto.offset.reset=earliest")
   void onMessage(ConsumerRecord<String, String> record, Acknowledgment ack) {
+    RegistryUnavailableException.rejectIfMarked(record.value());
     var parsed = parser.parse(record.value());
     if (parsed.isPresent()) {
       var event = parsed.get().event();

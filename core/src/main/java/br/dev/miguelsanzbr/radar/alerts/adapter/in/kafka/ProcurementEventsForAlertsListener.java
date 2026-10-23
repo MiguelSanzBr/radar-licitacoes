@@ -3,6 +3,7 @@ package br.dev.miguelsanzbr.radar.alerts.adapter.in.kafka;
 import br.dev.miguelsanzbr.radar.alerts.application.MatchProcurementUseCase;
 import br.dev.miguelsanzbr.radar.observability.TraceparentExtractor;
 import br.dev.miguelsanzbr.radar.ops.DeadLetters;
+import br.dev.miguelsanzbr.radar.shared.RegistryUnavailableException;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.nio.charset.StandardCharsets;
@@ -98,6 +99,7 @@ class ProcurementEventsForAlertsListener {
   }
 
   private static ProcurementEnvelope parse(String message) {
+    RegistryUnavailableException.rejectIfMarked(message);
     try {
       return JSON.readValue(message, ProcurementEnvelope.class);
     } catch (JacksonException e) {

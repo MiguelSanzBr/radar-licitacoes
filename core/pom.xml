@@ -65,6 +65,22 @@
       <artifactId>spring-boot-starter-kafka</artifactId>
     </dependency>
     <dependency>
+      <groupId>io.apicurio</groupId>
+      <artifactId>apicurio-registry-avro-serde-kafka</artifactId>
+      <version>${apicurio.version}</version>
+      <exclusions>
+        <!-- why: o cliente usa o adaptador HTTP do JDK (apicurio.registry.http.adapter=JDK); o Vert.x arrastaria o Netty 4.1 contra o 4.2 do Boot -->
+        <exclusion>
+          <groupId>io.apicurio</groupId>
+          <artifactId>apicurio-registry-java-sdk-adapter-vertx</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>io.kiota</groupId>
+          <artifactId>kiota-http-vertx</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-mail</artifactId>
     </dependency>

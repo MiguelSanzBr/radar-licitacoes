@@ -5,10 +5,6 @@ plantuml::components.puml[,,format=svg]
 plantuml::module-api.puml[,,format=svg]
 include::module-api.adoc[]
 
-== Ops
-plantuml::module-ops.puml[,,format=svg]
-include::module-ops.adoc[]
-
 == Shared
 plantuml::module-shared.puml[,,format=svg]
 include::module-shared.adoc[]
@@ -20,6 +16,10 @@ include::module-identity.adoc[]
 == Observability
 plantuml::module-observability.puml[,,format=svg]
 include::module-observability.adoc[]
+
+== Ops
+plantuml::module-ops.puml[,,format=svg]
+include::module-ops.adoc[]
 
 == Outbox
 plantuml::module-outbox.puml[,,format=svg]

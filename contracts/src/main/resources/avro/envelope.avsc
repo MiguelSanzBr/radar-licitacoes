@@ -1,0 +1,53 @@
+{
+  "type": "record",
+  "name": "EventEnvelope",
+  "namespace": "br.dev.miguelsanzbr.radar.events",
+  "doc": "Common header of every event. Not registered: the event schemas carry these fields.",
+  "fields": [
+    {
+      "name": "eventId",
+      "type": "string",
+      "doc": "UUID v7, unique per event."
+    },
+    {
+      "name": "eventType",
+      "type": "string"
+    },
+    {
+      "name": "schemaVersion",
+      "type": "int"
+    },
+    {
+      "name": "aggregateType",
+      "type": "string"
+    },
+    {
+      "name": "aggregateId",
+      "type": "string",
+      "doc": "Also the Kafka record key."
+    },
+    {
+      "name": "aggregateVersion",
+      "type": "long"
+    },
+    {
+      "name": "occurredAt",
+      "type": "string",
+      "doc": "ISO-8601 instant."
+    },
+    {
+      "name": "traceparent",
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null,
+      "doc": "W3C trace context; null until tracing is on."
+    },
+    {
+      "name": "payload",
+      "type": "string",
+      "doc": "The payload as JSON text. Documents the common header only: each event schema replaces this field by the typed record of its payload, and only those are registered."
+    }
+  ]
+}

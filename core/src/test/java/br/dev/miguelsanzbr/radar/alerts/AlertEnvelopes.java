@@ -21,6 +21,7 @@ public final class AlertEnvelopes {
     node.put("schemaVersion", 1);
     node.put("aggregateType", "Alert");
     node.put("aggregateId", a.subscriberId().toString());
+    node.put("aggregateVersion", 1);
     node.put("occurredAt", occurredAt.toString());
     node.put("traceparent", traceparent);
     var payload = node.putObject("payload");

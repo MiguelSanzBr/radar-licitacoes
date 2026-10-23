@@ -1,0 +1,98 @@
+{
+  "type": "record",
+  "name": "ProcurementSituationChanged",
+  "namespace": "br.dev.miguelsanzbr.radar.events",
+  "doc": "The PNCP situation of a procurement changed.",
+  "fields": [
+    {
+      "name": "eventId",
+      "type": "string",
+      "doc": "UUID v7, unique per event."
+    },
+    {
+      "name": "eventType",
+      "type": "string"
+    },
+    {
+      "name": "schemaVersion",
+      "type": "int"
+    },
+    {
+      "name": "aggregateType",
+      "type": "string"
+    },
+    {
+      "name": "aggregateId",
+      "type": "string",
+      "doc": "Also the Kafka record key."
+    },
+    {
+      "name": "aggregateVersion",
+      "type": "long"
+    },
+    {
+      "name": "occurredAt",
+      "type": "string",
+      "doc": "ISO-8601 instant."
+    },
+    {
+      "name": "traceparent",
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null,
+      "doc": "W3C trace context; null until tracing is on."
+    },
+    {
+      "name": "payload",
+      "type": {
+        "type": "record",
+        "name": "ProcurementSituationChangedPayload",
+        "fields": [
+          {
+            "name": "aggregateId",
+            "type": "string"
+          },
+          {
+            "name": "occurredAt",
+            "type": "string",
+            "doc": "ISO-8601 instant."
+          },
+          {
+            "name": "from",
+            "type": {
+              "type": "record",
+              "name": "IdName",
+              "doc": "Numeric code and name pair, as PNCP names situations, modalities and dispute modes.",
+              "fields": [
+                {
+                  "name": "id",
+                  "type": "int"
+                },
+                {
+                  "name": "name",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          {
+            "name": "to",
+            "type": "IdName"
+          },
+          {
+            "name": "pncpUpdatedAt",
+            "type": "string",
+            "doc": "ISO-8601 instant."
+          },
+          {
+            "name": "unexpected",
+            "type": "boolean",
+            "doc": "True when the state machine does not allow the transition."
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -323,6 +323,22 @@ curl -fsS -X POST -H "Authorization: Bearer $TOKEN" \
 
 ## Operações rotineiras
 
+### Trocar o formato dos eventos entre JSON e Avro
+
+**Quando.** O padrão é JSON. Avro (ADR-0024) é opcional e pede o Apicurio no ar. Os consumidores leem os dois formatos sempre, então a troca só mexe no produtor.
+
+**Ligar.** `PROFILE=layer3 make up`, depois `make schemas-register` (cria o grupo de cada tópico com a regra `BACKWARD`; pode rodar de novo) e reinicie a aplicação com `RADAR_MESSAGING_FORMAT=avro`. Confira em `GET http://localhost:8081/apis/registry/v3/groups/radar.procurement.v1/artifacts` que o primeiro evento registrou o artefato do seu tipo.
+
+**Desligar.** `RADAR_MESSAGING_FORMAT=json` e reinicie. Os registros Avro que já estão nos tópicos continuam legíveis enquanto o registry tiver os schemas.
+
+**Registry fora do ar.** Com `avro`, a publicação para: as linhas ficam no outbox sem gastar tentativa (`OutboxOldestAgeHigh` avisa) e voltam a sair quando o registry volta. O consumo de um registro Avro que o consumidor ainda não decodificou também espera: o registro é repetido a cada 5 s (`avro-registry-unavailable` no log) e não vai para a DLQ; cada chamada ao registry espera no máximo `RADAR_MESSAGING_REGISTRY_TIMEOUT_MS` (10 s), e depois da primeira falha o consumidor marca os registros Avro na hora, sem chamar o registry, por `RADAR_MESSAGING_REGISTRY_BACKOFF_MS` (5 s), para que uma leitura de centenas de registros não espere o prazo de cada um (um registro com schema em cache espera essa janela também). Se uma leitura ainda ficar lenta, reduza `SPRING_KAFKA_CONSUMER_MAX_POLL_RECORDS`. Se ele não voltar logo, desligue o Avro (acima) e o outbox drena em JSON.
+
+**Registro Avro na DLQ.** A DLQ guarda o JSON do evento, em texto (nunca os bytes do Avro), então o reprocessamento da DLQ funciona como para JSON: republica o texto e o produtor o converte em Avro. Só um registro com o texto `avro-undecodable:` (schema que o registry não conhece, bytes inválidos) guarda os bytes em Base64 e não pode ser reprocessado; decodifique o Base64, descubra o schema pelo id (bytes 1 a 4, `GET /apis/ccompat/v7/schemas/ids/{id}`) e republique o evento pela origem.
+
+**Schema recusado.** Um evento cujo schema quebra o `BACKWARD` (ou que o Avro não consegue codificar) é uma recusa, não uma queda: a publicação falha com `RuleViolationException` (ou o erro do Avro) no `last_error` da linha do outbox e cada tentativa conta. Depois de `radar.outbox.max-attempts` (10) a linha vira poison (`outbox_poison_total` sobe, `attempts >= 10`) e sai da fila, sem bloquear os outros agregados. Corrija o schema (campo novo opcional com padrão), reimplante e libere as linhas como na seção do outbox atrasado: `UPDATE outbox.outbox_event SET attempts = 0 WHERE published_at IS NULL AND attempts >= 10`.
+
+**No modo `cdc`** os eventos continuam em JSON, qualquer que seja o formato.
+
 ### Redis fora do ar (limite abre)
 
 **Sintoma.** `rate_limit_fail_open_total` cresce e o log traz, no máximo uma vez por minuto, `WARN Rate limiter unavailable, public reads pass unmetered (fail-open)`. As respostas das rotas públicas ficam sem `RateLimit-*`.

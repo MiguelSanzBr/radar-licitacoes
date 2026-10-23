@@ -50,10 +50,12 @@
     <togglz.version>4.6.4</togglz.version>
     <openapi-generator.version>7.26.0</openapi-generator.version>
     <openapi-request-validator.version>3.0.0</openapi-request-validator.version>
+    <!-- why: a mesma linha 3.x do registry do compose (infra/compose/docker-compose.yml, perfil layer3) -->
+    <apicurio.version>3.3.3</apicurio.version>
 
-    <!-- why: testes com @Tag("bench") medem tempo e @Tag("chaos") derruba infraestrutura e @Tag("cdc") sobe tres contêineres e uma imagem de 2,4 GB: ficam fora do verify; -Pbench, -Pchaos e -Pcdc trocam os dois filtros -->
+    <!-- why: testes com @Tag("bench") medem tempo, @Tag("chaos") derruba infraestrutura, @Tag("cdc") sobe tres contêineres e uma imagem de 2,4 GB e @Tag("avro") sobe o Apicurio: ficam fora do verify; -Pbench, -Pchaos, -Pcdc e -Pavro trocam os dois filtros -->
     <test.groups></test.groups>
-    <test.excluded.groups>bench,chaos,compat,cdc</test.excluded.groups>
+    <test.excluded.groups>bench,chaos,compat,cdc,avro</test.excluded.groups>
 
     <!-- why: o JaCoCo prepende o agente a este valor; o perfil jfr acrescenta flags via @{argLine} -->
     <argLine></argLine>
@@ -216,6 +218,7 @@
               <param>chaos</param>
               <param>compat</param>
               <param>cdc</param>
+              <param>avro</param>
             </excludedGroups>
           </configuration>
         </plugin>
@@ -413,6 +416,35 @@
       <id>cdc</id>
       <properties>
         <test.groups>cdc</test.groups>
+        <test.excluded.groups></test.excluded.groups>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <!-- O agente continua ligado (o enforcer exige jacoco.exec); so o gate de 100% sai. -->
+            <groupId>org.jacoco</groupId>
+            <artifactId>jacoco-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>check</id>
+                <configuration>
+                  <skip>true</skip>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <!--
+        ./mvnw -Pavro verify -pl core -am -Dit.test='SchemaEvolutionIT,AvroModeIT,AvroDlqIT' (make avro-test): roda so os
+        testes com @Tag("avro"), que sobem o Apicurio Registry (ADR-0024) alem do Kafka e do Postgres compartilhados.
+        Fora do verify padrao e sem o gate de cobertura.
+      -->
+      <id>avro</id>
+      <properties>
+        <test.groups>avro</test.groups>
         <test.excluded.groups></test.excluded.groups>
       </properties>
       <build>

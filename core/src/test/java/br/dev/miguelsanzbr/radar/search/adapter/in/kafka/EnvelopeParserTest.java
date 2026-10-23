@@ -11,6 +11,7 @@ import static br.dev.miguelsanzbr.radar.search.SearchFixtures.view;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import br.dev.miguelsanzbr.radar.outbox.adapter.kafka.AvroWire;
 import br.dev.miguelsanzbr.radar.search.application.ProcurementEvent;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
@@ -140,5 +141,16 @@ class EnvelopeParserTest {
 
     assertThatThrownBy(() -> parser.parse(envelope.toString()))
         .isInstanceOf(RuntimeException.class);
+  }
+
+  @ParameterizedTest
+  @MethodSource("events")
+  void everyKnownEventParsesTheSameWhenItArrivedAsAvro(ProcurementEvent event) {
+    var avro = new AvroWire().roundTrip(envelope(event));
+
+    var parsed = parser.parse(avro).orElseThrow();
+
+    assertThat(parsed.event()).isEqualTo(event);
+    assertThat(parsed.traceparent()).isEqualTo(TRACEPARENT);
   }
 }

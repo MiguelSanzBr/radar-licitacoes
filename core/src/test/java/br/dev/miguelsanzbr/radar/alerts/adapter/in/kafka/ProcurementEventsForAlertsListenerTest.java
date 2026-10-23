@@ -12,6 +12,7 @@ import br.dev.miguelsanzbr.radar.alerts.application.MatchProcurementUseCase;
 import br.dev.miguelsanzbr.radar.alerts.domain.ProcurementFacts;
 import br.dev.miguelsanzbr.radar.ingest.adapter.out.outbox.EventSchemas;
 import br.dev.miguelsanzbr.radar.observability.TraceparentExtractor;
+import br.dev.miguelsanzbr.radar.outbox.adapter.kafka.AvroWire;
 import com.networknt.schema.InputFormat;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.micrometer.tracing.Tracer;
@@ -362,5 +363,41 @@ class ProcurementEventsForAlertsListenerTest {
 
     assertThatThrownBy(() -> send(JSON.writeValueAsString(tree)))
         .isInstanceOf(MalformedEventException.class);
+  }
+
+  @Test
+  void anAvroDiscoveredEventIsMatchedLikeItsJsonTwin() {
+    var id = UUID.randomUUID();
+
+    send(new AvroWire().roundTrip(discovered(id, snapshot(), TRACE)));
+
+    verify(useCase).onDiscovered(id, Facts.procurement().build());
+    assertThat(traces).containsExactly(TRACE);
+  }
+
+  @Test
+  void anAvroUpdatedEventIsMatchedWithItsChangedFields() {
+    var id = UUID.randomUUID();
+
+    send(new AvroWire().roundTrip(updated(id, "objectDescription")));
+
+    verify(useCase)
+        .onUpdated(id, Facts.procurement().build(), java.util.List.of("objectDescription"));
+  }
+
+  @Test
+  void anAvroRecordTheDeserializerCouldNotDecodeIsMalformed() {
+    assertThatThrownBy(() -> send("avro-undecodable:AAAAAQ=="))
+        .isInstanceOf(MalformedEventException.class);
+    verifyNoInteractions(useCase);
+  }
+
+  @Test
+  void aRecordLeftMarkedForARegistryRetryIsRejectedAsAnOutage() {
+    assertThatThrownBy(
+            () ->
+                send(br.dev.miguelsanzbr.radar.shared.RegistryUnavailableException.MARKER + "AAAA"))
+        .isInstanceOf(br.dev.miguelsanzbr.radar.shared.RegistryUnavailableException.class);
+    verifyNoInteractions(useCase);
   }
 }

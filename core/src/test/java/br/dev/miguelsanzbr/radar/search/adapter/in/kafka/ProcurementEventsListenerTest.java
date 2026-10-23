@@ -13,9 +13,11 @@ import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import br.dev.miguelsanzbr.radar.observability.TraceparentExtractor;
+import br.dev.miguelsanzbr.radar.outbox.adapter.kafka.AvroWire;
 import br.dev.miguelsanzbr.radar.search.application.ProcurementEvent;
 import br.dev.miguelsanzbr.radar.search.application.ProcurementProjector;
 import br.dev.miguelsanzbr.radar.search.application.ProjectionOutcome;
@@ -23,6 +25,7 @@ import java.nio.charset.StandardCharsets;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.junit.jupiter.api.Test;
 import org.springframework.kafka.support.Acknowledgment;
+import tools.jackson.core.JacksonException;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ObjectNode;
 
@@ -108,5 +111,49 @@ class ProcurementEventsListenerTest {
     listener.onMessage(record(envelope(closed("c", id(1), 3))), ack);
 
     verify(traces).continueFrom(eq(TRACEPARENT), anyString());
+  }
+
+  @Test
+  void anAvroRecordIsProjectedAndAcknowledgedLikeItsJsonTwin() {
+    var event = closed("c", id(1), 3);
+    when(projector.project(any(), anyLong())).thenReturn(ProjectionOutcome.APPLIED);
+
+    listener.onMessage(record(new AvroWire().roundTrip(envelope(event))), ack);
+
+    var order = inOrder(projector, ack);
+    order.verify(projector).project(event, 17L);
+    order.verify(ack).acknowledge();
+  }
+
+  @Test
+  void anAvroRecordKeepsTheTraceOfItsEnvelope() {
+    when(projector.project(any(), anyLong())).thenReturn(ProjectionOutcome.APPLIED);
+
+    listener.onMessage(record(new AvroWire().roundTrip(envelope(closed("c", id(1), 3)))), ack);
+
+    verify(traces).continueFrom(eq(TRACEPARENT), anyString());
+  }
+
+  @Test
+  void anAvroRecordTheDeserializerCouldNotDecodeIsPoisonAndIsNotAcknowledged() {
+    assertThatThrownBy(() -> listener.onMessage(record("avro-undecodable:AAAAAQ=="), ack))
+        .isInstanceOf(JacksonException.class);
+
+    verify(ack, never()).acknowledge();
+  }
+
+  @Test
+  void aRecordLeftMarkedForARegistryRetryIsNotAcknowledgedNorDeadLettered() {
+    assertThatThrownBy(
+            () ->
+                listener.onMessage(
+                    record(
+                        br.dev.miguelsanzbr.radar.shared.RegistryUnavailableException.MARKER
+                            + "AAAA"),
+                    ack))
+        .isInstanceOf(br.dev.miguelsanzbr.radar.shared.RegistryUnavailableException.class);
+
+    verify(ack, never()).acknowledge();
+    verifyNoInteractions(projector);
   }
 }

@@ -1,5 +1,6 @@
 package br.dev.miguelsanzbr.radar.ops;
 
+import br.dev.miguelsanzbr.radar.shared.RegistryUnavailableException;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
@@ -75,7 +76,9 @@ public final class DeadLetters implements ConsumerAwareRecordRecoverer {
    * fine and must wait, never go to the dead letters. A constraint or size violation is bad data
    * and is not an outage. The jOOQ side has no Spring translator, so its raw {@link SQLException}
    * is judged by type and by SQLState class: 08 (connection), 40 (rollback, deadlock), 53
-   * (resources), 57 (operator intervention, timeout) and 55P03 (lock not available).
+   * (resources), 57 (operator intervention, timeout) and 55P03 (lock not available). A record the
+   * Avro deserializer could not decode for lack of the schema registry ({@link
+   * RegistryUnavailableException}) is an outage too.
    */
   public static boolean isOutage(Throwable failure) {
     for (var t = failure; t != null; t = t.getCause()) {
@@ -83,6 +86,7 @@ public final class DeadLetters implements ConsumerAwareRecordRecoverer {
           || t instanceof DataAccessResourceFailureException
           || t instanceof CannotCreateTransactionException
           || t instanceof TransactionTimedOutException
+          || t instanceof RegistryUnavailableException
           || (t instanceof SQLException sql && outage(sql))) {
         return true;
       }

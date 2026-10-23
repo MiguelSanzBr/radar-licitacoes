@@ -177,6 +177,9 @@ services:
       SPRING_DATA_REDIS_HOST: redis
       # polling (relay da aplicacao) ou cdc (Debezium, perfil cdc): nunca os dois (ADR-0018); make exporta cdc com PROFILE=cdc
       RADAR_OUTBOX_MODE: ${RADAR_OUTBOX_MODE:-polling}
+      # json (padrao) ou avro (ADR-0024); avro pede o perfil layer3 (Apicurio) e `make schemas-register`. O cdc fica em JSON.
+      RADAR_MESSAGING_FORMAT: ${RADAR_MESSAGING_FORMAT:-json}
+      RADAR_MESSAGING_REGISTRY_URL: http://apicurio:8080/apis/registry/v3
       SPRING_MAIL_HOST: mailpit
       SPRING_MAIL_PORT: "1025"
       # Emissor = URL do navegador; chaves e token pelo nome do servico (back-channel)
@@ -205,9 +208,12 @@ services:
       start_period: 40s
 
   apicurio:
-    # Camada 3 (PR 8.1): o registro de schemas sobe so com `--profile layer3`; a aplicacao ainda nao o usa.
+    # Camada 3 (ADR-0024): o registro de schemas sobe so com `--profile layer3` e a aplicacao so o usa com RADAR_MESSAGING_FORMAT=avro.
+    # A regra padrao BACKWARD vale para todo grupo; `make schemas-register` poe a regra explicita em cada grupo de topico.
     image: apicurio/apicurio-registry:3.3.3@sha256:c9cae4c90ce46538abf673c68eb591345f23bcc6c2aa6bfd47189adcf609d8f1
     profiles: [layer3]
+    environment:
+      APICURIO_RULES_GLOBAL_COMPATIBILITY: BACKWARD
     ports: ["127.0.0.1:8081:8080"]
     mem_limit: 512m
 

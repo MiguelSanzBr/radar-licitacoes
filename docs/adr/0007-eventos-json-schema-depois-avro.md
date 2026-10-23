@@ -31,5 +31,5 @@ Regras de evolução já na camada 1: campo novo é opcional; remoção ou mudan
 
 - PR 1.1 `feat(shared): value objects and envelope`: envelope e `DomainEvent` com testes de unidade e de propriedade.
 - Job `contracts` do CI: validação dos `.schema.json` contra exemplos.
-- PR 8.1 `feat(contracts): avro schemas and apicurio`: teste de evolução (campo opcional registra; remoção de campo obrigatório é rejeitada) e relatório em `docs/benchmarks/schema/evolution.md`.
-- Compatibilidade do cliente do registry com Kafka 4: pesquisa em `docs/compat-matrix.md`, a verificar na M8.
+- PR 8.1 `feat(contracts): avro schemas and apicurio`: teste de evolução (campo opcional registra; campo obrigatório sem padrão e mudança de tipo são rejeitados; a remoção de campo obrigatório só é rejeitada com `FULL`, ver ADR-0024) e relatório em `docs/benchmarks/schema/evolution.md`.
+- Compatibilidade do cliente do registry com Kafka 4: verificada no PR 8.1 (`docs/compat-matrix.md`).

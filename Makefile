@@ -1,4 +1,4 @@
-.PHONY: verify chaos cdc-test compat mutation check-coverage-policy lint-openapi audit-repo tf-fmt tf-validate tf-lint tf-plan up down logs seed e2e replay bench slo synth probe deploy rollback test-scripts profile image image-size image-scan image-test lint-observability probe-report backfill helm-lint helm-smoke sbom sbom-scan secrets-scan
+.PHONY: verify chaos cdc-test avro-test schemas-register compat mutation check-coverage-policy lint-openapi audit-repo tf-fmt tf-validate tf-lint tf-plan up down logs seed e2e replay bench slo synth probe deploy rollback test-scripts profile image image-size image-scan image-test lint-observability probe-report backfill helm-lint helm-smoke sbom sbom-scan secrets-scan
 
 verify:
 	./mvnw verify
@@ -17,6 +17,14 @@ compat:
 # Relay e Debezium pelas mesmas asserções (ADR-0018); sobe Postgres, Kafka e o Connect (imagem de 2,4 GB).
 cdc-test:
 	./mvnw -Pcdc verify -pl core -am -Dit.test=CdcEquivalenceIT
+
+# Avro e Apicurio (ADR-0024): evolucao do schema no registry e o fluxo ponta a ponta em modo avro; sobe o Apicurio.
+avro-test:
+	./mvnw -Pavro verify -pl core -am -Dit.test='SchemaEvolutionIT,AvroModeIT,AvroDlqIT'
+
+# Grupos do Apicurio por topico com a regra BACKWARD; rode depois de `PROFILE=layer3 make up` e antes de ligar RADAR_MESSAGING_FORMAT=avro.
+schemas-register:
+	scripts/schemas-register.sh
 
 TRIVY_IMAGE := aquasec/trivy:0.76.0@sha256:2416d1f74045b57274df1a340eee6b510cacd73c66a6ccb8da092b117eb7d222
 
@@ -199,7 +207,7 @@ SHELLCHECK_IMAGE := koalaman/shellcheck:v0.10.0@sha256:2097951f02e735b613f4a34de
 BATS_IMAGE := bats/bats:1.12.0@sha256:0257e4f5326dd37046e94d4b8ce07c293447be80a9db6d6dfff1d50d07617e2e
 
 test-scripts:
-	docker run --rm -v "$(CURDIR):$(CURDIR)" -w "$(CURDIR)" $(SHELLCHECK_IMAGE) scripts/deploy-lib.sh scripts/deploy.sh scripts/rollback.sh scripts/smoke.sh
+	docker run --rm -v "$(CURDIR):$(CURDIR)" -w "$(CURDIR)" $(SHELLCHECK_IMAGE) scripts/deploy-lib.sh scripts/deploy.sh scripts/rollback.sh scripts/smoke.sh scripts/schemas-register.sh
 	docker run --rm -v "$(CURDIR):$(CURDIR)" -w "$(CURDIR)" $(BATS_IMAGE) scripts/test
 
 # Reconstroi o modelo de leitura do offset 0 do topico (ADR-0010): dispara o replay do operador e

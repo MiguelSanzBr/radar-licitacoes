@@ -3,6 +3,7 @@ package br.dev.miguelsanzbr.radar.ops.adapter.in.kafka;
 import br.dev.miguelsanzbr.radar.ops.DeadLetters;
 import br.dev.miguelsanzbr.radar.ops.application.port.DlqMessages;
 import br.dev.miguelsanzbr.radar.ops.domain.DeadMessage;
+import br.dev.miguelsanzbr.radar.shared.RegistryUnavailableException;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.util.LinkedHashMap;
@@ -37,6 +38,7 @@ class DlqRecorderListener {
       containerFactory = "opsKafkaListenerContainerFactory",
       properties = "auto.offset.reset=earliest")
   void onMessage(ConsumerRecord<String, String> record) {
+    RegistryUnavailableException.rejectIfMarked(record.value());
     var headers = new LinkedHashMap<String, String>();
     for (var header : record.headers()) {
       if (header.value() != null) {
