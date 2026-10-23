@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="UTF-8"><title>Resumo diário</title></head>
+<body style="font-family: sans-serif; color: #1a1a1a; max-width: 38rem; margin: 0 auto;">
+  <p th:text="${headline}">Resumo</p>
+  <div th:each="group : ${groups}">
+    <h2 style="font-size: 1.1rem;" th:text="${group.name}">busca</h2>
+    <div th:each="item : ${group.items}" style="margin-bottom: 1rem;">
+      <p style="margin: 0;" th:text="${item.objectDescription}">Objeto</p>
+      <p style="margin: 0; font-size: 0.9rem;">
+        <span th:text="${item.organ}">órgão</span> |
+        <span th:text="${item.place}">local</span> |
+        <span th:text="${item.value}">valor</span> |
+        encerra em <span th:text="${item.closing}">data</span>
+      </p>
+      <p style="margin: 0;"><a th:href="${item.url}" th:text="${item.url}">link</a></p>
+    </div>
+  </div>
+  <hr>
+  <p style="font-size: 0.85rem; color: #555;">
+    <a th:href="${searchesUrl}">Gerenciar suas buscas</a> |
+    <a th:href="${privacyUrl}">Apagar seus dados</a>
+  </p>
+</body>
+</html>

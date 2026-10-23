@@ -71,12 +71,19 @@ class AlertsKafkaConfiguration {
 
   static BackOff backOffFor(
       Exception failure, long retryMillis, long maxRetries, long outageMillis) {
+    return databaseFailure(failure)
+        ? new FixedBackOff(outageMillis, FixedBackOff.UNLIMITED_ATTEMPTS)
+        : new FixedBackOff(retryMillis, maxRetries);
+  }
+
+  /** A database or transaction failure anywhere in the cause chain: an outage, not bad data. */
+  static boolean databaseFailure(Throwable failure) {
     for (Throwable t = failure; t != null; t = t.getCause()) {
       if (t instanceof DataAccessException || t instanceof TransactionException) {
-        return new FixedBackOff(outageMillis, FixedBackOff.UNLIMITED_ATTEMPTS);
+        return true;
       }
     }
-    return new FixedBackOff(retryMillis, maxRetries);
+    return false;
   }
 
   static void logAndSkip(ConsumerRecord<?, ?> record, Exception failure) {

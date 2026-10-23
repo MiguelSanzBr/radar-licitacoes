@@ -42,6 +42,11 @@ public final class Facts {
     return this;
   }
 
+  public Facts municipality(String value) {
+    this.municipality = value;
+    return this;
+  }
+
   public Facts ibge(String value) {
     this.ibge = value;
     return this;

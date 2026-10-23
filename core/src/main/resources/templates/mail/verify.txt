@@ -1,0 +1,5 @@
+Para receber os alertas do Radar de Licitações, confirme seu e-mail:
+
+[(${link})]
+
+O link vale por 48 horas e só pode ser usado uma vez. Se você não pediu este cadastro, ignore esta mensagem.

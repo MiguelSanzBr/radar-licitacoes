@@ -1,0 +1,14 @@
+Nova licitação para a busca "[(${search})]"
+
+[(${item.objectDescription})]
+
+Órgão: [(${item.organ})]
+Local: [(${item.place})]
+Valor estimado: [(${item.value})]
+Encerramento: [(${item.closing})]
+
+Ver a licitação: [(${item.url})]
+
+--
+Gerenciar suas buscas: [(${searchesUrl})]
+Apagar seus dados: [(${privacyUrl})]

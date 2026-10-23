@@ -73,6 +73,18 @@ class PrometheusEndpointIT {
   }
 
   @Test
+  void alertLatencyHasABucketAtTheSixtySecondSloAndTheMailFailuresExistFromTheStart()
+      throws Exception {
+    var scrape = get("/actuator/prometheus");
+
+    assertThat(scrape)
+        .containsPattern("alert_delivery_latency_seconds_bucket\\{[^}]*le=\"60\\.0\"")
+        .containsPattern("alert_mail_failures_total\\{[^}]*kind=\"instant\"[^}]*} 0\\.0")
+        .containsPattern("alert_mail_failures_total\\{[^}]*kind=\"digest\"[^}]*} 0\\.0")
+        .containsPattern("alert_mail_failures_total\\{[^}]*kind=\"verification\"[^}]*} 0\\.0");
+  }
+
+  @Test
   void otherSensitiveEndpointsStayUnexposed() throws Exception {
     assertThat(request("/actuator/env").statusCode()).isEqualTo(404);
     assertThat(request("/actuator/beans").statusCode()).isEqualTo(404);

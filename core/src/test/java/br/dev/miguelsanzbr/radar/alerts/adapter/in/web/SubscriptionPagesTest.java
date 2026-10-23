@@ -2,6 +2,7 @@ package br.dev.miguelsanzbr.radar.alerts.adapter.in.web;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -18,6 +19,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import br.dev.miguelsanzbr.radar.alerts.Auth;
 import br.dev.miguelsanzbr.radar.alerts.application.EmailAlreadyRegisteredException;
 import br.dev.miguelsanzbr.radar.alerts.application.InvalidTokenException;
+import br.dev.miguelsanzbr.radar.alerts.application.MailDeliveryException;
 import br.dev.miguelsanzbr.radar.alerts.application.RegisterSubscriberUseCase;
 import br.dev.miguelsanzbr.radar.alerts.application.VerifySubscriberUseCase;
 import br.dev.miguelsanzbr.radar.alerts.domain.InvalidInputException;
@@ -136,6 +138,24 @@ class SubscriptionPagesTest {
         .andExpect(content().contentTypeCompatibleWith("text/html"))
         .andExpect(content().string(Matchers.containsString("<main")))
         .andExpect(content().string(Matchers.not(Matchers.containsString("X-Debug"))));
+  }
+
+  @Test
+  void aMailServerThatIsDownAnswers503WithTheMailUnavailableProblem() throws Exception {
+    doThrow(new MailDeliveryException(new IllegalStateException("smtp down")))
+        .when(register)
+        .register(any(), anyBoolean(), any());
+
+    mvc.perform(
+            post("/assinatura")
+                .with(Auth.webSupplier("sub-1", "fulano@example.com"))
+                .with(csrf())
+                .param("consent", "on"))
+        .andExpect(status().isServiceUnavailable())
+        .andExpect(content().contentTypeCompatibleWith("application/problem+json"))
+        .andExpect(jsonPath("$.type").value(Matchers.endsWith("/problems/mail-unavailable.md")))
+        .andExpect(jsonPath("$.status").value(503))
+        .andExpect(jsonPath("$.detail").value(Matchers.containsString("Tente de novo")));
   }
 
   @Test

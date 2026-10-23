@@ -1,0 +1,11 @@
+[(${headline})]
+[# th:each="group : ${groups}"]
+== [(${group.name})] ==
+[# th:each="item : ${group.items}"]
+[(${item.objectDescription})]
+[(${item.organ})] | [(${item.place})] | [(${item.value})] | encerra em [(${item.closing})]
+[(${item.url})]
+[/][/]
+--
+Gerenciar suas buscas: [(${searchesUrl})]
+Apagar seus dados: [(${privacyUrl})]

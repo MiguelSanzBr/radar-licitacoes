@@ -5,12 +5,18 @@ import br.dev.miguelsanzbr.radar.alerts.application.IdempotencyGuard;
 import br.dev.miguelsanzbr.radar.alerts.application.ManageSavedSearchUseCase;
 import br.dev.miguelsanzbr.radar.alerts.application.MatchProcurementUseCase;
 import br.dev.miguelsanzbr.radar.alerts.application.PurgeExpiredUseCase;
+import br.dev.miguelsanzbr.radar.alerts.application.QueueDigestAlertUseCase;
 import br.dev.miguelsanzbr.radar.alerts.application.RegisterSubscriberUseCase;
+import br.dev.miguelsanzbr.radar.alerts.application.SendDigestUseCase;
+import br.dev.miguelsanzbr.radar.alerts.application.SendInstantAlertUseCase;
 import br.dev.miguelsanzbr.radar.alerts.application.VerifySubscriberUseCase;
 import br.dev.miguelsanzbr.radar.alerts.application.port.AlertDeliveries;
 import br.dev.miguelsanzbr.radar.alerts.application.port.AlertEvents;
+import br.dev.miguelsanzbr.radar.alerts.application.port.AlertMailer;
+import br.dev.miguelsanzbr.radar.alerts.application.port.DeliveryLog;
 import br.dev.miguelsanzbr.radar.alerts.application.port.IdempotencyStore;
 import br.dev.miguelsanzbr.radar.alerts.application.port.MatcherMetrics;
+import br.dev.miguelsanzbr.radar.alerts.application.port.NotifierMetrics;
 import br.dev.miguelsanzbr.radar.alerts.application.port.ProcessedEvents;
 import br.dev.miguelsanzbr.radar.alerts.application.port.ReverseSearch;
 import br.dev.miguelsanzbr.radar.alerts.application.port.SavedSearchRepository;
@@ -105,5 +111,28 @@ class AlertsConfig {
       Clock clock) {
     return new MatchProcurementUseCase(
         search, deliveries, inbox, events, metrics, unitOfWork, clock);
+  }
+
+  @Bean
+  SendInstantAlertUseCase sendInstantAlertUseCase(
+      DeliveryLog log,
+      ProcessedEvents inbox,
+      AlertMailer mailer,
+      NotifierMetrics metrics,
+      UnitOfWork unitOfWork,
+      Clock clock) {
+    return new SendInstantAlertUseCase(log, inbox, mailer, metrics, unitOfWork, clock);
+  }
+
+  @Bean
+  QueueDigestAlertUseCase queueDigestAlertUseCase(
+      DeliveryLog log, ProcessedEvents inbox, UnitOfWork unitOfWork, Clock clock) {
+    return new QueueDigestAlertUseCase(log, inbox, unitOfWork, clock);
+  }
+
+  @Bean
+  SendDigestUseCase sendDigestUseCase(
+      DeliveryLog log, AlertMailer mailer, UnitOfWork unitOfWork, Clock clock) {
+    return new SendDigestUseCase(log, mailer, unitOfWork, clock);
   }
 }

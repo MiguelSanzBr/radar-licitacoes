@@ -3,6 +3,7 @@ package br.dev.miguelsanzbr.radar.alerts.adapter.in.web;
 import br.dev.miguelsanzbr.radar.alerts.application.ConsentRequiredException;
 import br.dev.miguelsanzbr.radar.alerts.application.EmailAlreadyRegisteredException;
 import br.dev.miguelsanzbr.radar.alerts.application.IdempotencyMismatchException;
+import br.dev.miguelsanzbr.radar.alerts.application.MailDeliveryException;
 import br.dev.miguelsanzbr.radar.alerts.application.SavedSearchNotFoundException;
 import br.dev.miguelsanzbr.radar.alerts.application.UnauthenticatedException;
 import br.dev.miguelsanzbr.radar.alerts.domain.InvalidInputException;
@@ -68,6 +69,16 @@ class ProblemAdvice {
   @ExceptionHandler(EmailAlreadyRegisteredException.class)
   ResponseEntity<ProblemDetail> conflict(EmailAlreadyRegisteredException e) {
     return problem(e, HttpStatus.CONFLICT, "conflict", "Conflito");
+  }
+
+  /** The registration is committed before the mail goes out, so asking again re-sends it. */
+  @ExceptionHandler(MailDeliveryException.class)
+  ResponseEntity<ProblemDetail> mailUnavailable() {
+    return problem(
+        "Não foi possível enviar o e-mail de confirmação agora. Tente de novo em instantes.",
+        HttpStatus.SERVICE_UNAVAILABLE,
+        "mail-unavailable",
+        "E-mail indisponível");
   }
 
   @ExceptionHandler(IdempotencyMismatchException.class)
