@@ -440,7 +440,7 @@ Sequência do ADR-0010 (expand, backfill, flag, contract), em ordem:
 1. A migration V14 criou `estimated_value_cents`, o gatilho e o índice dos pendentes no deploy. Ela pede trava exclusiva em `ingest.procurement` e desiste em 5 s (`lock_timeout`) se houver transação longa aberta: o deploy falha sem aplicar nada, então encerre a transação (veja `pg_stat_activity`) e repita. Confira: `$PSQL -c "SELECT count(*) FROM ingest.procurement WHERE estimated_value_cents IS NULL AND estimated_value IS NOT NULL"` (o que falta preencher).
 2. Ligue o job em uma instância só (ele não tem trava entre instâncias; duas repetem trabalho sem dano): `RADAR_INGEST_VALUE_CENTS_BACKFILL_ENABLED=true` e reinicie o app. Acompanhe a métrica `ingest_value_cents_pending_rows`; ao chegar a 0, o job pode ficar ligado (sem nada a fazer ele só conta). O backfill dobra o arquivo das partições com linhas antigas ([vacuum-bloat](benchmarks/db/vacuum-bloat.md)).
 3. Com o pendente em 0 (recomendado; a leitura cai para o valor antigo nas linhas sem centavos, então não há perda se for antes), ligue `READ_VALUE_CENTS` em `/ops/togglz`. Para voltar, desligue a flag no mesmo lugar.
-4. O contract (`db/contract/V16__drop_estimated_value.sql.next`) só entra na release seguinte, depois de uma release inteira com a flag ligada.
+4. O contract (`db/contract/V17__drop_estimated_value.sql.next`) só entra na release seguinte, depois de uma release inteira com a flag ligada.
 
 ### Rotação de segredos
 

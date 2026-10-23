@@ -2,7 +2,7 @@
 -- (docs/adr/0010, secao expand-contract). NAO e uma migration de hoje: a extensao .next a deixa
 -- fora do Flyway. Na release seguinte, com a flag READ_VALUE_CENTS ligada ha uma release inteira
 -- e o backfill concluido (ingest_value_cents_pending_rows em 0), o mesmo PR que remove o campo
--- estimatedValue da entidade e do mapper move este arquivo para db/migration/V16__drop_estimated_value.sql
+-- estimatedValue da entidade e do mapper move este arquivo para db/migration/V17__drop_estimated_value.sql
 -- (ou o proximo numero livre) e a flag READ_VALUE_CENTS sai do codigo.
 --
 -- Sem o gatilho a coluna numerica deixa de ser mantida, por isso a ordem importa: primeiro o

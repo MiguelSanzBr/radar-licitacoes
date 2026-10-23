@@ -5,6 +5,8 @@
 #   render-metrics.sh readme         reescreve o bloco do README a partir do latest.json
 #   render-metrics.sh self-test      roda collect, readme e check sobre scripts/test/fixtures/bench, sem tocar no repositorio
 #   render-metrics.sh check          falha se o bloco do README diverge do que o latest.json geraria (make docs-check)
+# collect mantem as linhas do latest.json anterior que a execucao nova nao mediu (por nome), com a data e o commit de
+# onde vieram (campo "from"): rodar so S1, S2 e S4 nao apaga o S3 e o S6 publicados antes.
 # Sem latest.json, o bloco e o aviso de que nenhum numero foi publicado.
 set -euo pipefail
 
@@ -17,16 +19,19 @@ end='<!-- bench:end -->'
 collect() {
   local dir="${1:?uso: $0 collect DIRETORIO}"
   # DIR/gatling/sN.stats.json sai de scripts/gatling-stats.sh; o aquecimento tem o sufixo "(warmup)" no nome e fica de fora; a taxa e requisicoes por segundo da fase medida, nao da simulacao inteira (que inclui o aquecimento)
-  jq -n --slurpfile run "$dir/run.json" --slurpfile stats <(jq -c '.[]' "$dir"/gatling/*.stats.json) '
+  local old="[]"
+  [ -f "$latest" ] && old="$(jq -c '[.requests[] | . + {from: (.from // {date: $d, commit: $c})}]' --arg d "$(jq -r .date "$latest")" --arg c "$(jq -r .commit "$latest")" "$latest")"
+  jq -n --argjson old "$old" --slurpfile run "$dir/run.json" --slurpfile stats <(jq -c '.[]' "$dir"/gatling/*.stats.json) '
     $run[0] as $r
     | {date: $r.date, commit: $r.commit, host: $r.host, postgres: $r.postgres, rows: $r.rows,
        thinkMs: $r.thinkMs, warmupSeconds: $r.warmupSeconds, measuredSeconds: $r.measuredSeconds,
        directory: $r.directory,
-       requests: [ $stats[] | select(.name | endswith(" (warmup)") | not)
+       requests: ([ $stats[] | select(.name | endswith(" (warmup)") | not)
                    | (.name | split(" ")[0]) as $s | ($r.load[$s | ascii_downcase]) as $l
                    | {scenario: $s, name: .name, users: $l.usedUsers, plannedUsers: $l.plannedUsers,
                       requests: .requests, errors: .errors, p50: .p50, p95: .p95, p99: .p99,
-                      rps: ((.requests / $r.measuredSeconds * 10 | round) / 10)} ],
+                      rps: ((.requests / $r.measuredSeconds * 10 | round) / 10)} ] as $new
+                 | $new + [ $old[] | select(.name as $n | $new | map(.name) | index($n) | not) ] | sort_by(.scenario)),
        detailCache: $r.detailCache}' >"$latest"
   echo "render-metrics: $latest"
 }
@@ -47,7 +52,7 @@ block() {
     "",
     "| Cenário | Usuários | Requisições | Erros | p50 (ms) | p95 (ms) | p99 (ms) | req/s |",
     "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
-    (.requests[] | "| \(.name) | \(.users) | \(.requests | thousands) | \(.errors) | \(.p50) | \(.p95) | \(.p99) | \(.rps | comma) |"),
+    (.requests[] | "| \(.name)\(if .from then " (medido em \(.from.date), commit `\(.from.commit[0:7])`)" else "" end) | \(.users) | \(.requests | thousands) | \(.errors) | \(.p50) | \(.p95) | \(.p99) | \(.rps | comma) |"),
     "",
     (. as $m | ($m.detailCache) as $c
       | (if $c.hits + $c.misses == 0 then "- Cache do detalhe (S5): não medido."
@@ -80,6 +85,15 @@ self_test() {
   grep -q 'S2 não atende' "$tmp/README.md" || { echo "self-test: veredito do S2 errado" >&2; return 1; }
   grep -q 'S5 detail (warmup)' "$tmp/README.md" && { echo "self-test: o aquecimento entrou" >&2; return 1; }
   grep -q '^velho$' "$tmp/README.md" && { echo "self-test: o texto antigo ficou" >&2; return 1; }
+  "$0" check >/dev/null
+  # uma execucao nova so com o S1 mantem o S2 e o S5 da anterior, com a data e o commit de origem
+  mkdir -p "$tmp/novo/gatling"
+  jq '.date = "2026-02-03" | .commit = "fedcba9876"' "$root/scripts/test/fixtures/bench/run.json" >"$tmp/novo/run.json"
+  cp "$root/scripts/test/fixtures/bench/gatling/s1.stats.json" "$tmp/novo/gatling/"
+  "$0" collect "$tmp/novo" >/dev/null
+  "$0" readme
+  grep -q '^| S2 filtered search (medido em 2026-01-02, commit `abcdef0`) |' "$tmp/README.md" || { echo "self-test: o S2 anterior nao foi mantido" >&2; return 1; }
+  grep -q '^| S1 text search | 50 |' "$tmp/README.md" || { echo "self-test: o S1 novo ficou com origem" >&2; return 1; }
   "$0" check >/dev/null
   echo x >>"$tmp/README.md"
   sed -i "s/^$start\$/$start\nmexido/" "$tmp/README.md"

@@ -1,6 +1,6 @@
 {
   "date": "2026-10-23",
-  "commit": "c82905bdaa626f537c3b95c5cbde11d26b520164",
+  "commit": "a05da33ba7c40fc5f0fa7d5781a9d99cec9a159c",
   "host": "AMD Ryzen 5 5600GT with Radeon Graphics, 12 threads, 11,6 GiB de RAM",
   "postgres": "Postgres 18.6",
   "rows": {
@@ -11,31 +11,31 @@
   "thinkMs": 1000,
   "warmupSeconds": 60,
   "measuredSeconds": 180,
-  "directory": "docs/benchmarks/search/2026-10-23",
+  "directory": "docs/benchmarks/search/2026-10-23-pr63",
   "requests": [
     {
       "scenario": "S1",
       "name": "S1 text search",
       "users": 50,
       "plannedUsers": 50,
-      "requests": 3943,
-      "errors": 142,
-      "p50": 1005,
-      "p95": 3402,
-      "p99": 5857,
-      "rps": 21.9
+      "requests": 8662,
+      "errors": 0,
+      "p50": 34,
+      "p95": 83,
+      "p99": 122,
+      "rps": 48.1
     },
     {
       "scenario": "S2",
       "name": "S2 filtered search",
       "users": 50,
       "plannedUsers": 50,
-      "requests": 8879,
+      "requests": 8925,
       "errors": 0,
-      "p50": 8,
-      "p95": 44,
-      "p99": 204,
-      "rps": 49.3
+      "p50": 6,
+      "p95": 22,
+      "p99": 46,
+      "rps": 49.6
     },
     {
       "scenario": "S3",
@@ -47,7 +47,11 @@
       "p50": 2,
       "p95": 3,
       "p99": 5,
-      "rps": 1.7
+      "rps": 1.7,
+      "from": {
+        "date": "2026-10-23",
+        "commit": "c82905bdaa626f537c3b95c5cbde11d26b520164"
+      }
     },
     {
       "scenario": "S3",
@@ -59,7 +63,11 @@
       "p50": 2,
       "p95": 4,
       "p99": 6,
-      "rps": 1.7
+      "rps": 1.7,
+      "from": {
+        "date": "2026-10-23",
+        "commit": "c82905bdaa626f537c3b95c5cbde11d26b520164"
+      }
     },
     {
       "scenario": "S3",
@@ -71,7 +79,11 @@
       "p50": 2,
       "p95": 3,
       "p99": 6,
-      "rps": 1.7
+      "rps": 1.7,
+      "from": {
+        "date": "2026-10-23",
+        "commit": "c82905bdaa626f537c3b95c5cbde11d26b520164"
+      }
     },
     {
       "scenario": "S3",
@@ -83,7 +95,11 @@
       "p50": 5,
       "p95": 7,
       "p99": 8,
-      "rps": 1.7
+      "rps": 1.7,
+      "from": {
+        "date": "2026-10-23",
+        "commit": "c82905bdaa626f537c3b95c5cbde11d26b520164"
+      }
     },
     {
       "scenario": "S3",
@@ -95,7 +111,11 @@
       "p50": 2,
       "p95": 3,
       "p99": 7,
-      "rps": 1.7
+      "rps": 1.7,
+      "from": {
+        "date": "2026-10-23",
+        "commit": "c82905bdaa626f537c3b95c5cbde11d26b520164"
+      }
     },
     {
       "scenario": "S3",
@@ -107,31 +127,35 @@
       "p50": 31,
       "p95": 38,
       "p99": 48,
-      "rps": 1.7
+      "rps": 1.7,
+      "from": {
+        "date": "2026-10-23",
+        "commit": "c82905bdaa626f537c3b95c5cbde11d26b520164"
+      }
     },
     {
       "scenario": "S4",
       "name": "S4 organ typo",
       "users": 20,
       "plannedUsers": 20,
-      "requests": 720,
-      "errors": 544,
-      "p50": 4393,
-      "p95": 5025,
-      "p99": 5526,
-      "rps": 4
+      "requests": 3545,
+      "errors": 0,
+      "p50": 13,
+      "p95": 18,
+      "p99": 23,
+      "rps": 19.7
     },
     {
       "scenario": "S5",
       "name": "S5 detail",
       "users": 100,
       "plannedUsers": 100,
-      "requests": 17955,
+      "requests": 17975,
       "errors": 0,
       "p50": 1,
       "p95": 2,
-      "p99": 57,
-      "rps": 99.8
+      "p99": 5,
+      "rps": 99.9
     },
     {
       "scenario": "S6",
@@ -143,7 +167,11 @@
       "p50": 2,
       "p95": 2,
       "p99": 3,
-      "rps": 5
+      "rps": 5,
+      "from": {
+        "date": "2026-10-23",
+        "commit": "c82905bdaa626f537c3b95c5cbde11d26b520164"
+      }
     },
     {
       "scenario": "S6",
@@ -155,12 +183,16 @@
       "p50": 2,
       "p95": 2,
       "p99": 3,
-      "rps": 5
+      "rps": 5,
+      "from": {
+        "date": "2026-10-23",
+        "commit": "c82905bdaa626f537c3b95c5cbde11d26b520164"
+      }
     }
   ],
   "detailCache": {
-    "hits": 19531,
-    "misses": 4413,
-    "hitRatio": 0.8156949548947544
+    "hits": 19518,
+    "misses": 4444,
+    "hitRatio": 0.8145396878390785
   }
 }

@@ -19,18 +19,20 @@ import org.jooq.DSLContext;
 import org.jooq.Record;
 import org.jooq.ResultQuery;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 /**
  * Keyset search over {@code procurement_search_view}. With text the order is {@code ts_rank_cd}
- * then id, both descending; without it, {@code published_at} then id. The headline is computed in
- * an outer query, so only the rows of the returned page pay for it.
+ * then id, both descending, among the {@code rankCandidates} most recent matches; without text,
+ * {@code published_at} then id. The rank is not indexable, so ranking every match of a common term
+ * cost seconds (benchmark 2.7); the headline is computed only for the rows of the returned page.
  *
  * <p>The SQL is written out because the full-text operators have no jOOQ counterpart; the values
  * are always bound, never concatenated.
  */
 @Component
-class JooqSearchReadModel implements SearchReadModel {
+final class JooqSearchReadModel implements SearchReadModel {
 
   private static final String CONFIG = "'search.portuguese_unaccent'";
   private static final String HEADLINE_OPTIONS =
@@ -49,13 +51,6 @@ class JooqSearchReadModel implements SearchReadModel {
           + " v.ibge_code, v.modality_id, v.status, v.estimated_value, v.proposal_opening_at,"
           + " v.proposal_closing_at, v.published_at";
 
-  /** What the outer query keeps of {@code page}: everything but the full object text. */
-  private static final String OUTER_COLUMNS =
-      "page.id, page.object_description, page.organ_name, page.unit_name, page.uf,"
-          + " page.municipality_name, page.ibge_code, page.modality_id, page.status,"
-          + " page.estimated_value, page.proposal_opening_at, page.proposal_closing_at,"
-          + " page.published_at, page.rank";
-
   /**
    * An open procurement takes proposals now: published, closing in the future, and already opened
    * (an unknown opening counts as opened, since many notices only state the closing).
@@ -67,9 +62,20 @@ class JooqSearchReadModel implements SearchReadModel {
   private static final String RANK = "ts_rank_cd(v.search_vector, ?::tsquery)::float8";
 
   private final DSLContext dsl;
+  private final int rankCandidates;
 
-  JooqSearchReadModel(@Qualifier("searchReadDsl") DSLContext dsl) {
+  /**
+   * @param rankCandidates how many of the most recent matches a text search ranks; the matches
+   *     beyond them are not reachable by text (ADR-0011, "Perfil e otimização")
+   */
+  JooqSearchReadModel(
+      @Qualifier("searchReadDsl") DSLContext dsl,
+      @Value("${radar.search.rank-candidates:2000}") int rankCandidates) {
+    if (rankCandidates < 1) {
+      throw new IllegalArgumentException("radar.search.rank-candidates must be at least 1");
+    }
     this.dsl = dsl;
+    this.rankCandidates = rankCandidates;
   }
 
   @Override
@@ -129,33 +135,45 @@ class JooqSearchReadModel implements SearchReadModel {
         + " ORDER BY v.published_at DESC, v.numero_controle_pncp DESC LIMIT ?";
   }
 
-  /** The rank is cast to float8 so the cursor compares exactly what the client was given. */
-  private static String ranked(SearchQuery query, String tsquery, List<Object> binds) {
+  /**
+   * The rank is cast to float8 so the cursor compares exactly what the client was given.
+   *
+   * <p>Three levels. The innermost takes the {@code rankCandidates} most recent matches
+   * (publication order, which {@code psv_published_keyset} serves, or the GIN index when the term
+   * is rare) and computes the rank of those rows only. The middle one applies the cursor and takes
+   * the page by rank. The outer one reads the columns and the headline of the page rows by primary
+   * key. A qualification on the middle level never reaches the innermost one (it has a LIMIT), so
+   * the candidates do not depend on the cursor and every page walks the same set.
+   */
+  private String ranked(SearchQuery query, String tsquery, List<Object> binds) {
     binds.add(tsquery);
     binds.add(HEADLINE_OPTIONS);
     binds.add(tsquery);
     binds.add(tsquery);
     var where = new StringBuilder(filters(query.filters(), binds));
+    binds.add(rankCandidates);
+    var cursor = "true";
     if (query.cursor() instanceof Cursor.ByRank after) {
-      where.append(" AND (").append(RANK).append(", v.numero_controle_pncp) < (?::float8, ?)");
-      binds.add(tsquery);
+      cursor = "(c.rank, c.id) < (?::float8, ?)";
       binds.add(after.rank());
       binds.add(after.id());
     }
     binds.add(query.limit() + 1);
     return "SELECT "
-        + OUTER_COLUMNS
-        + ", ts_headline("
-        + CONFIG
-        + ", left(page.full_object, "
-        + INDEXED_CHARS
-        + "), ?::tsquery, ?) AS snippet FROM (SELECT "
         + COLUMNS
-        + ", v.object_description AS full_object, "
+        + ", page.rank, ts_headline("
+        + CONFIG
+        + ", left(v.object_description, "
+        + INDEXED_CHARS
+        + "), ?::tsquery, ?) AS snippet FROM (SELECT c.id, c.rank FROM (SELECT"
+        + " v.numero_controle_pncp AS id, "
         + RANK
         + " AS rank FROM search.procurement_search_view v WHERE v.search_vector @@ ?::tsquery AND "
         + where
-        + " ORDER BY rank DESC, id DESC LIMIT ?) page ORDER BY page.rank DESC, page.id DESC";
+        + " ORDER BY v.published_at DESC, v.numero_controle_pncp DESC LIMIT ?) c WHERE "
+        + cursor
+        + " ORDER BY c.rank DESC, c.id DESC LIMIT ?) page JOIN search.procurement_search_view v"
+        + " ON v.numero_controle_pncp = page.id ORDER BY page.rank DESC, page.id DESC";
   }
 
   private static String filters(Filters f, List<Object> binds) {

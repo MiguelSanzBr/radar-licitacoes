@@ -1,0 +1,36 @@
+                                                                                  QUERY PLAN                                                                                  
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Nested Loop  (cost=219631.58..219814.12 rows=21 width=266) (actual time=791.747..793.767 rows=21.00 loops=1)
+   Buffers: shared hit=155973 read=111252, temp read=6514 written=6529
+   ->  Limit  (cost=219631.16..219631.21 rows=21 width=40) (actual time=791.548..791.555 rows=21.00 loops=1)
+         Buffers: shared hit=155885 read=111252, temp read=6514 written=6529
+         ->  Sort  (cost=219631.16..220653.31 rows=408862 width=40) (actual time=784.834..784.839 rows=21.00 loops=1)
+               Sort Key: c.rank DESC, c.id DESC
+               Sort Method: top-N heapsort  Memory: 27kB
+               Buffers: shared hit=155885 read=111252, temp read=6514 written=6529
+               ->  Subquery Scan on c  (cost=203496.81..208607.59 rows=408862 width=40) (actual time=684.938..753.749 rows=403237.00 loops=1)
+                     Buffers: shared hit=155879 read=111252, temp read=6514 written=6529
+                     ->  Limit  (cost=203496.81..204518.97 rows=408862 width=48) (actual time=684.905..729.291 rows=403237.00 loops=1)
+                           Buffers: shared hit=155879 read=111252, temp read=6514 written=6529
+                           ->  Sort  (cost=203496.81..204518.97 rows=408862 width=48) (actual time=684.898..709.506 rows=403237.00 loops=1)
+                                 Sort Key: v_1.published_at DESC, v_1.numero_controle_pncp DESC
+                                 Sort Method: external merge  Disk: 26064kB
+                                 Buffers: shared hit=155879 read=111252, temp read=6514 written=6529
+                                 ->  Seq Scan on procurement_search_view v_1  (cost=0.00..152809.31 rows=408862 width=48) (actual time=0.045..571.371 rows=403237.00 loops=1)
+                                       Filter: (search_vector @@ '''contrataca'''::tsquery)
+                                       Rows Removed by Filter: 796763
+                                       Buffers: shared hit=155876 read=111252
+   ->  Index Scan using procurement_search_view_pkey on procurement_search_view v  (cost=0.43..8.45 rows=1 width=401) (actual time=0.009..0.009 rows=1.00 loops=21)
+         Index Cond: (numero_controle_pncp = c.id)
+         Index Searches: 21
+         Buffers: shared hit=84
+ Planning:
+   Buffers: shared hit=352
+ Planning Time: 0.863 ms
+ JIT:
+   Functions: 14
+   Options: Inlining false, Optimization false, Expressions true, Deforming true
+   Timing: Generation 0.649 ms (Deform 0.337 ms), Inlining 0.000 ms, Optimization 0.338 ms, Emission 6.415 ms, Total 7.402 ms
+ Execution Time: 812.618 ms
+(32 rows)
+

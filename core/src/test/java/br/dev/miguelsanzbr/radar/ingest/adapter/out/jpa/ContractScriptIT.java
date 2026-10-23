@@ -17,7 +17,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 @PostgresJpaTest
 class ContractScriptIT {
 
-  private static final String SCRIPT = "db/contract/V16__drop_estimated_value.sql.next";
+  private static final String SCRIPT = "db/contract/V17__drop_estimated_value.sql.next";
 
   @Autowired JdbcTemplate jdbc;
 
@@ -32,9 +32,9 @@ class ContractScriptIT {
   @Test
   void flywayDoesNotSeeTheScriptNow() {
     assertThat(new ClassPathResource(SCRIPT).exists()).isTrue();
-    assertThat(new ClassPathResource("db/migration/V16__drop_estimated_value.sql").exists())
+    assertThat(new ClassPathResource("db/migration/V17__drop_estimated_value.sql").exists())
         .isFalse();
-    assertThat(count("select count(*) from flyway_schema_history where version = '16'")).isZero();
+    assertThat(count("select count(*) from flyway_schema_history where version = '17'")).isZero();
   }
 
   @Test

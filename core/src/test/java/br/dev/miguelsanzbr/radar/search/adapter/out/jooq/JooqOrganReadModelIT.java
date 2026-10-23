@@ -42,7 +42,7 @@ class JooqOrganReadModelIT {
     jdbc.execute(
         "TRUNCATE search.procurement_search_view, search.procurement_detail_view,"
             + " search.processed_event, search.projection_checkpoint,"
-            + " search.procurement_stats_view");
+            + " search.procurement_stats_view, search.organ");
   }
 
   private void project(int n, String organ) {
@@ -145,18 +145,15 @@ class JooqOrganReadModelIT {
   }
 
   @Test
-  void theTrigramIndexServesTheQuery() {
+  void theTrigramIndexOfTheOrganTableServesTheQuery() {
     jdbc.update(
         """
-        INSERT INTO search.procurement_search_view
-          (numero_controle_pncp, search_vector, object_description, organ_name, modality_id, status,
-           value_band, published_at, pncp_updated_at, source_version, projected_at)
-        SELECT 'X' || g, to_tsvector('simple', 'x'), 'x',
-               'Prefeitura Municipal de ' || md5(g::text) || ' ' || md5((g * 7)::text),
-               6, 'PUBLISHED', 0, now(), now(), 1, now()
+        INSERT INTO search.organ (organ_name, procurement_count)
+        SELECT 'Orgao ' || md5(g::text) || ' ' || md5((g * 7)::text), 1
         FROM generate_series(1, 20000) AS g
         """);
-    jdbc.execute("ANALYZE search.procurement_search_view");
+    jdbc.update("INSERT INTO search.organ VALUES ('Prefeitura Municipal de Chapeco', 1)");
+    jdbc.execute("ANALYZE search.organ");
     var plan = new ArrayList<String>();
     var sql =
         "EXPLAIN "
@@ -167,8 +164,8 @@ class JooqOrganReadModelIT {
         (ConnectionCallback<Void>)
             connection -> {
               try (var statement = connection.createStatement()) {
-                // why: 20 thousand rows are cheaper to scan than to probe; the benchmark (2.7)
-                // runs the planner's own choice at a million rows
+                // why: 20 thousand short names are cheaper to scan than to probe; the benchmark
+                // (2.7) runs the planner's own choice at a million rows
                 statement.execute("SET enable_seqscan = off");
                 try (var rs = statement.executeQuery(sql)) {
                   while (rs.next()) {
@@ -182,6 +179,7 @@ class JooqOrganReadModelIT {
             });
     var text = String.join("\n", plan);
 
-    assertThat(text).contains("psv_organ_trgm");
+    // why: the organ table is read, not the million-row view (S4 of the benchmark, ADR-0011)
+    assertThat(text).contains("organ_name_trgm").doesNotContain("procurement_search_view");
   }
 }

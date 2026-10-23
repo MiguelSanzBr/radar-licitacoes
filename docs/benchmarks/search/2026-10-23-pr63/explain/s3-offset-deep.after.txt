@@ -1,0 +1,13 @@
+                                                                                QUERY PLAN                                                                                 
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=6783.17..6789.96 rows=20 width=194) (actual time=36.047..36.082 rows=20.00 loops=1)
+   Buffers: shared hit=5580
+   ->  Index Scan using psv_published_keyset on procurement_search_view v  (cost=0.43..407155.16 rows=1199360 width=194) (actual time=0.024..35.553 rows=20000.00 loops=1)
+         Index Searches: 1
+         Buffers: shared hit=5580
+ Planning:
+   Buffers: shared hit=276
+ Planning Time: 0.590 ms
+ Execution Time: 36.110 ms
+(9 rows)
+

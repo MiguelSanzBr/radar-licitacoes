@@ -1,0 +1,475 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="1707" viewBox="0 0 1400 1707" font-family="monospace" font-size="11">
+<rect width="100%" height="100%" fill="#fff"/>
+<text x="6" y="15" font-size="13" fill="#111">S1 busca textual, antes (JFR, 50 usuários) (CPU 5460 ms, espera JDBC 2349804 ms)</text>
+<g><title>all (2355264 ms)</title><rect x="0.00" y="24" width="1400.00" height="16" fill="rgb(238,160,58)" stroke="#fff" stroke-width="0.5"/><text x="2.00" y="36" fill="#111">all</text></g>
+<g><title>ObservationFilterChainDecorator$ObservationFilter.doFilter (1212 ms)</title><rect x="0.01" y="41" width="0.72" height="16" fill="rgb(232,163,74)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ObservationFilterChainDecorator$ObservationFilter.wrapFilter (1212 ms)</title><rect x="0.01" y="58" width="0.72" height="16" fill="rgb(229,206,86)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>AnonymousAuthenticationFilter.doFilter (2974 ms)</title><rect x="0.73" y="41" width="1.77" height="16" fill="rgb(243,126,80)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ObservationFilterChainDecorator$VirtualFilterChain.doFilter (2974 ms)</title><rect x="0.73" y="58" width="1.77" height="16" fill="rgb(228,146,67)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ObservationFilterChainDecorator$ObservationFilter.doFilter (2974 ms)</title><rect x="0.73" y="75" width="1.77" height="16" fill="rgb(232,163,74)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ObservationFilterChainDecorator$ObservationFilter.wrapFilter (2974 ms)</title><rect x="0.73" y="92" width="1.77" height="16" fill="rgb(229,206,86)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>SessionManagementFilter.doFilter (2974 ms)</title><rect x="0.73" y="109" width="1.77" height="16" fill="rgb(235,134,89)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>SessionManagementFilter.doFilter (2974 ms)</title><rect x="0.73" y="126" width="1.77" height="16" fill="rgb(235,134,89)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ObservationFilterChainDecorator$VirtualFilterChain.doFilter (2974 ms)</title><rect x="0.73" y="143" width="1.77" height="16" fill="rgb(228,146,67)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ObservationFilterChainDecorator$ObservationFilter.doFilter (2974 ms)</title><rect x="0.73" y="160" width="1.77" height="16" fill="rgb(232,163,74)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ObservationFilterChainDecorator$ObservationFilter.wrapFilter (2974 ms)</title><rect x="0.73" y="177" width="1.77" height="16" fill="rgb(229,206,86)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ExceptionTranslationFilter.doFilter (2974 ms)</title><rect x="0.73" y="194" width="1.77" height="16" fill="rgb(250,170,45)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ExceptionTranslationFilter.doFilter (2974 ms)</title><rect x="0.73" y="211" width="1.77" height="16" fill="rgb(250,170,45)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ObservationFilterChainDecorator$VirtualFilterChain.doFilter (2974 ms)</title><rect x="0.73" y="228" width="1.77" height="16" fill="rgb(228,146,67)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ObservationFilterChainDecorator$ObservationFilter.doFilter (2974 ms)</title><rect x="0.73" y="245" width="1.77" height="16" fill="rgb(232,163,74)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ObservationFilterChainDecorator$ObservationFilter.wrapFilter (2974 ms)</title><rect x="0.73" y="262" width="1.77" height="16" fill="rgb(229,206,86)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>AuthorizationFilter.doFilter (2974 ms)</title><rect x="0.73" y="279" width="1.77" height="16" fill="rgb(237,190,81)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ObservationFilterChainDecorator$VirtualFilterChain.doFilter (2974 ms)</title><rect x="0.73" y="296" width="1.77" height="16" fill="rgb(228,146,67)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>0x000000008d4f1038.doFilter (2974 ms)</title><rect x="0.73" y="313" width="1.77" height="16" fill="rgb(234,147,63)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ObservationFilterChainDecorator.lambda$wrapSecured$0 (2974 ms)</title><rect x="0.73" y="330" width="1.77" height="16" fill="rgb(237,203,58)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>0x000000008d4f9570.doFilter (2974 ms)</title><rect x="0.73" y="347" width="1.77" height="16" fill="rgb(231,180,40)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ObservationFilterChainDecorator$AroundFilterObservation$SimpleAroundFilterObservation.lambda$wrap$1 (2974 ms)</title><rect x="0.73" y="364" width="1.77" height="16" fill="rgb(239,143,44)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>0x000000008d4f9340.doFilter (2974 ms)</title><rect x="0.73" y="381" width="1.77" height="16" fill="rgb(254,128,59)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ObservationFilterChainDecorator$FilterObservation$SimpleFilterObservation.lambda$wrap$1 (2974 ms)</title><rect x="0.73" y="398" width="1.77" height="16" fill="rgb(249,166,88)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>0x000000008d4f0bd8.doFilter (2974 ms)</title><rect x="0.73" y="415" width="1.77" height="16" fill="rgb(254,188,76)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>FilterChainProxy.lambda$doFilterInternal$2 (2974 ms)</title><rect x="0.73" y="432" width="1.77" height="16" fill="rgb(249,183,50)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>CompositeFilter$VirtualFilterChain.doFilter (2974 ms)</title><rect x="0.73" y="449" width="1.77" height="16" fill="rgb(249,153,85)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ApplicationFilterChain.doFilter (2974 ms)</title><rect x="0.73" y="466" width="1.77" height="16" fill="rgb(245,208,76)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ResourceUrlEncodingFilter.doFilter (2974 ms)</title><rect x="0.73" y="483" width="1.77" height="16" fill="rgb(242,152,78)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ApplicationFilterChain.doFilter (2974 ms)</title><rect x="0.73" y="500" width="1.77" height="16" fill="rgb(245,208,76)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>OncePerRequestFilter.doFilter (2974 ms)</title><rect x="0.73" y="517" width="1.77" height="16" fill="rgb(241,152,52)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>CorrelationIdFilter.doFilterInternal (2974 ms)</title><rect x="0.73" y="534" width="1.77" height="16" fill="rgb(236,194,45)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ApplicationFilterChain.doFilter (2974 ms)</title><rect x="0.73" y="551" width="1.77" height="16" fill="rgb(245,208,76)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>WsFilter.doFilter (2974 ms)</title><rect x="0.73" y="568" width="1.77" height="16" fill="rgb(236,177,67)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ApplicationFilterChain.doFilter (2974 ms)</title><rect x="0.73" y="585" width="1.77" height="16" fill="rgb(245,208,76)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>HttpServlet.service (2974 ms)</title><rect x="0.73" y="602" width="1.77" height="16" fill="rgb(253,145,64)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>FrameworkServlet.service (2974 ms)</title><rect x="0.73" y="619" width="1.77" height="16" fill="rgb(231,202,84)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>HttpServlet.service (2974 ms)</title><rect x="0.73" y="636" width="1.77" height="16" fill="rgb(253,145,64)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>FrameworkServlet.doGet (2974 ms)</title><rect x="0.73" y="653" width="1.77" height="16" fill="rgb(247,161,55)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>FrameworkServlet.processRequest (2974 ms)</title><rect x="0.73" y="670" width="1.77" height="16" fill="rgb(240,203,49)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>DispatcherServlet.doService (2974 ms)</title><rect x="0.73" y="687" width="1.77" height="16" fill="rgb(231,146,77)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>DispatcherServlet.doDispatch (2974 ms)</title><rect x="0.73" y="704" width="1.77" height="16" fill="rgb(228,129,44)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>AbstractHandlerMethodAdapter.handle (2974 ms)</title><rect x="0.73" y="721" width="1.77" height="16" fill="rgb(253,136,50)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>RequestMappingHandlerAdapter.handleInternal (2974 ms)</title><rect x="0.73" y="738" width="1.77" height="16" fill="rgb(244,122,54)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>RequestMappingHandlerAdapter.invokeHandlerMethod (2974 ms)</title><rect x="0.73" y="755" width="1.77" height="16" fill="rgb(252,128,59)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ServletInvocableHandlerMethod.invokeAndHandle (2974 ms)</title><rect x="0.73" y="772" width="1.77" height="16" fill="rgb(245,152,63)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>InvocableHandlerMethod.invokeForRequest (2974 ms)</title><rect x="0.73" y="789" width="1.77" height="16" fill="rgb(225,124,70)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>InvocableHandlerMethod.doInvoke (2974 ms)</title><rect x="0.73" y="806" width="1.77" height="16" fill="rgb(242,152,73)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>Method.invoke (2974 ms)</title><rect x="0.73" y="823" width="1.77" height="16" fill="rgb(248,204,46)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>DirectMethodHandleAccessor.invoke (2974 ms)</title><rect x="0.73" y="840" width="1.77" height="16" fill="rgb(240,147,83)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>DirectMethodHandleAccessor.invokeImpl (2974 ms)</title><rect x="0.73" y="857" width="1.77" height="16" fill="rgb(236,177,73)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>Invokers$Holder.invokeExact_MT (2974 ms)</title><rect x="0.73" y="874" width="1.77" height="16" fill="rgb(239,199,46)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>0x000000008d29d000.invoke (2902 ms)</title><rect x="0.77" y="891" width="1.72" height="16" fill="rgb(236,147,81)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>0x000000008d589800.invoke (2902 ms)</title><rect x="0.77" y="908" width="1.72" height="16" fill="rgb(235,207,53)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>0x000000008d580400.invokeVirtual (2902 ms)</title><rect x="0.77" y="925" width="1.72" height="16" fill="rgb(251,132,45)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ProcurementsController$$SpringCGLIB$$0.searchProcurements (2902 ms)</title><rect x="0.77" y="942" width="1.72" height="16" fill="rgb(249,196,86)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>CglibAopProxy$DynamicAdvisedInterceptor.intercept (2902 ms)</title><rect x="0.77" y="959" width="1.72" height="16" fill="rgb(230,142,87)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ReflectiveMethodInvocation.proceed (2902 ms)</title><rect x="0.77" y="976" width="1.72" height="16" fill="rgb(251,153,52)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>MethodValidationInterceptor.invoke (2902 ms)</title><rect x="0.77" y="993" width="1.72" height="16" fill="rgb(250,162,86)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ReflectiveMethodInvocation.proceed (2902 ms)</title><rect x="0.77" y="1010" width="1.72" height="16" fill="rgb(251,153,52)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ReflectiveMethodInvocation.invokeJoinpoint (2902 ms)</title><rect x="0.77" y="1027" width="1.72" height="16" fill="rgb(245,174,42)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>AopUtils.invokeJoinpointUsingReflection (2902 ms)</title><rect x="0.77" y="1044" width="1.72" height="16" fill="rgb(225,154,65)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>Method.invoke (2902 ms)</title><rect x="0.77" y="1061" width="1.72" height="16" fill="rgb(248,204,46)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>DirectMethodHandleAccessor.invoke (2902 ms)</title><rect x="0.77" y="1078" width="1.72" height="16" fill="rgb(240,147,83)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>DirectMethodHandleAccessor.invokeImpl (2902 ms)</title><rect x="0.77" y="1095" width="1.72" height="16" fill="rgb(236,177,73)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>Invokers$Holder.invokeExact_MT (2902 ms)</title><rect x="0.77" y="1112" width="1.72" height="16" fill="rgb(239,199,46)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>0x000000008d29d000.invoke (2902 ms)</title><rect x="0.77" y="1129" width="1.72" height="16" fill="rgb(236,147,81)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>0x000000008d589800.invoke (2902 ms)</title><rect x="0.77" y="1146" width="1.72" height="16" fill="rgb(235,207,53)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>0x000000008d580400.invokeVirtual (2902 ms)</title><rect x="0.77" y="1163" width="1.72" height="16" fill="rgb(251,132,45)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ProcurementsController.searchProcurements (2902 ms)</title><rect x="0.77" y="1180" width="1.72" height="16" fill="rgb(229,129,82)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>SearchUseCase.search (2902 ms)</title><rect x="0.77" y="1197" width="1.72" height="16" fill="rgb(240,199,80)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>JooqSearchReadModel.search (2902 ms)</title><rect x="0.77" y="1214" width="1.72" height="16" fill="rgb(247,136,73)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>JooqSearchReadModel.query (2772 ms)</title><rect x="0.77" y="1231" width="1.65" height="16" fill="rgb(239,199,75)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ResultQueryTrait.fetchOne (2772 ms)</title><rect x="0.77" y="1248" width="1.65" height="16" fill="rgb(252,149,49)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ResultQueryTrait.fetchOne (2772 ms)</title><rect x="0.77" y="1265" width="1.65" height="16" fill="rgb(252,149,49)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>AbstractResultQuery.fetchLazyNonAutoClosing (2772 ms)</title><rect x="0.77" y="1282" width="1.65" height="16" fill="rgb(231,206,45)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>AbstractResultQuery.fetchLazy (2772 ms)</title><rect x="0.77" y="1299" width="1.65" height="16" fill="rgb(232,172,57)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>AbstractQuery.execute (2772 ms)</title><rect x="0.77" y="1316" width="1.65" height="16" fill="rgb(234,177,84)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>AbstractQuery.execute (2772 ms)</title><rect x="0.77" y="1333" width="1.65" height="16" fill="rgb(234,177,84)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>AbstractResultQuery.execute (2742 ms)</title><rect x="0.77" y="1350" width="1.63" height="16" fill="rgb(253,184,64)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>Tools.executeStatementAndGetFirstResultSet (2742 ms)</title><rect x="0.77" y="1367" width="1.63" height="16" fill="rgb(242,131,73)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>Tools.consumeExceptions (2742 ms)</title><rect x="0.77" y="1384" width="1.63" height="16" fill="rgb(244,178,58)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>0x000000008d5ab0f0.run (2742 ms)</title><rect x="0.77" y="1401" width="1.63" height="16" fill="rgb(238,186,59)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>Tools.lambda$executeStatementAndGetFirstResultSet$104 (2742 ms)</title><rect x="0.77" y="1418" width="1.63" height="16" fill="rgb(240,203,76)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>DefaultPreparedStatement.execute (2742 ms)</title><rect x="0.77" y="1435" width="1.63" height="16" fill="rgb(245,157,40)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>HikariProxyPreparedStatement.execute (2742 ms)</title><rect x="0.77" y="1452" width="1.63" height="16" fill="rgb(246,153,41)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ProxyPreparedStatement.execute (2742 ms)</title><rect x="0.77" y="1469" width="1.63" height="16" fill="rgb(230,206,88)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>PgPreparedStatement.execute (2742 ms)</title><rect x="0.77" y="1486" width="1.63" height="16" fill="rgb(243,165,71)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>PgPreparedStatement.executeWithFlags (2742 ms)</title><rect x="0.77" y="1503" width="1.63" height="16" fill="rgb(250,140,87)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>PgStatement.execute (2742 ms)</title><rect x="0.77" y="1520" width="1.63" height="16" fill="rgb(234,181,73)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>PgStatement.executeInternal (2742 ms)</title><rect x="0.77" y="1537" width="1.63" height="16" fill="rgb(247,153,88)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>QueryExecutorImpl.execute (2742 ms)</title><rect x="0.77" y="1554" width="1.63" height="16" fill="rgb(253,188,88)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>QueryExecutorImpl.processResults (2742 ms)</title><rect x="0.77" y="1571" width="1.63" height="16" fill="rgb(241,182,70)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>PGStream.receiveChar (2742 ms)</title><rect x="0.77" y="1588" width="1.63" height="16" fill="rgb(243,148,79)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>VisibleBufferedInputStream.read (2742 ms)</title><rect x="0.77" y="1605" width="1.63" height="16" fill="rgb(250,183,66)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>VisibleBufferedInputStream.ensureBytes (2742 ms)</title><rect x="0.77" y="1622" width="1.63" height="16" fill="rgb(225,205,63)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>VisibleBufferedInputStream.ensureBytes (2742 ms)</title><rect x="0.77" y="1639" width="1.63" height="16" fill="rgb(225,205,63)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>VisibleBufferedInputStream.readMore (2742 ms)</title><rect x="0.77" y="1656" width="1.63" height="16" fill="rgb(247,178,42)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>[JDBC wait: socket read] (2742 ms)</title><rect x="0.77" y="1673" width="1.63" height="16" fill="#6aa6e8" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ObservationFilterChainDecorator$ObservationFilter.wrapFilter (1426 ms)</title><rect x="2.49" y="41" width="0.85" height="16" fill="rgb(229,206,86)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ObservationFilterChainDecorator$VirtualFilterChain.doFilter (54763 ms)</title><rect x="3.64" y="41" width="32.55" height="16" fill="rgb(228,146,67)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ObservationFilterChainDecorator$ObservationFilter.doFilter (54763 ms)</title><rect x="3.64" y="58" width="32.55" height="16" fill="rgb(232,163,74)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ObservationFilterChainDecorator$ObservationFilter.wrapFilter (54763 ms)</title><rect x="3.64" y="75" width="32.55" height="16" fill="rgb(229,206,86)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>AnonymousAuthenticationFilter.doFilter (53833 ms)</title><rect x="3.73" y="92" width="32.00" height="16" fill="rgb(243,126,80)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ObservationFilterChainDecorator$VirtualFilterChain.doFilter (53833 ms)</title><rect x="3.73" y="109" width="32.00" height="16" fill="rgb(228,146,67)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ObservationFilterChainDecorator$ObservationFilter.doFilter (53833 ms)</title><rect x="3.73" y="126" width="32.00" height="16" fill="rgb(232,163,74)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ObservationFilterChainDecorator$ObservationFilter.wrapFilter (53833 ms)</title><rect x="3.73" y="143" width="32.00" height="16" fill="rgb(229,206,86)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>SessionManagementFilter.doFilter (53833 ms)</title><rect x="3.73" y="160" width="32.00" height="16" fill="rgb(235,134,89)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>SessionManagementFilter.doFilter (53833 ms)</title><rect x="3.73" y="177" width="32.00" height="16" fill="rgb(235,134,89)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ObservationFilterChainDecorator$VirtualFilterChain.doFilter (53833 ms)</title><rect x="3.73" y="194" width="32.00" height="16" fill="rgb(228,146,67)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ObservationFilterChainDecorator$ObservationFilter.doFilter (53833 ms)</title><rect x="3.73" y="211" width="32.00" height="16" fill="rgb(232,163,74)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ObservationFilterChainDecorator$ObservationFilter.wrapFilter (53833 ms)</title><rect x="3.73" y="228" width="32.00" height="16" fill="rgb(229,206,86)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ExceptionTranslationFilter.doFilter (53833 ms)</title><rect x="3.73" y="245" width="32.00" height="16" fill="rgb(250,170,45)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ExceptionTranslationFilter.doFilter (53833 ms)</title><rect x="3.73" y="262" width="32.00" height="16" fill="rgb(250,170,45)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ObservationFilterChainDecorator$VirtualFilterChain.doFilter (53833 ms)</title><rect x="3.73" y="279" width="32.00" height="16" fill="rgb(228,146,67)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ObservationFilterChainDecorator$ObservationFilter.doFilter (53833 ms)</title><rect x="3.73" y="296" width="32.00" height="16" fill="rgb(232,163,74)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ObservationFilterChainDecorator$ObservationFilter.wrapFilter (53833 ms)</title><rect x="3.73" y="313" width="32.00" height="16" fill="rgb(229,206,86)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>AuthorizationFilter.doFilter (53833 ms)</title><rect x="3.73" y="330" width="32.00" height="16" fill="rgb(237,190,81)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ObservationFilterChainDecorator$VirtualFilterChain.doFilter (53833 ms)</title><rect x="3.73" y="347" width="32.00" height="16" fill="rgb(228,146,67)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>0x000000008d4f1038.doFilter (53833 ms)</title><rect x="3.73" y="364" width="32.00" height="16" fill="rgb(234,147,63)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ObservationFilterChainDecorator.lambda$wrapSecured$0 (53833 ms)</title><rect x="3.73" y="381" width="32.00" height="16" fill="rgb(237,203,58)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>0x000000008d4f9570.doFilter (53833 ms)</title><rect x="3.73" y="398" width="32.00" height="16" fill="rgb(231,180,40)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ObservationFilterChainDecorator$AroundFilterObservation$SimpleAroundFilterObservation.lambda$wrap$1 (53833 ms)</title><rect x="3.73" y="415" width="32.00" height="16" fill="rgb(239,143,44)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>0x000000008d4f9340.doFilter (53833 ms)</title><rect x="3.73" y="432" width="32.00" height="16" fill="rgb(254,128,59)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ObservationFilterChainDecorator$FilterObservation$SimpleFilterObservation.lambda$wrap$1 (53833 ms)</title><rect x="3.73" y="449" width="32.00" height="16" fill="rgb(249,166,88)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>0x000000008d4f0bd8.doFilter (53833 ms)</title><rect x="3.73" y="466" width="32.00" height="16" fill="rgb(254,188,76)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>FilterChainProxy.lambda$doFilterInternal$2 (53833 ms)</title><rect x="3.73" y="483" width="32.00" height="16" fill="rgb(249,183,50)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>CompositeFilter$VirtualFilterChain.doFilter (53833 ms)</title><rect x="3.73" y="500" width="32.00" height="16" fill="rgb(249,153,85)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ApplicationFilterChain.doFilter (53833 ms)</title><rect x="3.73" y="517" width="32.00" height="16" fill="rgb(245,208,76)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ResourceUrlEncodingFilter.doFilter (53833 ms)</title><rect x="3.73" y="534" width="32.00" height="16" fill="rgb(242,152,78)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ApplicationFilterChain.doFilter (53833 ms)</title><rect x="3.73" y="551" width="32.00" height="16" fill="rgb(245,208,76)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>OncePerRequestFilter.doFilter (53833 ms)</title><rect x="3.73" y="568" width="32.00" height="16" fill="rgb(241,152,52)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>CorrelationIdFilter.doFilterInternal (53833 ms)</title><rect x="3.73" y="585" width="32.00" height="16" fill="rgb(236,194,45)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ApplicationFilterChain.doFilter (53833 ms)</title><rect x="3.73" y="602" width="32.00" height="16" fill="rgb(245,208,76)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>WsFilter.doFilter (53833 ms)</title><rect x="3.73" y="619" width="32.00" height="16" fill="rgb(236,177,67)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ApplicationFilterChain.doFilter (53833 ms)</title><rect x="3.73" y="636" width="32.00" height="16" fill="rgb(245,208,76)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>HttpServlet.service (53833 ms)</title><rect x="3.73" y="653" width="32.00" height="16" fill="rgb(253,145,64)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>FrameworkServlet.service (53833 ms)</title><rect x="3.73" y="670" width="32.00" height="16" fill="rgb(231,202,84)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>HttpServlet.service (53833 ms)</title><rect x="3.73" y="687" width="32.00" height="16" fill="rgb(253,145,64)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>FrameworkServlet.doGet (53833 ms)</title><rect x="3.73" y="704" width="32.00" height="16" fill="rgb(247,161,55)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>FrameworkServlet.processRequest (53833 ms)</title><rect x="3.73" y="721" width="32.00" height="16" fill="rgb(240,203,49)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>DispatcherServlet.doService (53833 ms)</title><rect x="3.73" y="738" width="32.00" height="16" fill="rgb(231,146,77)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>DispatcherServlet.doDispatch (53833 ms)</title><rect x="3.73" y="755" width="32.00" height="16" fill="rgb(228,129,44)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>AbstractHandlerMethodAdapter.handle (53833 ms)</title><rect x="3.73" y="772" width="32.00" height="16" fill="rgb(253,136,50)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>RequestMappingHandlerAdapter.handleInternal (53833 ms)</title><rect x="3.73" y="789" width="32.00" height="16" fill="rgb(244,122,54)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>RequestMappingHandlerAdapter.invokeHandlerMethod (53833 ms)</title><rect x="3.73" y="806" width="32.00" height="16" fill="rgb(252,128,59)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ServletInvocableHandlerMethod.invokeAndHandle (53833 ms)</title><rect x="3.73" y="823" width="32.00" height="16" fill="rgb(245,152,63)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>InvocableHandlerMethod.invokeForRequest (53833 ms)</title><rect x="3.73" y="840" width="32.00" height="16" fill="rgb(225,124,70)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>InvocableHandlerMethod.doInvoke (53833 ms)</title><rect x="3.73" y="857" width="32.00" height="16" fill="rgb(242,152,73)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>Method.invoke (53833 ms)</title><rect x="3.73" y="874" width="32.00" height="16" fill="rgb(248,204,46)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>DirectMethodHandleAccessor.invoke (53833 ms)</title><rect x="3.73" y="891" width="32.00" height="16" fill="rgb(240,147,83)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>DirectMethodHandleAccessor.invokeImpl (53833 ms)</title><rect x="3.73" y="908" width="32.00" height="16" fill="rgb(236,177,73)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>Invokers$Holder.invokeExact_MT (53833 ms)</title><rect x="3.73" y="925" width="32.00" height="16" fill="rgb(239,199,46)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>0x000000008c625800.invoke (692 ms)</title><rect x="3.73" y="942" width="0.41" height="16" fill="rgb(249,149,63)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>0x000000008d29d000.invoke (53141 ms)</title><rect x="4.14" y="942" width="31.59" height="16" fill="rgb(236,147,81)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>0x000000008d589800.invoke (53141 ms)</title><rect x="4.14" y="959" width="31.59" height="16" fill="rgb(235,207,53)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>0x000000008d580400.invokeVirtual (53141 ms)</title><rect x="4.14" y="976" width="31.59" height="16" fill="rgb(251,132,45)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ProcurementsController$$SpringCGLIB$$0.searchProcurements (53141 ms)</title><rect x="4.14" y="993" width="31.59" height="16" fill="rgb(249,196,86)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>CglibAopProxy$DynamicAdvisedInterceptor.intercept (53141 ms)</title><rect x="4.14" y="1010" width="31.59" height="16" fill="rgb(230,142,87)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ReflectiveMethodInvocation.proceed (53141 ms)</title><rect x="4.14" y="1027" width="31.59" height="16" fill="rgb(251,153,52)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>MethodValidationInterceptor.invoke (53141 ms)</title><rect x="4.14" y="1044" width="31.59" height="16" fill="rgb(250,162,86)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ReflectiveMethodInvocation.proceed (53141 ms)</title><rect x="4.14" y="1061" width="31.59" height="16" fill="rgb(251,153,52)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ReflectiveMethodInvocation.invokeJoinpoint (53141 ms)</title><rect x="4.14" y="1078" width="31.59" height="16" fill="rgb(245,174,42)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>AopUtils.invokeJoinpointUsingReflection (53141 ms)</title><rect x="4.14" y="1095" width="31.59" height="16" fill="rgb(225,154,65)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>Method.invoke (53141 ms)</title><rect x="4.14" y="1112" width="31.59" height="16" fill="rgb(248,204,46)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>DirectMethodHandleAccessor.invoke (53141 ms)</title><rect x="4.14" y="1129" width="31.59" height="16" fill="rgb(240,147,83)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>DirectMethodHandleAccessor.invokeImpl (53141 ms)</title><rect x="4.14" y="1146" width="31.59" height="16" fill="rgb(236,177,73)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>Invokers$Holder.invokeExact_MT (53141 ms)</title><rect x="4.14" y="1163" width="31.59" height="16" fill="rgb(239,199,46)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>0x000000008d29d000.invoke (53141 ms)</title><rect x="4.14" y="1180" width="31.59" height="16" fill="rgb(236,147,81)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>0x000000008d589800.invoke (53141 ms)</title><rect x="4.14" y="1197" width="31.59" height="16" fill="rgb(235,207,53)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>0x000000008d580400.invokeVirtual (53141 ms)</title><rect x="4.14" y="1214" width="31.59" height="16" fill="rgb(251,132,45)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ProcurementsController.searchProcurements (53141 ms)</title><rect x="4.14" y="1231" width="31.59" height="16" fill="rgb(229,129,82)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>SearchUseCase.search (53141 ms)</title><rect x="4.14" y="1248" width="31.59" height="16" fill="rgb(240,199,80)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>JooqSearchReadModel.search (53141 ms)</title><rect x="4.14" y="1265" width="31.59" height="16" fill="rgb(247,136,73)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>AbstractResultQuery.fetch (53071 ms)</title><rect x="4.14" y="1282" width="31.55" height="16" fill="rgb(238,147,75)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>AbstractQuery.execute (53071 ms)</title><rect x="4.14" y="1299" width="31.55" height="16" fill="rgb(234,177,84)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>AbstractQuery.execute (53071 ms)</title><rect x="4.14" y="1316" width="31.55" height="16" fill="rgb(234,177,84)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>AbstractResultQuery.execute (53061 ms)</title><rect x="4.14" y="1333" width="31.54" height="16" fill="rgb(253,184,64)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>Tools.executeStatementAndGetFirstResultSet (52881 ms)</title><rect x="4.14" y="1350" width="31.43" height="16" fill="rgb(242,131,73)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>Tools.consumeExceptions (52881 ms)</title><rect x="4.14" y="1367" width="31.43" height="16" fill="rgb(244,178,58)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>0x000000008d5ab0f0.run (52881 ms)</title><rect x="4.14" y="1384" width="31.43" height="16" fill="rgb(238,186,59)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>Tools.lambda$executeStatementAndGetFirstResultSet$104 (52881 ms)</title><rect x="4.14" y="1401" width="31.43" height="16" fill="rgb(240,203,76)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>DefaultPreparedStatement.execute (52881 ms)</title><rect x="4.14" y="1418" width="31.43" height="16" fill="rgb(245,157,40)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>HikariProxyPreparedStatement.execute (52881 ms)</title><rect x="4.14" y="1435" width="31.43" height="16" fill="rgb(246,153,41)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ProxyPreparedStatement.execute (52881 ms)</title><rect x="4.14" y="1452" width="31.43" height="16" fill="rgb(230,206,88)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>PgPreparedStatement.execute (52881 ms)</title><rect x="4.14" y="1469" width="31.43" height="16" fill="rgb(243,165,71)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>PgPreparedStatement.executeWithFlags (52881 ms)</title><rect x="4.14" y="1486" width="31.43" height="16" fill="rgb(250,140,87)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>PgStatement.execute (52881 ms)</title><rect x="4.14" y="1503" width="31.43" height="16" fill="rgb(234,181,73)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>PgStatement.executeInternal (52881 ms)</title><rect x="4.14" y="1520" width="31.43" height="16" fill="rgb(247,153,88)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>QueryExecutorImpl.execute (52881 ms)</title><rect x="4.14" y="1537" width="31.43" height="16" fill="rgb(253,188,88)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>QueryExecutorImpl.processResults (52871 ms)</title><rect x="4.14" y="1554" width="31.43" height="16" fill="rgb(241,182,70)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>PGStream.receiveTupleV3 (52871 ms)</title><rect x="4.14" y="1571" width="31.43" height="16" fill="rgb(228,159,47)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>PGStream.receive (51169 ms)</title><rect x="4.14" y="1588" width="30.42" height="16" fill="rgb(225,175,50)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>VisibleBufferedInputStream.read (51169 ms)</title><rect x="4.14" y="1605" width="30.42" height="16" fill="rgb(250,183,66)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>VisibleBufferedInputStream.ensureBytes (51169 ms)</title><rect x="4.14" y="1622" width="30.42" height="16" fill="rgb(225,205,63)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>VisibleBufferedInputStream.ensureBytes (51169 ms)</title><rect x="4.14" y="1639" width="30.42" height="16" fill="rgb(225,205,63)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>VisibleBufferedInputStream.readMore (51169 ms)</title><rect x="4.14" y="1656" width="30.42" height="16" fill="rgb(247,178,42)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>[JDBC wait: socket read] (51169 ms)</title><rect x="4.14" y="1673" width="30.42" height="16" fill="#6aa6e8" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>PGStream.receiveInteger4 (1682 ms)</title><rect x="34.56" y="1588" width="1.00" height="16" fill="rgb(225,124,42)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>VisibleBufferedInputStream.readInt4 (1682 ms)</title><rect x="34.56" y="1605" width="1.00" height="16" fill="rgb(239,147,67)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>VisibleBufferedInputStream.ensureBytes (1682 ms)</title><rect x="34.56" y="1622" width="1.00" height="16" fill="rgb(225,205,63)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>VisibleBufferedInputStream.ensureBytes (1682 ms)</title><rect x="34.56" y="1639" width="1.00" height="16" fill="rgb(225,205,63)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>VisibleBufferedInputStream.readMore (1682 ms)</title><rect x="34.56" y="1656" width="1.00" height="16" fill="rgb(247,178,42)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>[JDBC wait: socket read] (1682 ms)</title><rect x="34.56" y="1673" width="1.00" height="16" fill="#6aa6e8" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>SecurityContextHolderAwareRequestFilter.doFilter (2293664 ms)</title><rect x="36.27" y="41" width="1363.38" height="16" fill="rgb(238,186,57)" stroke="#fff" stroke-width="0.5"/><text x="38.27" y="53" fill="#111">SecurityContextHolderAwareRequestFilter.doFilter</text></g>
+<g><title>ObservationFilterChainDecorator$VirtualFilterChain.doFilter (2293664 ms)</title><rect x="36.27" y="58" width="1363.38" height="16" fill="rgb(228,146,67)" stroke="#fff" stroke-width="0.5"/><text x="38.27" y="70" fill="#111">ObservationFilterChainDecorator$VirtualFilterChain.doFilter</text></g>
+<g><title>ObservationFilterChainDecorator$ObservationFilter.doFilter (2293664 ms)</title><rect x="36.27" y="75" width="1363.38" height="16" fill="rgb(232,163,74)" stroke="#fff" stroke-width="0.5"/><text x="38.27" y="87" fill="#111">ObservationFilterChainDecorator$ObservationFilter.doFilter</text></g>
+<g><title>ObservationFilterChainDecorator$ObservationFilter.wrapFilter (2293664 ms)</title><rect x="36.27" y="92" width="1363.38" height="16" fill="rgb(229,206,86)" stroke="#fff" stroke-width="0.5"/><text x="38.27" y="104" fill="#111">ObservationFilterChainDecorator$ObservationFilter.wrapFilter</text></g>
+<g><title>AnonymousAuthenticationFilter.doFilter (2293664 ms)</title><rect x="36.27" y="109" width="1363.38" height="16" fill="rgb(243,126,80)" stroke="#fff" stroke-width="0.5"/><text x="38.27" y="121" fill="#111">AnonymousAuthenticationFilter.doFilter</text></g>
+<g><title>ObservationFilterChainDecorator$VirtualFilterChain.doFilter (2293664 ms)</title><rect x="36.27" y="126" width="1363.38" height="16" fill="rgb(228,146,67)" stroke="#fff" stroke-width="0.5"/><text x="38.27" y="138" fill="#111">ObservationFilterChainDecorator$VirtualFilterChain.doFilter</text></g>
+<g><title>ObservationFilterChainDecorator$ObservationFilter.doFilter (2293664 ms)</title><rect x="36.27" y="143" width="1363.38" height="16" fill="rgb(232,163,74)" stroke="#fff" stroke-width="0.5"/><text x="38.27" y="155" fill="#111">ObservationFilterChainDecorator$ObservationFilter.doFilter</text></g>
+<g><title>ObservationFilterChainDecorator$ObservationFilter.wrapFilter (2293664 ms)</title><rect x="36.27" y="160" width="1363.38" height="16" fill="rgb(229,206,86)" stroke="#fff" stroke-width="0.5"/><text x="38.27" y="172" fill="#111">ObservationFilterChainDecorator$ObservationFilter.wrapFilter</text></g>
+<g><title>SessionManagementFilter.doFilter (2293664 ms)</title><rect x="36.27" y="177" width="1363.38" height="16" fill="rgb(235,134,89)" stroke="#fff" stroke-width="0.5"/><text x="38.27" y="189" fill="#111">SessionManagementFilter.doFilter</text></g>
+<g><title>SessionManagementFilter.doFilter (2293664 ms)</title><rect x="36.27" y="194" width="1363.38" height="16" fill="rgb(235,134,89)" stroke="#fff" stroke-width="0.5"/><text x="38.27" y="206" fill="#111">SessionManagementFilter.doFilter</text></g>
+<g><title>ObservationFilterChainDecorator$VirtualFilterChain.doFilter (2293664 ms)</title><rect x="36.27" y="211" width="1363.38" height="16" fill="rgb(228,146,67)" stroke="#fff" stroke-width="0.5"/><text x="38.27" y="223" fill="#111">ObservationFilterChainDecorator$VirtualFilterChain.doFilter</text></g>
+<g><title>ObservationFilterChainDecorator$ObservationFilter.doFilter (2293664 ms)</title><rect x="36.27" y="228" width="1363.38" height="16" fill="rgb(232,163,74)" stroke="#fff" stroke-width="0.5"/><text x="38.27" y="240" fill="#111">ObservationFilterChainDecorator$ObservationFilter.doFilter</text></g>
+<g><title>ObservationFilterChainDecorator$ObservationFilter.wrapFilter (2293664 ms)</title><rect x="36.27" y="245" width="1363.38" height="16" fill="rgb(229,206,86)" stroke="#fff" stroke-width="0.5"/><text x="38.27" y="257" fill="#111">ObservationFilterChainDecorator$ObservationFilter.wrapFilter</text></g>
+<g><title>ExceptionTranslationFilter.doFilter (2293664 ms)</title><rect x="36.27" y="262" width="1363.38" height="16" fill="rgb(250,170,45)" stroke="#fff" stroke-width="0.5"/><text x="38.27" y="274" fill="#111">ExceptionTranslationFilter.doFilter</text></g>
+<g><title>ExceptionTranslationFilter.doFilter (2293664 ms)</title><rect x="36.27" y="279" width="1363.38" height="16" fill="rgb(250,170,45)" stroke="#fff" stroke-width="0.5"/><text x="38.27" y="291" fill="#111">ExceptionTranslationFilter.doFilter</text></g>
+<g><title>ObservationFilterChainDecorator$VirtualFilterChain.doFilter (2293664 ms)</title><rect x="36.27" y="296" width="1363.38" height="16" fill="rgb(228,146,67)" stroke="#fff" stroke-width="0.5"/><text x="38.27" y="308" fill="#111">ObservationFilterChainDecorator$VirtualFilterChain.doFilter</text></g>
+<g><title>ObservationFilterChainDecorator$ObservationFilter.doFilter (2293664 ms)</title><rect x="36.27" y="313" width="1363.38" height="16" fill="rgb(232,163,74)" stroke="#fff" stroke-width="0.5"/><text x="38.27" y="325" fill="#111">ObservationFilterChainDecorator$ObservationFilter.doFilter</text></g>
+<g><title>ObservationFilterChainDecorator$ObservationFilter.wrapFilter (2293664 ms)</title><rect x="36.27" y="330" width="1363.38" height="16" fill="rgb(229,206,86)" stroke="#fff" stroke-width="0.5"/><text x="38.27" y="342" fill="#111">ObservationFilterChainDecorator$ObservationFilter.wrapFilter</text></g>
+<g><title>AuthorizationFilter.doFilter (2293664 ms)</title><rect x="36.27" y="347" width="1363.38" height="16" fill="rgb(237,190,81)" stroke="#fff" stroke-width="0.5"/><text x="38.27" y="359" fill="#111">AuthorizationFilter.doFilter</text></g>
+<g><title>ObservationFilterChainDecorator$VirtualFilterChain.doFilter (2293664 ms)</title><rect x="36.27" y="364" width="1363.38" height="16" fill="rgb(228,146,67)" stroke="#fff" stroke-width="0.5"/><text x="38.27" y="376" fill="#111">ObservationFilterChainDecorator$VirtualFilterChain.doFilter</text></g>
+<g><title>0x000000008d4f1038.doFilter (2293664 ms)</title><rect x="36.27" y="381" width="1363.38" height="16" fill="rgb(234,147,63)" stroke="#fff" stroke-width="0.5"/><text x="38.27" y="393" fill="#111">0x000000008d4f1038.doFilter</text></g>
+<g><title>ObservationFilterChainDecorator.lambda$wrapSecured$0 (2293664 ms)</title><rect x="36.27" y="398" width="1363.38" height="16" fill="rgb(237,203,58)" stroke="#fff" stroke-width="0.5"/><text x="38.27" y="410" fill="#111">ObservationFilterChainDecorator.lambda$wrapSecured$0</text></g>
+<g><title>0x000000008d4f9570.doFilter (2293664 ms)</title><rect x="36.27" y="415" width="1363.38" height="16" fill="rgb(231,180,40)" stroke="#fff" stroke-width="0.5"/><text x="38.27" y="427" fill="#111">0x000000008d4f9570.doFilter</text></g>
+<g><title>ObservationFilterChainDecorator$AroundFilterObservation$SimpleAroundFilterObservation.lambda$wrap$1 (2293664 ms)</title><rect x="36.27" y="432" width="1363.38" height="16" fill="rgb(239,143,44)" stroke="#fff" stroke-width="0.5"/><text x="38.27" y="444" fill="#111">ObservationFilterChainDecorator$AroundFilterObservation$SimpleAroundFilterObservation.lambda$wrap$1</text></g>
+<g><title>0x000000008d4f9340.doFilter (2293664 ms)</title><rect x="36.27" y="449" width="1363.38" height="16" fill="rgb(254,128,59)" stroke="#fff" stroke-width="0.5"/><text x="38.27" y="461" fill="#111">0x000000008d4f9340.doFilter</text></g>
+<g><title>ObservationFilterChainDecorator$FilterObservation$SimpleFilterObservation.lambda$wrap$1 (2293664 ms)</title><rect x="36.27" y="466" width="1363.38" height="16" fill="rgb(249,166,88)" stroke="#fff" stroke-width="0.5"/><text x="38.27" y="478" fill="#111">ObservationFilterChainDecorator$FilterObservation$SimpleFilterObservation.lambda$wrap$1</text></g>
+<g><title>0x000000008d4f0bd8.doFilter (2293664 ms)</title><rect x="36.27" y="483" width="1363.38" height="16" fill="rgb(254,188,76)" stroke="#fff" stroke-width="0.5"/><text x="38.27" y="495" fill="#111">0x000000008d4f0bd8.doFilter</text></g>
+<g><title>FilterChainProxy.lambda$doFilterInternal$2 (2293664 ms)</title><rect x="36.27" y="500" width="1363.38" height="16" fill="rgb(249,183,50)" stroke="#fff" stroke-width="0.5"/><text x="38.27" y="512" fill="#111">FilterChainProxy.lambda$doFilterInternal$2</text></g>
+<g><title>CompositeFilter$VirtualFilterChain.doFilter (2293664 ms)</title><rect x="36.27" y="517" width="1363.38" height="16" fill="rgb(249,153,85)" stroke="#fff" stroke-width="0.5"/><text x="38.27" y="529" fill="#111">CompositeFilter$VirtualFilterChain.doFilter</text></g>
+<g><title>ApplicationFilterChain.doFilter (2293664 ms)</title><rect x="36.27" y="534" width="1363.38" height="16" fill="rgb(245,208,76)" stroke="#fff" stroke-width="0.5"/><text x="38.27" y="546" fill="#111">ApplicationFilterChain.doFilter</text></g>
+<g><title>ResourceUrlEncodingFilter.doFilter (2293664 ms)</title><rect x="36.27" y="551" width="1363.38" height="16" fill="rgb(242,152,78)" stroke="#fff" stroke-width="0.5"/><text x="38.27" y="563" fill="#111">ResourceUrlEncodingFilter.doFilter</text></g>
+<g><title>ApplicationFilterChain.doFilter (2293664 ms)</title><rect x="36.27" y="568" width="1363.38" height="16" fill="rgb(245,208,76)" stroke="#fff" stroke-width="0.5"/><text x="38.27" y="580" fill="#111">ApplicationFilterChain.doFilter</text></g>
+<g><title>OncePerRequestFilter.doFilter (2293664 ms)</title><rect x="36.27" y="585" width="1363.38" height="16" fill="rgb(241,152,52)" stroke="#fff" stroke-width="0.5"/><text x="38.27" y="597" fill="#111">OncePerRequestFilter.doFilter</text></g>
+<g><title>CorrelationIdFilter.doFilterInternal (2293664 ms)</title><rect x="36.27" y="602" width="1363.38" height="16" fill="rgb(236,194,45)" stroke="#fff" stroke-width="0.5"/><text x="38.27" y="614" fill="#111">CorrelationIdFilter.doFilterInternal</text></g>
+<g><title>ApplicationFilterChain.doFilter (2293664 ms)</title><rect x="36.27" y="619" width="1363.38" height="16" fill="rgb(245,208,76)" stroke="#fff" stroke-width="0.5"/><text x="38.27" y="631" fill="#111">ApplicationFilterChain.doFilter</text></g>
+<g><title>WsFilter.doFilter (2293664 ms)</title><rect x="36.27" y="636" width="1363.38" height="16" fill="rgb(236,177,67)" stroke="#fff" stroke-width="0.5"/><text x="38.27" y="648" fill="#111">WsFilter.doFilter</text></g>
+<g><title>ApplicationFilterChain.doFilter (2293664 ms)</title><rect x="36.27" y="653" width="1363.38" height="16" fill="rgb(245,208,76)" stroke="#fff" stroke-width="0.5"/><text x="38.27" y="665" fill="#111">ApplicationFilterChain.doFilter</text></g>
+<g><title>HttpServlet.service (2293664 ms)</title><rect x="36.27" y="670" width="1363.38" height="16" fill="rgb(253,145,64)" stroke="#fff" stroke-width="0.5"/><text x="38.27" y="682" fill="#111">HttpServlet.service</text></g>
+<g><title>FrameworkServlet.service (2293664 ms)</title><rect x="36.27" y="687" width="1363.38" height="16" fill="rgb(231,202,84)" stroke="#fff" stroke-width="0.5"/><text x="38.27" y="699" fill="#111">FrameworkServlet.service</text></g>
+<g><title>HttpServlet.service (2293664 ms)</title><rect x="36.27" y="704" width="1363.38" height="16" fill="rgb(253,145,64)" stroke="#fff" stroke-width="0.5"/><text x="38.27" y="716" fill="#111">HttpServlet.service</text></g>
+<g><title>FrameworkServlet.doGet (2293664 ms)</title><rect x="36.27" y="721" width="1363.38" height="16" fill="rgb(247,161,55)" stroke="#fff" stroke-width="0.5"/><text x="38.27" y="733" fill="#111">FrameworkServlet.doGet</text></g>
+<g><title>FrameworkServlet.processRequest (2293664 ms)</title><rect x="36.27" y="738" width="1363.38" height="16" fill="rgb(240,203,49)" stroke="#fff" stroke-width="0.5"/><text x="38.27" y="750" fill="#111">FrameworkServlet.processRequest</text></g>
+<g><title>DispatcherServlet.doService (2293664 ms)</title><rect x="36.27" y="755" width="1363.38" height="16" fill="rgb(231,146,77)" stroke="#fff" stroke-width="0.5"/><text x="38.27" y="767" fill="#111">DispatcherServlet.doService</text></g>
+<g><title>DispatcherServlet.doDispatch (2293664 ms)</title><rect x="36.27" y="772" width="1363.38" height="16" fill="rgb(228,129,44)" stroke="#fff" stroke-width="0.5"/><text x="38.27" y="784" fill="#111">DispatcherServlet.doDispatch</text></g>
+<g><title>AbstractHandlerMethodAdapter.handle (2293664 ms)</title><rect x="36.27" y="789" width="1363.38" height="16" fill="rgb(253,136,50)" stroke="#fff" stroke-width="0.5"/><text x="38.27" y="801" fill="#111">AbstractHandlerMethodAdapter.handle</text></g>
+<g><title>RequestMappingHandlerAdapter.handleInternal (2293664 ms)</title><rect x="36.27" y="806" width="1363.38" height="16" fill="rgb(244,122,54)" stroke="#fff" stroke-width="0.5"/><text x="38.27" y="818" fill="#111">RequestMappingHandlerAdapter.handleInternal</text></g>
+<g><title>RequestMappingHandlerAdapter.invokeHandlerMethod (2293664 ms)</title><rect x="36.27" y="823" width="1363.38" height="16" fill="rgb(252,128,59)" stroke="#fff" stroke-width="0.5"/><text x="38.27" y="835" fill="#111">RequestMappingHandlerAdapter.invokeHandlerMethod</text></g>
+<g><title>ServletInvocableHandlerMethod.invokeAndHandle (2293664 ms)</title><rect x="36.27" y="840" width="1363.38" height="16" fill="rgb(245,152,63)" stroke="#fff" stroke-width="0.5"/><text x="38.27" y="852" fill="#111">ServletInvocableHandlerMethod.invokeAndHandle</text></g>
+<g><title>InvocableHandlerMethod.invokeForRequest (2293664 ms)</title><rect x="36.27" y="857" width="1363.38" height="16" fill="rgb(225,124,70)" stroke="#fff" stroke-width="0.5"/><text x="38.27" y="869" fill="#111">InvocableHandlerMethod.invokeForRequest</text></g>
+<g><title>InvocableHandlerMethod.doInvoke (2293664 ms)</title><rect x="36.27" y="874" width="1363.38" height="16" fill="rgb(242,152,73)" stroke="#fff" stroke-width="0.5"/><text x="38.27" y="886" fill="#111">InvocableHandlerMethod.doInvoke</text></g>
+<g><title>Method.invoke (2293664 ms)</title><rect x="36.27" y="891" width="1363.38" height="16" fill="rgb(248,204,46)" stroke="#fff" stroke-width="0.5"/><text x="38.27" y="903" fill="#111">Method.invoke</text></g>
+<g><title>DirectMethodHandleAccessor.invoke (2293664 ms)</title><rect x="36.27" y="908" width="1363.38" height="16" fill="rgb(240,147,83)" stroke="#fff" stroke-width="0.5"/><text x="38.27" y="920" fill="#111">DirectMethodHandleAccessor.invoke</text></g>
+<g><title>DirectMethodHandleAccessor.invokeImpl (2293664 ms)</title><rect x="36.27" y="925" width="1363.38" height="16" fill="rgb(236,177,73)" stroke="#fff" stroke-width="0.5"/><text x="38.27" y="937" fill="#111">DirectMethodHandleAccessor.invokeImpl</text></g>
+<g><title>Invokers$Holder.invokeExact_MT (2293664 ms)</title><rect x="36.27" y="942" width="1363.38" height="16" fill="rgb(239,199,46)" stroke="#fff" stroke-width="0.5"/><text x="38.27" y="954" fill="#111">Invokers$Holder.invokeExact_MT</text></g>
+<g><title>0x000000008c625800.invoke (73764 ms)</title><rect x="36.27" y="959" width="43.85" height="16" fill="rgb(249,149,63)" stroke="#fff" stroke-width="0.5"/><text x="38.27" y="971" fill="#111">0x000~</text></g>
+<g><title>0x000000008d583400.invoke (16228 ms)</title><rect x="36.27" y="976" width="9.65" height="16" fill="rgb(227,163,80)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>0x000000008d580400.invokeVirtual (16228 ms)</title><rect x="36.27" y="993" width="9.65" height="16" fill="rgb(251,132,45)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ProcurementsController$$SpringCGLIB$$0.searchProcurements (16228 ms)</title><rect x="36.27" y="1010" width="9.65" height="16" fill="rgb(249,196,86)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>CglibAopProxy$DynamicAdvisedInterceptor.intercept (16228 ms)</title><rect x="36.27" y="1027" width="9.65" height="16" fill="rgb(230,142,87)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ReflectiveMethodInvocation.proceed (16228 ms)</title><rect x="36.27" y="1044" width="9.65" height="16" fill="rgb(251,153,52)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>MethodValidationInterceptor.invoke (16228 ms)</title><rect x="36.27" y="1061" width="9.65" height="16" fill="rgb(250,162,86)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ReflectiveMethodInvocation.proceed (16228 ms)</title><rect x="36.27" y="1078" width="9.65" height="16" fill="rgb(251,153,52)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ReflectiveMethodInvocation.invokeJoinpoint (16228 ms)</title><rect x="36.27" y="1095" width="9.65" height="16" fill="rgb(245,174,42)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>AopUtils.invokeJoinpointUsingReflection (16228 ms)</title><rect x="36.27" y="1112" width="9.65" height="16" fill="rgb(225,154,65)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>Method.invoke (16228 ms)</title><rect x="36.27" y="1129" width="9.65" height="16" fill="rgb(248,204,46)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>DirectMethodHandleAccessor.invoke (16228 ms)</title><rect x="36.27" y="1146" width="9.65" height="16" fill="rgb(240,147,83)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>DirectMethodHandleAccessor.invokeImpl (16228 ms)</title><rect x="36.27" y="1163" width="9.65" height="16" fill="rgb(236,177,73)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>Invokers$Holder.invokeExact_MT (16228 ms)</title><rect x="36.27" y="1180" width="9.65" height="16" fill="rgb(239,199,46)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>0x000000008c625800.invoke (16228 ms)</title><rect x="36.27" y="1197" width="9.65" height="16" fill="rgb(249,149,63)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>0x000000008d589800.invoke (16228 ms)</title><rect x="36.27" y="1214" width="9.65" height="16" fill="rgb(235,207,53)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>0x000000008d580400.invokeVirtual (16228 ms)</title><rect x="36.27" y="1231" width="9.65" height="16" fill="rgb(251,132,45)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ProcurementsController.searchProcurements (16228 ms)</title><rect x="36.27" y="1248" width="9.65" height="16" fill="rgb(229,129,82)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>SearchUseCase.search (16228 ms)</title><rect x="36.27" y="1265" width="9.65" height="16" fill="rgb(240,199,80)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>JooqSearchReadModel.search (16228 ms)</title><rect x="36.27" y="1282" width="9.65" height="16" fill="rgb(247,136,73)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>AbstractResultQuery.fetch (16228 ms)</title><rect x="36.27" y="1299" width="9.65" height="16" fill="rgb(238,147,75)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>AbstractQuery.execute (16228 ms)</title><rect x="36.27" y="1316" width="9.65" height="16" fill="rgb(234,177,84)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>AbstractQuery.execute (16228 ms)</title><rect x="36.27" y="1333" width="9.65" height="16" fill="rgb(234,177,84)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>AbstractResultQuery.execute (16228 ms)</title><rect x="36.27" y="1350" width="9.65" height="16" fill="rgb(253,184,64)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>Tools.executeStatementAndGetFirstResultSet (16228 ms)</title><rect x="36.27" y="1367" width="9.65" height="16" fill="rgb(242,131,73)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>Tools.consumeExceptions (16228 ms)</title><rect x="36.27" y="1384" width="9.65" height="16" fill="rgb(244,178,58)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>0x000000008d5ab0f0.run (16228 ms)</title><rect x="36.27" y="1401" width="9.65" height="16" fill="rgb(238,186,59)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>Tools.lambda$executeStatementAndGetFirstResultSet$104 (16228 ms)</title><rect x="36.27" y="1418" width="9.65" height="16" fill="rgb(240,203,76)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>DefaultPreparedStatement.execute (16228 ms)</title><rect x="36.27" y="1435" width="9.65" height="16" fill="rgb(245,157,40)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>HikariProxyPreparedStatement.execute (16228 ms)</title><rect x="36.27" y="1452" width="9.65" height="16" fill="rgb(246,153,41)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ProxyPreparedStatement.execute (16228 ms)</title><rect x="36.27" y="1469" width="9.65" height="16" fill="rgb(230,206,88)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>PgPreparedStatement.execute (16228 ms)</title><rect x="36.27" y="1486" width="9.65" height="16" fill="rgb(243,165,71)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>PgPreparedStatement.executeWithFlags (16228 ms)</title><rect x="36.27" y="1503" width="9.65" height="16" fill="rgb(250,140,87)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>PgStatement.execute (16228 ms)</title><rect x="36.27" y="1520" width="9.65" height="16" fill="rgb(234,181,73)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>PgStatement.executeInternal (16228 ms)</title><rect x="36.27" y="1537" width="9.65" height="16" fill="rgb(247,153,88)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>QueryExecutorImpl.execute (16228 ms)</title><rect x="36.27" y="1554" width="9.65" height="16" fill="rgb(253,188,88)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>QueryExecutorImpl.processResults (16228 ms)</title><rect x="36.27" y="1571" width="9.65" height="16" fill="rgb(241,182,70)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>PGStream.receiveChar (16228 ms)</title><rect x="36.27" y="1588" width="9.65" height="16" fill="rgb(243,148,79)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>VisibleBufferedInputStream.read (16228 ms)</title><rect x="36.27" y="1605" width="9.65" height="16" fill="rgb(250,183,66)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>VisibleBufferedInputStream.ensureBytes (16228 ms)</title><rect x="36.27" y="1622" width="9.65" height="16" fill="rgb(225,205,63)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>VisibleBufferedInputStream.ensureBytes (16228 ms)</title><rect x="36.27" y="1639" width="9.65" height="16" fill="rgb(225,205,63)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>VisibleBufferedInputStream.readMore (16228 ms)</title><rect x="36.27" y="1656" width="9.65" height="16" fill="rgb(247,178,42)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>[JDBC wait: socket read] (16228 ms)</title><rect x="36.27" y="1673" width="9.65" height="16" fill="#6aa6e8" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>0x000000008d589800.invoke (53024 ms)</title><rect x="45.91" y="976" width="31.52" height="16" fill="rgb(235,207,53)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>0x000000008d580400.invokeVirtual (53024 ms)</title><rect x="45.91" y="993" width="31.52" height="16" fill="rgb(251,132,45)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ProcurementsController$$SpringCGLIB$$0.searchProcurements (53024 ms)</title><rect x="45.91" y="1010" width="31.52" height="16" fill="rgb(249,196,86)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>CglibAopProxy$DynamicAdvisedInterceptor.intercept (53024 ms)</title><rect x="45.91" y="1027" width="31.52" height="16" fill="rgb(230,142,87)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ReflectiveMethodInvocation.proceed (53024 ms)</title><rect x="45.91" y="1044" width="31.52" height="16" fill="rgb(251,153,52)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>MethodValidationInterceptor.invoke (53024 ms)</title><rect x="45.91" y="1061" width="31.52" height="16" fill="rgb(250,162,86)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ReflectiveMethodInvocation.proceed (53024 ms)</title><rect x="45.91" y="1078" width="31.52" height="16" fill="rgb(251,153,52)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ReflectiveMethodInvocation.invokeJoinpoint (53024 ms)</title><rect x="45.91" y="1095" width="31.52" height="16" fill="rgb(245,174,42)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>AopUtils.invokeJoinpointUsingReflection (53024 ms)</title><rect x="45.91" y="1112" width="31.52" height="16" fill="rgb(225,154,65)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>Method.invoke (53024 ms)</title><rect x="45.91" y="1129" width="31.52" height="16" fill="rgb(248,204,46)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>DirectMethodHandleAccessor.invoke (53024 ms)</title><rect x="45.91" y="1146" width="31.52" height="16" fill="rgb(240,147,83)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>DirectMethodHandleAccessor.invokeImpl (53024 ms)</title><rect x="45.91" y="1163" width="31.52" height="16" fill="rgb(236,177,73)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>Invokers$Holder.invokeExact_MT (53024 ms)</title><rect x="45.91" y="1180" width="31.52" height="16" fill="rgb(239,199,46)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>0x000000008c625800.invoke (53024 ms)</title><rect x="45.91" y="1197" width="31.52" height="16" fill="rgb(249,149,63)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>0x000000008d589800.invoke (53024 ms)</title><rect x="45.91" y="1214" width="31.52" height="16" fill="rgb(235,207,53)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>0x000000008d580400.invokeVirtual (53024 ms)</title><rect x="45.91" y="1231" width="31.52" height="16" fill="rgb(251,132,45)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ProcurementsController.searchProcurements (53024 ms)</title><rect x="45.91" y="1248" width="31.52" height="16" fill="rgb(229,129,82)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>SearchUseCase.search (53024 ms)</title><rect x="45.91" y="1265" width="31.52" height="16" fill="rgb(240,199,80)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>JooqSearchReadModel.search (53024 ms)</title><rect x="45.91" y="1282" width="31.52" height="16" fill="rgb(247,136,73)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>AbstractResultQuery.fetch (53024 ms)</title><rect x="45.91" y="1299" width="31.52" height="16" fill="rgb(238,147,75)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>AbstractQuery.execute (53024 ms)</title><rect x="45.91" y="1316" width="31.52" height="16" fill="rgb(234,177,84)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>AbstractQuery.execute (53024 ms)</title><rect x="45.91" y="1333" width="31.52" height="16" fill="rgb(234,177,84)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>AbstractResultQuery.execute (53024 ms)</title><rect x="45.91" y="1350" width="31.52" height="16" fill="rgb(253,184,64)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>Tools.executeStatementAndGetFirstResultSet (53014 ms)</title><rect x="45.91" y="1367" width="31.51" height="16" fill="rgb(242,131,73)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>Tools.consumeExceptions (53014 ms)</title><rect x="45.91" y="1384" width="31.51" height="16" fill="rgb(244,178,58)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>0x000000008d5ab0f0.run (53014 ms)</title><rect x="45.91" y="1401" width="31.51" height="16" fill="rgb(238,186,59)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>Tools.lambda$executeStatementAndGetFirstResultSet$104 (53014 ms)</title><rect x="45.91" y="1418" width="31.51" height="16" fill="rgb(240,203,76)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>DefaultPreparedStatement.execute (53014 ms)</title><rect x="45.91" y="1435" width="31.51" height="16" fill="rgb(245,157,40)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>HikariProxyPreparedStatement.execute (53014 ms)</title><rect x="45.91" y="1452" width="31.51" height="16" fill="rgb(246,153,41)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ProxyPreparedStatement.execute (53014 ms)</title><rect x="45.91" y="1469" width="31.51" height="16" fill="rgb(230,206,88)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>PgPreparedStatement.execute (53014 ms)</title><rect x="45.91" y="1486" width="31.51" height="16" fill="rgb(243,165,71)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>PgPreparedStatement.executeWithFlags (53014 ms)</title><rect x="45.91" y="1503" width="31.51" height="16" fill="rgb(250,140,87)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>PgStatement.execute (53014 ms)</title><rect x="45.91" y="1520" width="31.51" height="16" fill="rgb(234,181,73)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>PgStatement.executeInternal (53014 ms)</title><rect x="45.91" y="1537" width="31.51" height="16" fill="rgb(247,153,88)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>QueryExecutorImpl.execute (53014 ms)</title><rect x="45.91" y="1554" width="31.51" height="16" fill="rgb(253,188,88)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>QueryExecutorImpl.processResults (53014 ms)</title><rect x="45.91" y="1571" width="31.51" height="16" fill="rgb(241,182,70)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>PGStream.receiveChar (53014 ms)</title><rect x="45.91" y="1588" width="31.51" height="16" fill="rgb(243,148,79)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>VisibleBufferedInputStream.read (53014 ms)</title><rect x="45.91" y="1605" width="31.51" height="16" fill="rgb(250,183,66)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>VisibleBufferedInputStream.ensureBytes (53014 ms)</title><rect x="45.91" y="1622" width="31.51" height="16" fill="rgb(225,205,63)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>VisibleBufferedInputStream.ensureBytes (53014 ms)</title><rect x="45.91" y="1639" width="31.51" height="16" fill="rgb(225,205,63)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>VisibleBufferedInputStream.readMore (53014 ms)</title><rect x="45.91" y="1656" width="31.51" height="16" fill="rgb(247,178,42)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>[JDBC wait: socket read] (53014 ms)</title><rect x="45.91" y="1673" width="31.51" height="16" fill="#6aa6e8" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>0x000000008d588c00.invoke (2175 ms)</title><rect x="77.43" y="976" width="1.29" height="16" fill="rgb(231,125,64)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>0x000000008d580400.invokeVirtual (2175 ms)</title><rect x="77.43" y="993" width="1.29" height="16" fill="rgb(251,132,45)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ProcurementsController$$SpringCGLIB$$0.searchProcurements (2175 ms)</title><rect x="77.43" y="1010" width="1.29" height="16" fill="rgb(249,196,86)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>CglibAopProxy$DynamicAdvisedInterceptor.intercept (2175 ms)</title><rect x="77.43" y="1027" width="1.29" height="16" fill="rgb(230,142,87)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ReflectiveMethodInvocation.proceed (2175 ms)</title><rect x="77.43" y="1044" width="1.29" height="16" fill="rgb(251,153,52)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>MethodValidationInterceptor.invoke (2175 ms)</title><rect x="77.43" y="1061" width="1.29" height="16" fill="rgb(250,162,86)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ReflectiveMethodInvocation.proceed (2175 ms)</title><rect x="77.43" y="1078" width="1.29" height="16" fill="rgb(251,153,52)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ReflectiveMethodInvocation.invokeJoinpoint (2175 ms)</title><rect x="77.43" y="1095" width="1.29" height="16" fill="rgb(245,174,42)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>AopUtils.invokeJoinpointUsingReflection (2175 ms)</title><rect x="77.43" y="1112" width="1.29" height="16" fill="rgb(225,154,65)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>Method.invoke (2175 ms)</title><rect x="77.43" y="1129" width="1.29" height="16" fill="rgb(248,204,46)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>DirectMethodHandleAccessor.invoke (2175 ms)</title><rect x="77.43" y="1146" width="1.29" height="16" fill="rgb(240,147,83)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>DirectMethodHandleAccessor.invokeImpl (2175 ms)</title><rect x="77.43" y="1163" width="1.29" height="16" fill="rgb(236,177,73)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>Invokers$Holder.invokeExact_MT (2175 ms)</title><rect x="77.43" y="1180" width="1.29" height="16" fill="rgb(239,199,46)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>0x000000008c625800.invoke (2175 ms)</title><rect x="77.43" y="1197" width="1.29" height="16" fill="rgb(249,149,63)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>0x000000008d589800.invoke (2175 ms)</title><rect x="77.43" y="1214" width="1.29" height="16" fill="rgb(235,207,53)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>0x000000008d580400.invokeVirtual (2175 ms)</title><rect x="77.43" y="1231" width="1.29" height="16" fill="rgb(251,132,45)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ProcurementsController.searchProcurements (2175 ms)</title><rect x="77.43" y="1248" width="1.29" height="16" fill="rgb(229,129,82)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>SearchUseCase.search (2175 ms)</title><rect x="77.43" y="1265" width="1.29" height="16" fill="rgb(240,199,80)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>JooqSearchReadModel.search (2175 ms)</title><rect x="77.43" y="1282" width="1.29" height="16" fill="rgb(247,136,73)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>AbstractResultQuery.fetch (2175 ms)</title><rect x="77.43" y="1299" width="1.29" height="16" fill="rgb(238,147,75)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>AbstractQuery.execute (2175 ms)</title><rect x="77.43" y="1316" width="1.29" height="16" fill="rgb(234,177,84)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>AbstractQuery.execute (2175 ms)</title><rect x="77.43" y="1333" width="1.29" height="16" fill="rgb(234,177,84)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>AbstractResultQuery.execute (2175 ms)</title><rect x="77.43" y="1350" width="1.29" height="16" fill="rgb(253,184,64)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>Tools.executeStatementAndGetFirstResultSet (2175 ms)</title><rect x="77.43" y="1367" width="1.29" height="16" fill="rgb(242,131,73)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>Tools.consumeExceptions (2175 ms)</title><rect x="77.43" y="1384" width="1.29" height="16" fill="rgb(244,178,58)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>0x000000008d5ab0f0.run (2175 ms)</title><rect x="77.43" y="1401" width="1.29" height="16" fill="rgb(238,186,59)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>Tools.lambda$executeStatementAndGetFirstResultSet$104 (2175 ms)</title><rect x="77.43" y="1418" width="1.29" height="16" fill="rgb(240,203,76)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>DefaultPreparedStatement.execute (2175 ms)</title><rect x="77.43" y="1435" width="1.29" height="16" fill="rgb(245,157,40)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>HikariProxyPreparedStatement.execute (2175 ms)</title><rect x="77.43" y="1452" width="1.29" height="16" fill="rgb(246,153,41)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ProxyPreparedStatement.execute (2175 ms)</title><rect x="77.43" y="1469" width="1.29" height="16" fill="rgb(230,206,88)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>PgPreparedStatement.execute (2175 ms)</title><rect x="77.43" y="1486" width="1.29" height="16" fill="rgb(243,165,71)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>PgPreparedStatement.executeWithFlags (2175 ms)</title><rect x="77.43" y="1503" width="1.29" height="16" fill="rgb(250,140,87)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>PgStatement.execute (2175 ms)</title><rect x="77.43" y="1520" width="1.29" height="16" fill="rgb(234,181,73)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>PgStatement.executeInternal (2175 ms)</title><rect x="77.43" y="1537" width="1.29" height="16" fill="rgb(247,153,88)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>QueryExecutorImpl.execute (2175 ms)</title><rect x="77.43" y="1554" width="1.29" height="16" fill="rgb(253,188,88)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>QueryExecutorImpl.processResults (2175 ms)</title><rect x="77.43" y="1571" width="1.29" height="16" fill="rgb(241,182,70)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>PGStream.receiveChar (2175 ms)</title><rect x="77.43" y="1588" width="1.29" height="16" fill="rgb(243,148,79)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>VisibleBufferedInputStream.read (2175 ms)</title><rect x="77.43" y="1605" width="1.29" height="16" fill="rgb(250,183,66)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>VisibleBufferedInputStream.ensureBytes (2175 ms)</title><rect x="77.43" y="1622" width="1.29" height="16" fill="rgb(225,205,63)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>VisibleBufferedInputStream.ensureBytes (2175 ms)</title><rect x="77.43" y="1639" width="1.29" height="16" fill="rgb(225,205,63)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>VisibleBufferedInputStream.readMore (2175 ms)</title><rect x="77.43" y="1656" width="1.29" height="16" fill="rgb(247,178,42)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>[JDBC wait: socket read] (2175 ms)</title><rect x="77.43" y="1673" width="1.29" height="16" fill="#6aa6e8" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>0x000000008d589000.invoke (2230 ms)</title><rect x="78.72" y="976" width="1.33" height="16" fill="rgb(225,175,88)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>0x000000008d580400.invokeVirtual (2230 ms)</title><rect x="78.72" y="993" width="1.33" height="16" fill="rgb(251,132,45)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ProcurementsController$$SpringCGLIB$$0.searchProcurements (2230 ms)</title><rect x="78.72" y="1010" width="1.33" height="16" fill="rgb(249,196,86)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>CglibAopProxy$DynamicAdvisedInterceptor.intercept (2230 ms)</title><rect x="78.72" y="1027" width="1.33" height="16" fill="rgb(230,142,87)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ReflectiveMethodInvocation.proceed (2230 ms)</title><rect x="78.72" y="1044" width="1.33" height="16" fill="rgb(251,153,52)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>MethodValidationInterceptor.invoke (2230 ms)</title><rect x="78.72" y="1061" width="1.33" height="16" fill="rgb(250,162,86)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ReflectiveMethodInvocation.proceed (2230 ms)</title><rect x="78.72" y="1078" width="1.33" height="16" fill="rgb(251,153,52)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ReflectiveMethodInvocation.invokeJoinpoint (2230 ms)</title><rect x="78.72" y="1095" width="1.33" height="16" fill="rgb(245,174,42)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>AopUtils.invokeJoinpointUsingReflection (2230 ms)</title><rect x="78.72" y="1112" width="1.33" height="16" fill="rgb(225,154,65)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>Method.invoke (2230 ms)</title><rect x="78.72" y="1129" width="1.33" height="16" fill="rgb(248,204,46)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>DirectMethodHandleAccessor.invoke (2230 ms)</title><rect x="78.72" y="1146" width="1.33" height="16" fill="rgb(240,147,83)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>DirectMethodHandleAccessor.invokeImpl (2230 ms)</title><rect x="78.72" y="1163" width="1.33" height="16" fill="rgb(236,177,73)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>Invokers$Holder.invokeExact_MT (2230 ms)</title><rect x="78.72" y="1180" width="1.33" height="16" fill="rgb(239,199,46)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>0x000000008c625800.invoke (2230 ms)</title><rect x="78.72" y="1197" width="1.33" height="16" fill="rgb(249,149,63)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>0x000000008d589800.invoke (2230 ms)</title><rect x="78.72" y="1214" width="1.33" height="16" fill="rgb(235,207,53)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>0x000000008d580400.invokeVirtual (2230 ms)</title><rect x="78.72" y="1231" width="1.33" height="16" fill="rgb(251,132,45)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ProcurementsController.searchProcurements (2230 ms)</title><rect x="78.72" y="1248" width="1.33" height="16" fill="rgb(229,129,82)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>SearchUseCase.search (2230 ms)</title><rect x="78.72" y="1265" width="1.33" height="16" fill="rgb(240,199,80)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>JooqSearchReadModel.search (2230 ms)</title><rect x="78.72" y="1282" width="1.33" height="16" fill="rgb(247,136,73)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>AbstractResultQuery.fetch (2230 ms)</title><rect x="78.72" y="1299" width="1.33" height="16" fill="rgb(238,147,75)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>AbstractQuery.execute (2230 ms)</title><rect x="78.72" y="1316" width="1.33" height="16" fill="rgb(234,177,84)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>AbstractQuery.execute (2230 ms)</title><rect x="78.72" y="1333" width="1.33" height="16" fill="rgb(234,177,84)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>AbstractResultQuery.execute (2230 ms)</title><rect x="78.72" y="1350" width="1.33" height="16" fill="rgb(253,184,64)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>Tools.executeStatementAndGetFirstResultSet (2230 ms)</title><rect x="78.72" y="1367" width="1.33" height="16" fill="rgb(242,131,73)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>Tools.consumeExceptions (2230 ms)</title><rect x="78.72" y="1384" width="1.33" height="16" fill="rgb(244,178,58)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>0x000000008d5ab0f0.run (2230 ms)</title><rect x="78.72" y="1401" width="1.33" height="16" fill="rgb(238,186,59)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>Tools.lambda$executeStatementAndGetFirstResultSet$104 (2230 ms)</title><rect x="78.72" y="1418" width="1.33" height="16" fill="rgb(240,203,76)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>DefaultPreparedStatement.execute (2230 ms)</title><rect x="78.72" y="1435" width="1.33" height="16" fill="rgb(245,157,40)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>HikariProxyPreparedStatement.execute (2230 ms)</title><rect x="78.72" y="1452" width="1.33" height="16" fill="rgb(246,153,41)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>ProxyPreparedStatement.execute (2230 ms)</title><rect x="78.72" y="1469" width="1.33" height="16" fill="rgb(230,206,88)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>PgPreparedStatement.execute (2230 ms)</title><rect x="78.72" y="1486" width="1.33" height="16" fill="rgb(243,165,71)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>PgPreparedStatement.executeWithFlags (2230 ms)</title><rect x="78.72" y="1503" width="1.33" height="16" fill="rgb(250,140,87)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>PgStatement.execute (2230 ms)</title><rect x="78.72" y="1520" width="1.33" height="16" fill="rgb(234,181,73)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>PgStatement.executeInternal (2230 ms)</title><rect x="78.72" y="1537" width="1.33" height="16" fill="rgb(247,153,88)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>QueryExecutorImpl.execute (2230 ms)</title><rect x="78.72" y="1554" width="1.33" height="16" fill="rgb(253,188,88)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>QueryExecutorImpl.processResults (2230 ms)</title><rect x="78.72" y="1571" width="1.33" height="16" fill="rgb(241,182,70)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>PGStream.receiveChar (2230 ms)</title><rect x="78.72" y="1588" width="1.33" height="16" fill="rgb(243,148,79)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>VisibleBufferedInputStream.read (2230 ms)</title><rect x="78.72" y="1605" width="1.33" height="16" fill="rgb(250,183,66)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>VisibleBufferedInputStream.ensureBytes (2230 ms)</title><rect x="78.72" y="1622" width="1.33" height="16" fill="rgb(225,205,63)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>VisibleBufferedInputStream.ensureBytes (2230 ms)</title><rect x="78.72" y="1639" width="1.33" height="16" fill="rgb(225,205,63)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>VisibleBufferedInputStream.readMore (2230 ms)</title><rect x="78.72" y="1656" width="1.33" height="16" fill="rgb(247,178,42)" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>[JDBC wait: socket read] (2230 ms)</title><rect x="78.72" y="1673" width="1.33" height="16" fill="#6aa6e8" stroke="#fff" stroke-width="0.5"/></g>
+<g><title>0x000000008d29d000.invoke (2219900 ms)</title><rect x="80.11" y="959" width="1319.54" height="16" fill="rgb(236,147,81)" stroke="#fff" stroke-width="0.5"/><text x="82.11" y="971" fill="#111">0x000000008d29d000.invoke</text></g>
+<g><title>0x000000008d589800.invoke (2219900 ms)</title><rect x="80.11" y="976" width="1319.54" height="16" fill="rgb(235,207,53)" stroke="#fff" stroke-width="0.5"/><text x="82.11" y="988" fill="#111">0x000000008d589800.invoke</text></g>
+<g><title>0x000000008d580400.invokeVirtual (2219900 ms)</title><rect x="80.11" y="993" width="1319.54" height="16" fill="rgb(251,132,45)" stroke="#fff" stroke-width="0.5"/><text x="82.11" y="1005" fill="#111">0x000000008d580400.invokeVirtual</text></g>
+<g><title>ProcurementsController$$SpringCGLIB$$0.searchProcurements (2219900 ms)</title><rect x="80.11" y="1010" width="1319.54" height="16" fill="rgb(249,196,86)" stroke="#fff" stroke-width="0.5"/><text x="82.11" y="1022" fill="#111">ProcurementsController$$SpringCGLIB$$0.searchProcurements</text></g>
+<g><title>CglibAopProxy$DynamicAdvisedInterceptor.intercept (2219900 ms)</title><rect x="80.11" y="1027" width="1319.54" height="16" fill="rgb(230,142,87)" stroke="#fff" stroke-width="0.5"/><text x="82.11" y="1039" fill="#111">CglibAopProxy$DynamicAdvisedInterceptor.intercept</text></g>
+<g><title>ReflectiveMethodInvocation.proceed (2219900 ms)</title><rect x="80.11" y="1044" width="1319.54" height="16" fill="rgb(251,153,52)" stroke="#fff" stroke-width="0.5"/><text x="82.11" y="1056" fill="#111">ReflectiveMethodInvocation.proceed</text></g>
+<g><title>MethodValidationInterceptor.invoke (2219900 ms)</title><rect x="80.11" y="1061" width="1319.54" height="16" fill="rgb(250,162,86)" stroke="#fff" stroke-width="0.5"/><text x="82.11" y="1073" fill="#111">MethodValidationInterceptor.invoke</text></g>
+<g><title>ReflectiveMethodInvocation.proceed (2219900 ms)</title><rect x="80.11" y="1078" width="1319.54" height="16" fill="rgb(251,153,52)" stroke="#fff" stroke-width="0.5"/><text x="82.11" y="1090" fill="#111">ReflectiveMethodInvocation.proceed</text></g>
+<g><title>ReflectiveMethodInvocation.invokeJoinpoint (2219900 ms)</title><rect x="80.11" y="1095" width="1319.54" height="16" fill="rgb(245,174,42)" stroke="#fff" stroke-width="0.5"/><text x="82.11" y="1107" fill="#111">ReflectiveMethodInvocation.invokeJoinpoint</text></g>
+<g><title>AopUtils.invokeJoinpointUsingReflection (2219900 ms)</title><rect x="80.11" y="1112" width="1319.54" height="16" fill="rgb(225,154,65)" stroke="#fff" stroke-width="0.5"/><text x="82.11" y="1124" fill="#111">AopUtils.invokeJoinpointUsingReflection</text></g>
+<g><title>Method.invoke (2219900 ms)</title><rect x="80.11" y="1129" width="1319.54" height="16" fill="rgb(248,204,46)" stroke="#fff" stroke-width="0.5"/><text x="82.11" y="1141" fill="#111">Method.invoke</text></g>
+<g><title>DirectMethodHandleAccessor.invoke (2219900 ms)</title><rect x="80.11" y="1146" width="1319.54" height="16" fill="rgb(240,147,83)" stroke="#fff" stroke-width="0.5"/><text x="82.11" y="1158" fill="#111">DirectMethodHandleAccessor.invoke</text></g>
+<g><title>DirectMethodHandleAccessor.invokeImpl (2219900 ms)</title><rect x="80.11" y="1163" width="1319.54" height="16" fill="rgb(236,177,73)" stroke="#fff" stroke-width="0.5"/><text x="82.11" y="1175" fill="#111">DirectMethodHandleAccessor.invokeImpl</text></g>
+<g><title>Invokers$Holder.invokeExact_MT (2219900 ms)</title><rect x="80.11" y="1180" width="1319.54" height="16" fill="rgb(239,199,46)" stroke="#fff" stroke-width="0.5"/><text x="82.11" y="1192" fill="#111">Invokers$Holder.invokeExact_MT</text></g>
+<g><title>0x000000008d29d000.invoke (2219900 ms)</title><rect x="80.11" y="1197" width="1319.54" height="16" fill="rgb(236,147,81)" stroke="#fff" stroke-width="0.5"/><text x="82.11" y="1209" fill="#111">0x000000008d29d000.invoke</text></g>
+<g><title>0x000000008d589800.invoke (2219900 ms)</title><rect x="80.11" y="1214" width="1319.54" height="16" fill="rgb(235,207,53)" stroke="#fff" stroke-width="0.5"/><text x="82.11" y="1226" fill="#111">0x000000008d589800.invoke</text></g>
+<g><title>0x000000008d580400.invokeVirtual (2219900 ms)</title><rect x="80.11" y="1231" width="1319.54" height="16" fill="rgb(251,132,45)" stroke="#fff" stroke-width="0.5"/><text x="82.11" y="1243" fill="#111">0x000000008d580400.invokeVirtual</text></g>
+<g><title>ProcurementsController.searchProcurements (2219900 ms)</title><rect x="80.11" y="1248" width="1319.54" height="16" fill="rgb(229,129,82)" stroke="#fff" stroke-width="0.5"/><text x="82.11" y="1260" fill="#111">ProcurementsController.searchProcurements</text></g>
+<g><title>SearchUseCase.search (2219900 ms)</title><rect x="80.11" y="1265" width="1319.54" height="16" fill="rgb(240,199,80)" stroke="#fff" stroke-width="0.5"/><text x="82.11" y="1277" fill="#111">SearchUseCase.search</text></g>
+<g><title>JooqSearchReadModel.search (2219900 ms)</title><rect x="80.11" y="1282" width="1319.54" height="16" fill="rgb(247,136,73)" stroke="#fff" stroke-width="0.5"/><text x="82.11" y="1294" fill="#111">JooqSearchReadModel.search</text></g>
+<g><title>AbstractResultQuery.fetch (2219800 ms)</title><rect x="80.11" y="1299" width="1319.48" height="16" fill="rgb(238,147,75)" stroke="#fff" stroke-width="0.5"/><text x="82.11" y="1311" fill="#111">AbstractResultQuery.fetch</text></g>
+<g><title>AbstractQuery.execute (2219800 ms)</title><rect x="80.11" y="1316" width="1319.48" height="16" fill="rgb(234,177,84)" stroke="#fff" stroke-width="0.5"/><text x="82.11" y="1328" fill="#111">AbstractQuery.execute</text></g>
+<g><title>AbstractQuery.execute (2219800 ms)</title><rect x="80.11" y="1333" width="1319.48" height="16" fill="rgb(234,177,84)" stroke="#fff" stroke-width="0.5"/><text x="82.11" y="1345" fill="#111">AbstractQuery.execute</text></g>
+<g><title>AbstractResultQuery.execute (2219800 ms)</title><rect x="80.11" y="1350" width="1319.48" height="16" fill="rgb(253,184,64)" stroke="#fff" stroke-width="0.5"/><text x="82.11" y="1362" fill="#111">AbstractResultQuery.execute</text></g>
+<g><title>Tools.executeStatementAndGetFirstResultSet (2219700 ms)</title><rect x="80.11" y="1367" width="1319.42" height="16" fill="rgb(242,131,73)" stroke="#fff" stroke-width="0.5"/><text x="82.11" y="1379" fill="#111">Tools.executeStatementAndGetFirstResultSet</text></g>
+<g><title>Tools.consumeExceptions (2219700 ms)</title><rect x="80.11" y="1384" width="1319.42" height="16" fill="rgb(244,178,58)" stroke="#fff" stroke-width="0.5"/><text x="82.11" y="1396" fill="#111">Tools.consumeExceptions</text></g>
+<g><title>0x000000008d5ab0f0.run (2219700 ms)</title><rect x="80.11" y="1401" width="1319.42" height="16" fill="rgb(238,186,59)" stroke="#fff" stroke-width="0.5"/><text x="82.11" y="1413" fill="#111">0x000000008d5ab0f0.run</text></g>
+<g><title>Tools.lambda$executeStatementAndGetFirstResultSet$104 (2219700 ms)</title><rect x="80.11" y="1418" width="1319.42" height="16" fill="rgb(240,203,76)" stroke="#fff" stroke-width="0.5"/><text x="82.11" y="1430" fill="#111">Tools.lambda$executeStatementAndGetFirstResultSet$104</text></g>
+<g><title>DefaultPreparedStatement.execute (2219700 ms)</title><rect x="80.11" y="1435" width="1319.42" height="16" fill="rgb(245,157,40)" stroke="#fff" stroke-width="0.5"/><text x="82.11" y="1447" fill="#111">DefaultPreparedStatement.execute</text></g>
+<g><title>HikariProxyPreparedStatement.execute (2219700 ms)</title><rect x="80.11" y="1452" width="1319.42" height="16" fill="rgb(246,153,41)" stroke="#fff" stroke-width="0.5"/><text x="82.11" y="1464" fill="#111">HikariProxyPreparedStatement.execute</text></g>
+<g><title>ProxyPreparedStatement.execute (2219700 ms)</title><rect x="80.11" y="1469" width="1319.42" height="16" fill="rgb(230,206,88)" stroke="#fff" stroke-width="0.5"/><text x="82.11" y="1481" fill="#111">ProxyPreparedStatement.execute</text></g>
+<g><title>PgPreparedStatement.execute (2219700 ms)</title><rect x="80.11" y="1486" width="1319.42" height="16" fill="rgb(243,165,71)" stroke="#fff" stroke-width="0.5"/><text x="82.11" y="1498" fill="#111">PgPreparedStatement.execute</text></g>
+<g><title>PgPreparedStatement.executeWithFlags (2219700 ms)</title><rect x="80.11" y="1503" width="1319.42" height="16" fill="rgb(250,140,87)" stroke="#fff" stroke-width="0.5"/><text x="82.11" y="1515" fill="#111">PgPreparedStatement.executeWithFlags</text></g>
+<g><title>PgStatement.execute (2219700 ms)</title><rect x="80.11" y="1520" width="1319.42" height="16" fill="rgb(234,181,73)" stroke="#fff" stroke-width="0.5"/><text x="82.11" y="1532" fill="#111">PgStatement.execute</text></g>
+<g><title>PgStatement.executeInternal (2219700 ms)</title><rect x="80.11" y="1537" width="1319.42" height="16" fill="rgb(247,153,88)" stroke="#fff" stroke-width="0.5"/><text x="82.11" y="1549" fill="#111">PgStatement.executeInternal</text></g>
+<g><title>QueryExecutorImpl.execute (2219680 ms)</title><rect x="80.11" y="1554" width="1319.41" height="16" fill="rgb(253,188,88)" stroke="#fff" stroke-width="0.5"/><text x="82.11" y="1566" fill="#111">QueryExecutorImpl.execute</text></g>
+<g><title>QueryExecutorImpl.processResults (2219680 ms)</title><rect x="80.11" y="1571" width="1319.41" height="16" fill="rgb(241,182,70)" stroke="#fff" stroke-width="0.5"/><text x="82.11" y="1583" fill="#111">QueryExecutorImpl.processResults</text></g>
+<g><title>PGStream.receiveChar (2219680 ms)</title><rect x="80.11" y="1588" width="1319.41" height="16" fill="rgb(243,148,79)" stroke="#fff" stroke-width="0.5"/><text x="82.11" y="1600" fill="#111">PGStream.receiveChar</text></g>
+<g><title>VisibleBufferedInputStream.read (2219680 ms)</title><rect x="80.11" y="1605" width="1319.41" height="16" fill="rgb(250,183,66)" stroke="#fff" stroke-width="0.5"/><text x="82.11" y="1617" fill="#111">VisibleBufferedInputStream.read</text></g>
+<g><title>VisibleBufferedInputStream.ensureBytes (2219680 ms)</title><rect x="80.11" y="1622" width="1319.41" height="16" fill="rgb(225,205,63)" stroke="#fff" stroke-width="0.5"/><text x="82.11" y="1634" fill="#111">VisibleBufferedInputStream.ensureBytes</text></g>
+<g><title>VisibleBufferedInputStream.ensureBytes (2219680 ms)</title><rect x="80.11" y="1639" width="1319.41" height="16" fill="rgb(225,205,63)" stroke="#fff" stroke-width="0.5"/><text x="82.11" y="1651" fill="#111">VisibleBufferedInputStream.ensureBytes</text></g>
+<g><title>VisibleBufferedInputStream.readMore (2219680 ms)</title><rect x="80.11" y="1656" width="1319.41" height="16" fill="rgb(247,178,42)" stroke="#fff" stroke-width="0.5"/><text x="82.11" y="1668" fill="#111">VisibleBufferedInputStream.readMore</text></g>
+<g><title>[JDBC wait: socket read] (2219680 ms)</title><rect x="80.11" y="1673" width="1319.41" height="16" fill="#6aa6e8" stroke="#fff" stroke-width="0.5"/><text x="82.11" y="1685" fill="#111">[JDBC wait: socket read]</text></g>
+</svg>

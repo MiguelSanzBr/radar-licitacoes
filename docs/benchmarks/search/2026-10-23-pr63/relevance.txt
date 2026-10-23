@@ -1,0 +1,11 @@
+  N   | termos | termos com teto atuando | acertos medios no top 20 (so os cortados) | razao media da soma dos ranks (so os cortados) | % de termos sem corte 
+------+--------+-------------------------+-------------------------------------------+------------------------------------------------+-----------------------
+  500 |    199 |                     199 |                                       2.8 |                                          0.677 |                   0.0
+ 2000 |    199 |                     199 |                                       6.4 |                                          0.820 |                   0.0
+ 5000 |    199 |                     145 |                                       7.4 |                                          0.876 |                  27.1
+
+               faixa               | termos 
+-----------------------------------+--------
+ termos com mais de 100 mil linhas |     15
+ termos com mais de 2 mil linhas   |    199
+

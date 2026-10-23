@@ -10,8 +10,10 @@
 #   BENCH_THINK_MS=1000  BENCH_WARMUP_S=60  BENCH_MEASURED_S=180
 #   BENCH_REUSE=1               nao recarrega: usa a pilha e a massa que ja estao no ar
 #   BENCH_KEEP=1                nao derruba a pilha ao fim
+#   BENCH_RANK_CANDIDATES=2000  radar.search.rank-candidates da aplicacao (2147483647 mede a busca sem o teto)
+#   BENCH_JAVA_OPTS=            opcoes extras da JVM da aplicacao (ex.: gravacao JFR, docs/benchmarks/jvm/)
 #   BENCH_MIN_FREE_MB=6144      RAM livre exigida para comecar
-#   BENCH_DATE=AAAA-MM-DD       pasta de saida (padrao: hoje)
+#   BENCH_DATE=NOME             nome da pasta de saida em docs/benchmarks/search (padrao: a data de hoje, AAAA-MM-DD)
 set -euo pipefail
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
@@ -83,7 +85,7 @@ pg_version="Postgres $(sql -c 'SHOW server_version' | cut -d' ' -f1)"
 {
   echo "# Ambiente do benchmark de busca"
   echo
-  echo "- Data: $date"
+  echo "- Data: $(date +%F)"
   echo "- Commit: \`$(git rev-parse HEAD)\`$(git diff --quiet HEAD -- . ':!docs' ':!README.md' || echo ' (com alterações não commitadas fora de docs)')"
   echo "- $pg_version, imagem \`$($COMPOSE config --images postgres)\`"
   echo "- Docker: $(docker version --format '{{.Server.Version}}'), compose $(docker compose version --short)"
@@ -138,7 +140,11 @@ if [ "${BENCH_REUSE:-0}" != 1 ]; then
     SELECT coalesce(uf, 'XX'), modality_id, date_trunc('month', published_at AT TIME ZONE 'America/Sao_Paulo')::date,
            value_band, count(*), coalesce(sum(estimated_value), 0)
     FROM search.procurement_search_view GROUP BY 1, 2, 3, 4"
-  for table in procurement_search_view procurement_detail_view procurement_stats_view; do
+  # idem para a tabela de orgaos (V16): uma linha por nome, com a contagem de licitacoes
+  sql -c "TRUNCATE search.organ;
+    INSERT INTO search.organ (organ_name, procurement_count)
+    SELECT organ_name, count(*) FROM search.procurement_search_view GROUP BY 1"
+  for table in procurement_search_view procurement_detail_view procurement_stats_view organ; do
     sql -c "VACUUM (ANALYZE) search.$table"
   done
 fi
@@ -232,7 +238,7 @@ for file in "$dir"/gatling/s?.load.json; do
 done
 cache='{"hits": 0, "misses": 0, "hitRatio": 0}'
 [ ! -f "$dir/gatling/s5.cache.json" ] || cache="$(cat "$dir/gatling/s5.cache.json")"
-jq -n --arg date "$date" --arg commit "$(git rev-parse HEAD)" --arg host "$host" --arg pg "$pg_version" \
+jq -n --arg date "$(date +%F)" --arg commit "$(git rev-parse HEAD)" --arg host "$host" --arg pg "$pg_version" \
   --arg directory "$dir" --argjson real "$real" --argjson synthetic "$synthetic" \
   --argjson think "$think_ms" --argjson warmup "$warmup_s" --argjson measured "$measured_s" \
   --argjson load "$load" --argjson cache "$cache" \

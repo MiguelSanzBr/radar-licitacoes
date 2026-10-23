@@ -1,0 +1,14 @@
+                                                                              QUERY PLAN                                                                               
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=0.43..7.68 rows=21 width=234) (actual time=0.016..0.057 rows=21.00 loops=1)
+   Buffers: shared hit=8
+   ->  Index Scan using psv_published_keyset on procurement_search_view v  (cost=0.43..407523.71 rows=1180665 width=234) (actual time=0.016..0.055 rows=21.00 loops=1)
+         Index Cond: (ROW(published_at, numero_controle_pncp) < ROW('2026-10-16 09:50:06+00'::timestamp with time zone, 'SYN-90879148694091-1-000584/2026'::text))
+         Index Searches: 1
+         Buffers: shared hit=8
+ Planning:
+   Buffers: shared hit=50
+ Planning Time: 0.171 ms
+ Execution Time: 0.080 ms
+(10 rows)
+

@@ -29,3 +29,8 @@ services:
       RADAR_RATE_LIMIT_ENABLED: "false"
       # pagina por OFFSET so do S3; a rota nao existe sem esta chave (ver BenchOffsetController)
       RADAR_BENCH_OFFSET_ENDPOINT: "true"
+      # teto de candidatos do ranking (ADR-0011); um valor enorme mede a busca sem o teto, para o antes e depois
+      RADAR_SEARCH_RANK_CANDIDATES: ${BENCH_RANK_CANDIDATES:-2000}
+      # as opcoes da imagem (Dockerfile; o AOT cache precisa do -Xms) mais as do benchmark, por exemplo a
+      # gravacao JFR do perfil da JVM (scripts/jfr/)
+      JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=75 -Xms64m -XX:+ExitOnOutOfMemoryError ${BENCH_JAVA_OPTS:-}

@@ -1,0 +1,2 @@
+./mvnw -q -pl tools/synth -am package -DskipTests
+gerou 1198367 linhas em 436.1 s (2748 linhas/s), seed 42, inseridas 1198367

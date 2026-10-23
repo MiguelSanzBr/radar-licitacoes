@@ -28,7 +28,7 @@ Alvos propostos, não medidos:
 | Frescor interno: `fetched_at` até `projected_at` | p95 até 30 s | proposto, não medido |
 | Frescor ponta a ponta: `dataAtualizacaoGlobal` até visível na busca | p95 até o intervalo de polling mais 1 min | proposto, não medido (medido em `make slo`) |
 | Alerta: `projected_at` até o SMTP aceitar | p95 até 60 s | proposto, não medido |
-| Busca S1 e S2 com 1,2 milhão de linhas | p95 até 200 ms, p99 até 500 ms | medido em 2026-10-23 (ver abaixo): S2 atende, S1 não atende |
+| Busca S1 e S2 com 1,2 milhão de linhas | p95 até 200 ms, p99 até 500 ms | medido (ver abaixo): na PR 2.7 S2 atendia e S1 não; depois da PR 6.3 os dois atendem (S1 p95 83 ms, p99 122 ms) |
 | Detalhe S5 com cache | p95 até 50 ms | medido em 2026-10-23: atende (p95 de 2 ms) |
 | Outbox | `outbox_oldest_age_seconds` p99 até 5 s | proposto, não medido |
 | Disponibilidade da API durante caos com Toxiproxy | 99,5% em 1 h | proposto, não medido (Gatling em `make slo`) |
@@ -108,3 +108,15 @@ O alvo do S1 **não foi alterado**: a medição não o confirma. A causa é a bu
 
 - `make lint-observability`: lint dos dashboards e promtool em `infra/prometheus/`. O teste de regras é `infra/prometheus/rules/slo_test.yml`, que falha se o alerta de queima rápida de disponibilidade deixar de disparar com 10% de erro 5xx, ou se disparar com tráfego saudável.
 - Commit de teste (RED) da regra: `test(obs): slo rule unit tests and observability lint`.
+
+### Medido na PR 6.3 (`make bench`, 1,2 milhão de linhas, inclui dados sintéticos, 1.198.367 linhas)
+
+Mesma massa, máquina e carga da PR 2.7, depois de limitar o ranking da busca textual e de ter a tabela de órgãos (ADR-0011, "Perfil e otimização"). Uma execução por cenário, `docs/benchmarks/search/2026-10-23-pr63/README.md`:
+
+| Cenário | Usuários | p50 | p95 | p99 | Erros | Alvo |
+|---|---|---|---|---|---|---|
+| S1 busca textual | 50 | 34 ms | 83 ms | 122 ms | 0 de 8.662 | **atende** (p95 200 ms, p99 500 ms) |
+| S2 busca com UF, modalidade e `open=true` | 50 | 6 ms | 22 ms | 46 ms | 0 | atende |
+| S4 órgão com erro de digitação | 20 | 13 ms | 18 ms | 23 ms | 0 de 3.545 | sem alvo no plano (era 544 erros em 720) |
+
+O alvo do S1 continua o do plano: a medição passou a confirmá-lo, e ele não foi alterado em nenhum momento. O S1 melhorou de p95 3.402 ms para 83 ms. O custo é de relevância, não de latência: o ranking vale para os 2.000 candidatos mais recentes (ADR-0011 mede 6,4 de 20 resultados do top 20 exato mantidos nesta massa). Uma rodada não é série: a medição segue sendo uma execução na máquina do desenvolvedor, com ruído de ambiente.

@@ -389,8 +389,9 @@ class JooqSearchReadModelIT {
   void theTextQueryUsesTheFullTextIndex() {
     // why: at 1 000 rows a sequential scan is cheaper than the index (the table is a few dozen
     // pages), so the plan is read with sequential scans off; at the volume of the benchmark the
-    // planner picks the GIN index by itself
-    var plan = plan(new SearchQuery("limpeza", Filters.NONE, null, 20), false);
+    // planner picks the GIN index by itself. A rare term: a common one walks the publication
+    // index instead (SearchRankCandidatesIT)
+    var plan = plan(new SearchQuery("ambulancia", Filters.NONE, null, 20), false);
 
     assertThat(plan).contains("Bitmap Index Scan on psv_fts_gin");
   }

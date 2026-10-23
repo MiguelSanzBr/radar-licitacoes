@@ -20,6 +20,8 @@ import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.TreeMap;
 import org.jooq.DSLContext;
 import org.jooq.Record;
 import org.jooq.impl.DSL;
@@ -136,7 +138,7 @@ class JooqProjectionStore implements ProjectionStore {
   private static final String READ_BUCKET =
       "SELECT "
           + BUCKET
-          + ", coalesce(estimated_value, 0) FROM search.procurement_search_view"
+          + ", coalesce(estimated_value, 0), organ_name FROM search.procurement_search_view"
           + " WHERE numero_controle_pncp = ?";
 
   private static final String ADD_TO_BUCKET =
@@ -154,6 +156,16 @@ class JooqProjectionStore implements ProjectionStore {
       WHERE uf = ? AND modality_id = ?::smallint AND month = ?::date AND value_band = ?::smallint
         AND count = 0
       """;
+
+  private static final String ADD_TO_ORGAN =
+      """
+      INSERT INTO search.organ AS o (organ_name, procurement_count) VALUES (?, ?::integer)
+      ON CONFLICT (organ_name) DO UPDATE SET
+        procurement_count = o.procurement_count + excluded.procurement_count
+      """;
+
+  private static final String DROP_EMPTY_ORGAN =
+      "DELETE FROM search.organ WHERE organ_name = ? AND procurement_count <= 0";
 
   /** A change to one bucket; buckets are touched in key order so two transactions cannot cross. */
   private record BucketDelta(
@@ -299,7 +311,7 @@ class JooqProjectionStore implements ProjectionStore {
         tx -> {
           dsl.execute(
               "TRUNCATE search.procurement_search_view, search.procurement_detail_view,"
-                  + " search.procurement_stats_view, search.projection_checkpoint");
+                  + " search.procurement_stats_view, search.organ, search.projection_checkpoint");
           dsl.deleteFrom(PROCESSED_EVENT).where(PROCESSED_EVENT.CONSUMER.eq(PROJECTOR)).execute();
           afterCommit(cache::clear);
         });
@@ -358,9 +370,30 @@ class JooqProjectionStore implements ProjectionStore {
       old.ifPresent(row -> deltas.add(BucketDelta.of(row, -1)));
       deltas.add(BucketDelta.of(dsl.fetchSingle(READ_BUCKET, view.id()), 1));
       deltas.stream().sorted().forEach(this::move);
+      moveOrgan(old.map(row -> row.get(5, String.class)), view.organName());
     }
     dsl.execute(UPSERT_DETAIL, view.json(), initialHistory, view.id(), view.id(), version);
     return true;
+  }
+
+  /**
+   * The organ table counts procurements per organ name. Names are touched in order, so two
+   * transactions that swap organs cannot lock each other; an organ that reaches zero is deleted.
+   */
+  private void moveOrgan(Optional<String> before, String after) {
+    if (before.filter(after::equals).isPresent()) {
+      return;
+    }
+    var changes = new TreeMap<String, Integer>();
+    before.ifPresent(name -> changes.put(name, -1));
+    changes.put(after, 1);
+    changes.forEach(
+        (name, delta) -> {
+          dsl.execute(ADD_TO_ORGAN, name, delta);
+          if (delta < 0) {
+            dsl.execute(DROP_EMPTY_ORGAN, name);
+          }
+        });
   }
 
   private void move(BucketDelta d) {

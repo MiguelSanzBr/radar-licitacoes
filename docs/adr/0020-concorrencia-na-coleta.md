@@ -53,3 +53,12 @@ O pool de agendamento (4 threads de plataforma) atende sete jobs. Se coleta incr
 **Por que não `StructuredTaskScope`** continua como decidido acima: preview no JDK 25 e 26, contaminaria o build. O cancelamento fica explícito (`Future.cancel(true)` ao fechar a leitura e fechamento do executor), coberto por teste.
 
 **Medição.** Com 200 páginas de 200 ms, taxa alta só no benchmark, virtual com bulkhead N empata em tempo com um pool de plataforma de N threads e dispensa o pool: o bulkhead fixa a concorrência e as threads virtuais ficam fora da contagem de threads de plataforma, mesmo com 200 tarefas esperando vaga (um pool de plataforma de 200 threads dá o mesmo tempo com 200 threads a mais). Tabela e método em `docs/benchmarks/jvm/virtual-threads.md`.
+
+## Perfil e otimização (PR 6.3)
+
+Perfil JFR da JVM durante o S1 do benchmark da busca (1,2 milhão de linhas, 50 usuários), antes e depois de limitar o ranking (ADR-0011, "Perfil e otimização"). Método, gráficos de chamas e números em `docs/benchmarks/jvm/profile-before-after.md`.
+
+- **O tempo da requisição é espera do JDBC.** Antes, 99,8% do peso das pilhas da busca era leitura de socket esperando o Postgres (476 ms por requisição); a CPU Java na mesma pilha ficou em 1,1 ms por requisição. Depois, a espera caiu para 39 ms por requisição, e a CPU Java para 0,4 ms.
+- **As threads virtuais mostram o que as amostras de CPU escondem.** As requisições do Tomcat rodam em threads virtuais (PR 6.1): uma thread virtual que espera o socket sai do carrier, e o `jdk.ExecutionSample` não a vê. O perfil usa `jdk.SocketRead` para a espera, pesado pela duração.
+- **Não há ponto quente na JVM.** O ponto quente era o SQL (ordenar 400 mil linhas por `ts_rank_cd`), corrigido no banco. Por isso esta PR não traz um microbenchmark JMH: não há trecho Java que o justifique, e a regressão é guardada pelo plano (`SearchRankCandidatesIT`) e não pelo relógio. Se um perfil futuro achar um ponto quente na JVM, o JMH entra com ele.
+- **Ferramenta.** JFR do próprio JDK 25 e `scripts/jfr/FlameGraph.java` (arquivo único que lê a gravação e escreve o SVG); async-profiler não foi usado porque não há download fixado offline.

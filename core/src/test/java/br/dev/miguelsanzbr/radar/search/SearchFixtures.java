@@ -129,6 +129,28 @@ public final class SearchFixtures {
         v.json());
   }
 
+  /** The same procurement under another organ name. */
+  public static ProcurementView withOrgan(ProcurementView v, String organName) {
+    return new ProcurementView(
+        v.id(),
+        v.status(),
+        v.situation(),
+        organName,
+        v.unitName(),
+        v.uf(),
+        v.municipalityName(),
+        v.ibgeCode(),
+        v.modalityId(),
+        v.modalityName(),
+        v.estimatedValue(),
+        v.proposalOpeningAt(),
+        v.proposalClosingAt(),
+        v.publishedAt(),
+        v.pncpUpdatedAt(),
+        v.objectDescription(),
+        v.json());
+  }
+
   public static ProcurementEvent.Discovered discovered(
       String seed, ProcurementView view, long version) {
     return new ProcurementEvent.Discovered(eventId(seed), view.id(), version, T0, view);

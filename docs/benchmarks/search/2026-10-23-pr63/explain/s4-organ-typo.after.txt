@@ -1,0 +1,23 @@
+ set_config 
+------------
+ 0.3
+(1 row)
+
+                                                      QUERY PLAN                                                       
+-----------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=58.72..58.75 rows=10 width=38) (actual time=10.835..10.838 rows=10.00 loops=1)
+   Buffers: shared hit=20
+   ->  Sort  (cost=58.72..61.36 rows=1057 width=38) (actual time=10.833..10.834 rows=10.00 loops=1)
+         Sort Key: (word_similarity('camraa municipal'::text, organ_name)) DESC, organ_name
+         Sort Method: top-N heapsort  Memory: 26kB
+         Buffers: shared hit=20
+         ->  Seq Scan on organ  (cost=0.00..35.88 rows=1057 width=38) (actual time=0.014..10.638 rows=1018.00 loops=1)
+               Filter: ('camraa municipal'::text <% organ_name)
+               Rows Removed by Filter: 521
+               Buffers: shared hit=14
+ Planning:
+   Buffers: shared hit=148
+ Planning Time: 1.108 ms
+ Execution Time: 10.873 ms
+(14 rows)
+

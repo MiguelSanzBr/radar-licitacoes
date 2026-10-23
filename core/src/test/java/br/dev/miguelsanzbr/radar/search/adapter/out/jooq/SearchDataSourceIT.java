@@ -34,6 +34,15 @@ class SearchDataSourceIT {
   }
 
   @Test
+  void everySearchConnectionPlansEachStatementWithItsOwnValues() {
+    // why: after five runs the driver prepares the statement on the server and Postgres may keep
+    // one generic plan; the plan that suits a rare term (GIN index) is the worst one for a common
+    // term
+    // and the other way round, so the text search must be planned with the term it carries
+    assertThat(searchDsl.fetchValue("show plan_cache_mode")).isEqualTo("force_custom_plan");
+  }
+
+  @Test
   void theJpaSideKeepsTheOwnerConnectionAndTheJpaTransactionManager() {
     assertThat(new JdbcTemplate(primary).queryForObject("select current_user", String.class))
         .isNotEqualTo("radar_read_writer");

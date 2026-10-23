@@ -1,0 +1,29 @@
+                                                                                           QUERY PLAN                                                                                            
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Nested Loop  (cost=2076.43..2258.96 rows=21 width=266) (actual time=5.659..7.122 rows=21.00 loops=1)
+   Buffers: shared hit=3497
+   ->  Limit  (cost=2076.00..2076.05 rows=21 width=40) (actual time=5.459..5.465 rows=21.00 loops=1)
+         Buffers: shared hit=3409
+         ->  Sort  (cost=2076.00..2081.00 rows=2000 width=40) (actual time=5.458..5.463 rows=21.00 loops=1)
+               Sort Key: c.rank DESC, c.id DESC
+               Sort Method: top-N heapsort  Memory: 27kB
+               Buffers: shared hit=3409
+               ->  Subquery Scan on c  (cost=0.43..2022.08 rows=2000 width=40) (actual time=0.040..5.168 rows=2000.00 loops=1)
+                     Buffers: shared hit=3403
+                     ->  Limit  (cost=0.43..2002.08 rows=2000 width=48) (actual time=0.039..5.034 rows=2000.00 loops=1)
+                           Buffers: shared hit=3403
+                           ->  Index Scan using psv_published_keyset on procurement_search_view v_1  (cost=0.43..409199.47 rows=408862 width=48) (actual time=0.039..4.921 rows=2000.00 loops=1)
+                                 Filter: (search_vector @@ '''contrataca'''::tsquery)
+                                 Rows Removed by Filter: 3959
+                                 Index Searches: 1
+                                 Buffers: shared hit=3403
+   ->  Index Scan using procurement_search_view_pkey on procurement_search_view v  (cost=0.43..8.45 rows=1 width=401) (actual time=0.017..0.017 rows=1.00 loops=21)
+         Index Cond: (numero_controle_pncp = c.id)
+         Index Searches: 21
+         Buffers: shared hit=84
+ Planning:
+   Buffers: shared hit=352
+ Planning Time: 0.844 ms
+ Execution Time: 7.175 ms
+(25 rows)
+

@@ -1,0 +1,18 @@
+                                                              QUERY PLAN                                                               
+---------------------------------------------------------------------------------------------------------------------------------------
+ Sort  (cost=43.66..43.72 rows=27 width=75) (actual time=0.446..0.448 rows=27.00 loops=1)
+   Sort Key: uf
+   Sort Method: quicksort  Memory: 26kB
+   Buffers: shared hit=16
+   ->  HashAggregate  (cost=42.61..43.02 rows=27 width=75) (actual time=0.390..0.396 rows=27.00 loops=1)
+         Group Key: uf
+         Batches: 1  Memory Usage: 40kB
+         Buffers: shared hit=13
+         ->  Seq Scan on procurement_stats_view  (cost=0.00..29.92 rows=1692 width=15) (actual time=0.013..0.095 rows=1692.00 loops=1)
+               Buffers: shared hit=13
+ Planning:
+   Buffers: shared hit=118
+ Planning Time: 0.483 ms
+ Execution Time: 0.561 ms
+(14 rows)
+

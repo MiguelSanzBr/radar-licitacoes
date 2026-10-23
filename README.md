@@ -64,27 +64,27 @@ Captura gerada no PR 7.2.
 ## Números
 
 <!-- bench:start -->
-Medido em 2026-10-23 (commit `c82905b`), AMD Ryzen 5 5600GT with Radeon Graphics, 12 threads, 11,6 GiB de RAM, Postgres 18.6, 1.200.000 linhas de busca: 1.633 reais do PNCP (dia versionado em `infra/compose/seed`) e 1.198.367 sintéticas. Rótulo de todo número abaixo: **inclui dados sintéticos (1.198.367 linhas)**. Uma execução por cenário, 1 min de aquecimento descartado e 3 min medidos; cada usuário espera 1 s entre requisições.
+Medido em 2026-10-23 (commit `a05da33`), AMD Ryzen 5 5600GT with Radeon Graphics, 12 threads, 11,6 GiB de RAM, Postgres 18.6, 1.200.000 linhas de busca: 1.633 reais do PNCP (dia versionado em `infra/compose/seed`) e 1.198.367 sintéticas. Rótulo de todo número abaixo: **inclui dados sintéticos (1.198.367 linhas)**. Uma execução por cenário, 1 min de aquecimento descartado e 3 min medidos; cada usuário espera 1 s entre requisições.
 
 | Cenário | Usuários | Requisições | Erros | p50 (ms) | p95 (ms) | p99 (ms) | req/s |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| S1 text search | 50 | 3.943 | 142 | 1005 | 3402 | 5857 | 21,9 |
-| S2 filtered search | 50 | 8.879 | 0 | 8 | 44 | 204 | 49,3 |
-| S3 keyset p1 | 10 | 300 | 0 | 2 | 3 | 5 | 1,7 |
-| S3 offset p1 | 10 | 300 | 0 | 2 | 4 | 6 | 1,7 |
-| S3 keyset p100 | 10 | 300 | 0 | 2 | 3 | 6 | 1,7 |
-| S3 offset p100 | 10 | 300 | 0 | 5 | 7 | 8 | 1,7 |
-| S3 keyset p1000 | 10 | 300 | 0 | 2 | 3 | 7 | 1,7 |
-| S3 offset p1000 | 10 | 300 | 0 | 31 | 38 | 48 | 1,7 |
-| S4 organ typo | 20 | 720 | 544 | 4393 | 5025 | 5526 | 4 |
-| S5 detail | 100 | 17.955 | 0 | 1 | 2 | 57 | 99,8 |
-| S6 stats by uf | 10 | 900 | 0 | 2 | 2 | 3 | 5 |
-| S6 stats by month | 10 | 900 | 0 | 2 | 2 | 3 | 5 |
+| S1 text search | 50 | 8.662 | 0 | 34 | 83 | 122 | 48,1 |
+| S2 filtered search | 50 | 8.925 | 0 | 6 | 22 | 46 | 49,6 |
+| S3 keyset p1 (medido em 2026-10-23, commit `c82905b`) | 10 | 300 | 0 | 2 | 3 | 5 | 1,7 |
+| S3 offset p1 (medido em 2026-10-23, commit `c82905b`) | 10 | 300 | 0 | 2 | 4 | 6 | 1,7 |
+| S3 keyset p100 (medido em 2026-10-23, commit `c82905b`) | 10 | 300 | 0 | 2 | 3 | 6 | 1,7 |
+| S3 offset p100 (medido em 2026-10-23, commit `c82905b`) | 10 | 300 | 0 | 5 | 7 | 8 | 1,7 |
+| S3 keyset p1000 (medido em 2026-10-23, commit `c82905b`) | 10 | 300 | 0 | 2 | 3 | 7 | 1,7 |
+| S3 offset p1000 (medido em 2026-10-23, commit `c82905b`) | 10 | 300 | 0 | 31 | 38 | 48 | 1,7 |
+| S4 organ typo | 20 | 3.545 | 0 | 13 | 18 | 23 | 19,7 |
+| S5 detail | 100 | 17.975 | 0 | 1 | 2 | 5 | 99,9 |
+| S6 stats by uf (medido em 2026-10-23, commit `c82905b`) | 10 | 900 | 0 | 2 | 2 | 3 | 5 |
+| S6 stats by month (medido em 2026-10-23, commit `c82905b`) | 10 | 900 | 0 | 2 | 2 | 3 | 5 |
 
-- Cache do detalhe (S5): 19.531 acertos e 4.413 faltas, taxa de acerto de 81,6%.
-- SLO de busca (S1 e S2, p95 até 200 ms e p99 até 500 ms): S1 não atende, S2 atende.
+- Cache do detalhe (S5): 19.518 acertos e 4.444 faltas, taxa de acerto de 81,5%.
+- SLO de busca (S1 e S2, p95 até 200 ms e p99 até 500 ms): S1 atende, S2 atende.
 - SLO de detalhe (S5, p95 até 50 ms): atende.
-- Planos, hardware e leitura completa: `docs/benchmarks/search/2026-10-23/README.md`.
+- Planos, hardware e leitura completa: `docs/benchmarks/search/2026-10-23-pr63/README.md`.
 <!-- bench:end -->
 
 ## Fora do escopo

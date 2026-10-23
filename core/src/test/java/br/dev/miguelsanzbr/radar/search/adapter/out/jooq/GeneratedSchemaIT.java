@@ -36,7 +36,8 @@ class GeneratedSchemaIT {
             "procurement_detail_view",
             "procurement_stats_view",
             "projection_checkpoint",
-            "processed_event");
+            "processed_event",
+            "organ");
   }
 
   @Test

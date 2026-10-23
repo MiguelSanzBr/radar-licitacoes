@@ -5,6 +5,7 @@
 #   before  numa transacao que apaga os indices secundarios da view de busca e termina em ROLLBACK
 #           (o DDL do Postgres e transacional, entao nada muda para quem vier depois; a chave
 #           primaria fica, porque a aplicacao nunca roda sem ela).
+#   RANK_CANDIDATES=2000  teto de candidatos do ranking (radar.search.rank-candidates); 2147483647 mede a busca sem o teto.
 # O statement_timeout da sessao sobe para 10 min: uma varredura de 1,2 mi linhas passa dos 3 s da aplicacao.
 set -euo pipefail
 
@@ -26,7 +27,7 @@ plan() { # $1 = arquivo .sql
     [ "$phase" = after ] || echo "$drop"
     cat "$1"
     echo "ROLLBACK;"
-  } | $compose exec -T postgres psql -U radar -d radar -X -q -v ON_ERROR_STOP=1
+  } | $compose exec -T postgres psql -U radar -d radar -X -q -v ON_ERROR_STOP=1 -v cap="${RANK_CANDIDATES:-2000}"
 }
 
 for file in "$here"/s*.sql; do

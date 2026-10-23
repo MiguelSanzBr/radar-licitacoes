@@ -13,12 +13,14 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * Organ names by trigram word similarity over {@code procurement_search_view}. Organ names are long
- * and the text is usually one or two words with a typo, so the whole-string similarity of {@code %}
- * would rarely reach the threshold; {@code <%} compares the text with the best matching part of the
- * name. It is served by {@code psv_organ_trgm} as well, so the match is on {@code organ_name} as
- * stored: case is ignored by pg_trgm, accents are not ({@code unaccent} is not immutable, so an
- * index over it is not possible). The threshold is set for the transaction only.
+ * Organ names by trigram word similarity over {@code search.organ}, the small table of distinct
+ * names the projector keeps next to the search view (a scan of the view cost seconds at a million
+ * rows). Organ names are long and the text is usually one or two words with a typo, so the
+ * whole-string similarity of {@code %} would rarely reach the threshold; {@code <%} compares the
+ * text with the best matching part of the name. It is served by {@code organ_name_trgm} as well, so
+ * the match is on {@code organ_name} as stored: case is ignored by pg_trgm, accents are not ({@code
+ * unaccent} is not immutable, so an index over it is not possible). The threshold is set for the
+ * transaction only.
  */
 @Component
 class JooqOrganReadModel implements OrganReadModel {
@@ -53,9 +55,8 @@ class JooqOrganReadModel implements OrganReadModel {
     return dsl.resultQuery(
         """
         SELECT organ_name, word_similarity(?, organ_name) AS s
-        FROM search.procurement_search_view
+        FROM search.organ
         WHERE ? <% organ_name
-        GROUP BY organ_name
         ORDER BY s DESC, organ_name
         LIMIT ?
         """,

@@ -1,0 +1,30 @@
+[
+  {
+    "name": "S4 organ typo (warmup)",
+    "requests": 1188,
+    "ok": 1188,
+    "errors": 0,
+    "rps": 4.91,
+    "min": 1,
+    "p50": 9,
+    "p75": 10,
+    "p95": 13,
+    "p99": 16,
+    "max": 70,
+    "mean": 8
+  },
+  {
+    "name": "S4 organ typo",
+    "requests": 3567,
+    "ok": 3567,
+    "errors": 0,
+    "rps": 14.74,
+    "min": 1,
+    "p50": 9,
+    "p75": 10,
+    "p95": 12,
+    "p99": 15,
+    "max": 23,
+    "mean": 8
+  }
+]

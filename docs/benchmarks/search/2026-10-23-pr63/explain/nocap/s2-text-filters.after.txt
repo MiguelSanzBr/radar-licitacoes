@@ -1,0 +1,34 @@
+                                                                                                    QUERY PLAN                                                                                                    
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Nested Loop  (cost=18681.55..18864.08 rows=21 width=266) (actual time=58.105..59.509 rows=21.00 loops=1)
+   Buffers: shared hit=52763
+   ->  Limit  (cost=18681.12..18681.17 rows=21 width=40) (actual time=57.924..57.927 rows=21.00 loops=1)
+         Buffers: shared hit=52675
+         ->  Sort  (cost=18681.12..18689.68 rows=3424 width=40) (actual time=57.923..57.925 rows=21.00 loops=1)
+               Sort Key: c.rank DESC, c.id DESC
+               Sort Method: top-N heapsort  Memory: 27kB
+               Buffers: shared hit=52675
+               ->  Subquery Scan on c  (cost=18546.00..18588.80 rows=3424 width=40) (actual time=56.826..57.550 rows=3209.00 loops=1)
+                     Buffers: shared hit=52669
+                     ->  Limit  (cost=18546.00..18554.56 rows=3424 width=48) (actual time=56.825..57.313 rows=3209.00 loops=1)
+                           Buffers: shared hit=52669
+                           ->  Sort  (cost=18546.00..18554.56 rows=3424 width=48) (actual time=56.824..57.154 rows=3209.00 loops=1)
+                                 Sort Key: v_1.published_at DESC, v_1.numero_controle_pncp DESC
+                                 Sort Method: quicksort  Memory: 518kB
+                                 Buffers: shared hit=52669
+                                 ->  Index Scan using psv_open_closing on procurement_search_view v_1  (cost=0.43..18344.99 rows=3424 width=48) (actual time=0.282..56.023 rows=3209.00 loops=1)
+                                       Index Cond: (proposal_closing_at > now())
+                                       Filter: ((search_vector @@ '''contrataca'''::tsquery) AND (uf = 'SP'::bpchar) AND (modality_id = 6) AND ((proposal_opening_at IS NULL) OR (proposal_opening_at <= now())))
+                                       Rows Removed by Filter: 45656
+                                       Index Searches: 1
+                                       Buffers: shared hit=52666
+   ->  Index Scan using procurement_search_view_pkey on procurement_search_view v  (cost=0.43..8.45 rows=1 width=401) (actual time=0.009..0.009 rows=1.00 loops=21)
+         Index Cond: (numero_controle_pncp = c.id)
+         Index Searches: 21
+         Buffers: shared hit=84
+ Planning:
+   Buffers: shared hit=378
+ Planning Time: 1.394 ms
+ Execution Time: 59.591 ms
+(30 rows)
+

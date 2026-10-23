@@ -38,6 +38,10 @@ class SearchJooqConfiguration {
             .password(properties.password())
             .build();
     dataSource.setPoolName("search");
+    // why: the driver prepares a statement on the server after five runs and Postgres may then keep
+    // one generic plan for it. The text search needs the plan of the term it carries: GIN for a
+    // rare term, publication order for a common one (ADR-0011, "Perfil e otimização")
+    dataSource.setConnectionInitSql("SET plan_cache_mode = force_custom_plan");
     return dataSource;
   }
 
