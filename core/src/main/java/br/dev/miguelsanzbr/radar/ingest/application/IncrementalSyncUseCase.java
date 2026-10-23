@@ -8,7 +8,9 @@ import br.dev.miguelsanzbr.radar.ingest.domain.IngestionKind;
 import br.dev.miguelsanzbr.radar.ingest.domain.IngestionRun;
 import java.time.Clock;
 import java.time.Duration;
+import java.time.Instant;
 import java.time.ZoneId;
+import java.util.Optional;
 
 /**
  * Reads what the PNCP updated since the modality's watermark, one window per call, one transaction
@@ -49,6 +51,11 @@ public final class IncrementalSyncUseCase {
     this.clock = clock;
     this.initialLookback = initialLookback;
     this.overlap = overlap;
+  }
+
+  /** When the PNCP's block of the client ends, while one is in force. */
+  public Optional<Instant> blockedUntil() {
+    return gateway.blockedUntil();
   }
 
   /**

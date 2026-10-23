@@ -158,3 +158,18 @@ groups:
         annotations:
           summary: "O mês seguinte não tem partição em ingest.procurement: a coleta vai falhar na virada do mês"
           runbook_url: docs/runbook.md#particao-ausente
+      - alert: PncpBloqueado
+        expr: pncp_blocked_until_seconds > 0
+        labels:
+          severity: warning
+        annotations:
+          summary: "O PNCP bloqueou o cliente (429 ou 403): a coleta está pausada até o fim do bloqueio"
+          runbook_url: docs/runbook.md#pncp-bloqueado
+      - alert: PncpBloqueadoPorMuito
+        expr: pncp_blocked_until_seconds > 0
+        for: 2h
+        labels:
+          severity: critical
+        annotations:
+          summary: "O PNCP segue bloqueando o cliente há mais de 2 h: a coleta está parada"
+          runbook_url: docs/runbook.md#pncp-bloqueado

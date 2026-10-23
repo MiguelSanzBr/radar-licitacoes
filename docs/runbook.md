@@ -32,6 +32,7 @@ curl -fsS -H "Authorization: Bearer $TOKEN" http://localhost:8080/actuator/prome
 | `RadarTargetDown` | critical | [alvo-fora](#alvo-fora) |
 | `RadarSemTrafego` | warning | [sem-trafego](#sem-trafego) |
 | `ParticaoFutura` | critical | [particao-ausente](#particao-ausente) |
+| `PncpBloqueado`, `PncpBloqueadoPorMuito` | warning, critical | [pncp-bloqueado](#pncp-bloqueado) |
 
 <a id="outbox-atrasado"></a>
 
@@ -276,6 +277,49 @@ curl -fsS -X POST -H "Authorization: Bearer $TOKEN" \
 4. Corrija a causa do job (permissão, flag, agendamento) para a próxima virada.
 
 **Escalonamento.** Execução que continua `FAILED` depois das partições criadas: time de coleta (a causa é outra).
+
+<a id="pncp-bloqueado"></a>
+
+## PNCP bloqueou o cliente (`PncpBloqueado`, `PncpBloqueadoPorMuito`)
+
+**Sintoma.** `pncp_blocked_until_seconds > 0`: o PNCP respondeu 429 ou 403 e o cliente parou de chamar até o instante (em segundos desde 1970) que a métrica mostra. `PncpBloqueado` (aviso) dispara na hora; `PncpBloqueadoPorMuito` (crítico) quando o bloqueio dura mais de 2 h seguidas, o que indica que a pausa não está bastando. O contador `pncp_blocked_total{status}` conta as execuções que pararam por causa do bloqueio (não os ciclos pulados depois dele). O log traz um WARN `PNCP blocked the client (HTTP 429), no calls until ..., response: <início do corpo>` na resposta que bloqueou e um WARN `... skipped: PNCP blocked the client until ...` por bloqueio, na coleta incremental e no backfill agendado.
+
+**Impacto.** Sem coleta nova enquanto durar a pausa. Não há perda: só a execução que tomou o 429 fica `FAILED` (com o marcador de página onde estava; os ciclos seguintes nem criam execução) e a coleta incremental não avança o marcador, então o que passou na pausa é lido depois. O cliente não faz nenhuma requisição enquanto bloqueado (a chamada falha na hora), e é de propósito: a API devolveu uma página de WAF, e insistir pode alongar o bloqueio. A pausa dura o `Retry-After` do PNCP, quando vem (segundos ou data HTTP, no máximo 24 h e nunca menos que o intervalo do limitador de taxa), ou `radar.pncp.block-pause` (padrão `PT30M`, mínimo 1 minuto). **O estado da pausa fica na memória de cada instância:** reiniciar a aplicação ou ter uma segunda instância faz sair mais uma requisição ao PNCP, que pode levar outro 429.
+
+**Diagnóstico.**
+
+1. Até quando e por qual status:
+
+```
+curl -fsS -H "Authorization: Bearer $TOKEN" http://localhost:8080/actuator/prometheus | grep -E '^pncp_blocked'
+date -d @<valor de pncp_blocked_until_seconds>
+```
+
+2. Execuções paradas e o erro registrado:
+
+```
+$PSQL -c "SELECT id, kind, status, window_start::date, cursor_page, left(error, 90) AS erro
+  FROM ingest.ingestion_run WHERE status = 'FAILED' ORDER BY id DESC LIMIT 5"
+```
+
+3. O que veio na resposta (corpo HTML de WAF, sem `Retry-After`, é o caso conhecido): `$COMPOSE logs --no-log-prefix --tail=1000 app | grep "PNCP blocked the client"`.
+4. Volume pedido no dia: `pncp_request_duration_seconds_count` por `outcome` no dashboard "Radar: coleta". Veja se algo (backfill manual, `fetch-ahead` alto, mais de uma instância) passou da taxa de `radar.pncp.requests-per-second`.
+
+**Ação.**
+
+1. **Espere.** Não reinicie a aplicação para "limpar" o bloqueio: a pausa é só a memória da instância e o bloqueio é do PNCP, então reiniciar zera a pausa, a próxima requisição pode levar outro 429 e alongar o bloqueio.
+2. **Não suba a taxa** (`radar.pncp.requests-per-second` fica em 0,2) nem o `radar.pncp.block-pause` para menos do padrão. Se o bloqueio voltar mesmo a 0,2 req/s, a taxa baixa e a mudança vira ADR (ADR-0017).
+3. Confira o volume (passo 4 do diagnóstico) e pare o que estiver acima do esperado, por exemplo um backfill manual em paralelo com a coleta.
+4. Depois que `pncp_blocked_until_seconds` voltar a 0, a coleta incremental retoma sozinha no próximo ciclo. Refaça os dias do backfill que pararam; a execução `FAILED` retoma da página não confirmada:
+
+```
+curl -fsS -X POST -H "Authorization: Bearer $TOKEN" \
+  "http://localhost:8080/ops/backfill?from=AAAA-MM-DD&to=AAAA-MM-DD&modality=6&force=true"
+```
+
+5. Verifique: o alerta some, a execução termina `DONE` e `ingest_items_total` volta a crescer.
+
+**Escalonamento.** Bloqueio que passa de 24 h, ou que volta a cada pausa: time de coleta (o PNCP pode ter uma regra nova; registre o que foi medido no ADR-0017).
 
 ## Operações rotineiras
 

@@ -5,11 +5,13 @@ import static br.dev.miguelsanzbr.radar.ingest.application.BackfillUseCaseTest.s
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import br.dev.miguelsanzbr.radar.ingest.application.BackfillUseCaseTest.Blocked;
 import br.dev.miguelsanzbr.radar.ingest.application.BackfillUseCaseTest.InMemoryProcurements;
 import br.dev.miguelsanzbr.radar.ingest.application.BackfillUseCaseTest.InMemoryRuns;
 import br.dev.miguelsanzbr.radar.ingest.application.BackfillUseCaseTest.RecordingMetrics;
 import br.dev.miguelsanzbr.radar.ingest.application.BackfillUseCaseTest.RecordingOutbox;
 import br.dev.miguelsanzbr.radar.ingest.application.port.IngestionCursorRepository;
+import br.dev.miguelsanzbr.radar.ingest.application.port.PncpBlockedException;
 import br.dev.miguelsanzbr.radar.ingest.application.port.PncpGateway;
 import br.dev.miguelsanzbr.radar.ingest.application.port.PncpPage;
 import br.dev.miguelsanzbr.radar.ingest.application.port.PncpUnavailableException;
@@ -46,6 +48,12 @@ class IncrementalSyncUseCaseTest {
   static final class FakeUpdates implements PncpGateway {
     final Map<Integer, Object> pages = new ConcurrentHashMap<>();
     final List<Call> calls = Collections.synchronizedList(new ArrayList<>());
+    Instant blockedUntil;
+
+    @Override
+    public Optional<Instant> blockedUntil() {
+      return Optional.ofNullable(blockedUntil);
+    }
 
     @Override
     public PncpPage publications(LocalDate from, LocalDate to, int modalityId, int page) {
@@ -278,6 +286,33 @@ class IncrementalSyncUseCaseTest {
     assertThat(run.error()).contains("PncpUnavailableException");
     assertThat(cursors.store.get(6).watermark()).isEqualTo(WATERMARK);
     assertThat(cursors.store.get(6).updatedAt()).isEqualTo(WATERMARK);
+  }
+
+  @Test
+  void itTellsWhetherTheGatewayIsBlocked() {
+    assertThat(useCase.blockedUntil()).isEmpty();
+
+    gateway.blockedUntil = NOW.plusSeconds(60);
+
+    assertThat(useCase.blockedUntil()).contains(NOW.plusSeconds(60));
+  }
+
+  @Test
+  void aBlockedPncpFailsTheRunLeavesTheCursorAndIsCounted() {
+    cursorAt(WATERMARK);
+    var until = NOW.plusSeconds(1800);
+    var blocked = new PncpBlockedException(429, until, null);
+    gateway.pages.put(1, blocked);
+
+    assertThatThrownBy(() -> useCase.sync(6))
+        .isInstanceOf(IncrementalSyncFailedException.class)
+        .hasCause(blocked);
+
+    var run = runs.store.values().iterator().next();
+    assertThat(run.status()).isEqualTo(RunStatus.FAILED);
+    assertThat(run.error()).contains("PNCP blocked");
+    assertThat(cursors.store.get(6).watermark()).isEqualTo(WATERMARK);
+    assertThat(metrics.blocked).containsExactly(new Blocked(429, until));
   }
 
   @Test

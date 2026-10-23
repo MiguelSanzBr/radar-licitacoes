@@ -3,6 +3,7 @@ package br.dev.miguelsanzbr.radar.ingest.application;
 import br.dev.miguelsanzbr.radar.ingest.application.port.IngestMetrics;
 import br.dev.miguelsanzbr.radar.ingest.application.port.IngestionRunRepository;
 import br.dev.miguelsanzbr.radar.ingest.application.port.OutboxAppender;
+import br.dev.miguelsanzbr.radar.ingest.application.port.PncpBlockedException;
 import br.dev.miguelsanzbr.radar.ingest.application.port.PncpPage;
 import br.dev.miguelsanzbr.radar.ingest.application.port.ProcurementRepository;
 import br.dev.miguelsanzbr.radar.ingest.domain.IngestionRun;
@@ -96,10 +97,14 @@ public final class PageProcessor {
 
   /**
    * Marks the stored run FAILED; a failure while doing so is added to {@code cause} as suppressed.
-   * The stored state is reloaded because a rolled back page may have moved the cursor of the
-   * in-memory run past what was committed.
+   * A PNCP block is also reported to the metrics, since both kinds of run stop on it. The stored
+   * state is reloaded because a rolled back page may have moved the cursor of the in-memory run
+   * past what was committed.
    */
   void fail(IngestionRun run, RuntimeException cause) {
+    if (cause instanceof PncpBlockedException blocked) {
+      metrics.pncpBlocked(blocked.status(), blocked.until());
+    }
     try {
       var stored =
           runs.findResumable(run.kind(), run.modalityId(), run.windowStart(), run.windowEnd())

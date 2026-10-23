@@ -18,6 +18,7 @@ Os alvos desta decisão vêm da seção 7.4 do plano. Nenhum deles foi medido ai
 - Os alertas têm `severity`, `summary` e `runbook_url` apontando para `docs/runbook.md`.
 - Dois alertas de saúde do próprio scrape: `RadarTargetDown` (`up{job="radar"} == 0` por 2 min, crítico) e `RadarSemTrafego` (nenhuma requisição à busca por 15 min, aviso, com `absent()`).
 - Alerta de limiar `ParticaoFutura` (`ingest_partitions_ahead < 1` por 1 h, crítico): o mês seguinte não tem partição em `ingest.procurement`. É o único alerta que vigia um erro silencioso, porque a falha de insert não move nenhuma outra métrica (`docs/post-mortem/2026-10-22-particao-ausente.md`).
+- Alertas `PncpBloqueado` (`pncp_blocked_until_seconds > 0`, aviso) e `PncpBloqueadoPorMuito` (a mesma condição por 2 h, crítico): o PNCP bloqueou o cliente com 429 ou 403 e a coleta está em pausa (ADR-0017). O gauge vale o fim do bloqueio em segundos desde 1970 e volta a 0 sozinho quando ele acaba; o crítico só dispara se a pausa não bastar.
 - Testes das regras com `promtool test rules` (`infra/prometheus/rules/slo_test.yml`): cada alerta dispara com séries sintéticas que violam o alvo, e nenhum dispara com tráfego saudável.
 
 Alvos propostos, não medidos:

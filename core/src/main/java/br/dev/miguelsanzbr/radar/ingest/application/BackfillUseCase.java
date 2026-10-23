@@ -10,6 +10,7 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -69,6 +70,11 @@ public final class BackfillUseCase {
       }
     }
     return false;
+  }
+
+  /** When the PNCP's block of the client ends, while one is in force. */
+  public Optional<Instant> blockedUntil() {
+    return gateway.blockedUntil();
   }
 
   /** Whether the day already has a finished backfill run. */

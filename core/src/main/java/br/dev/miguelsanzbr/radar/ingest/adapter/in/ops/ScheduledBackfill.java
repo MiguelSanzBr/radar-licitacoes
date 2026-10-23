@@ -1,11 +1,14 @@
 package br.dev.miguelsanzbr.radar.ingest.adapter.in.ops;
 
+import br.dev.miguelsanzbr.radar.ingest.application.BackfillFailedException;
 import br.dev.miguelsanzbr.radar.ingest.application.BackfillUseCase;
 import br.dev.miguelsanzbr.radar.ingest.application.BackfillWindowBusyException;
 import br.dev.miguelsanzbr.radar.ingest.application.BackfillWindowPolicy;
+import br.dev.miguelsanzbr.radar.ingest.application.port.PncpBlockedException;
 import br.dev.miguelsanzbr.radar.ops.Flag;
 import br.dev.miguelsanzbr.radar.ops.Flags;
 import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import org.slf4j.Logger;
@@ -32,6 +35,7 @@ class ScheduledBackfill {
   private final BackfillProperties properties;
   private final Clock clock;
   private final Flags flags;
+  private Instant announced;
 
   ScheduledBackfill(
       BackfillUseCase useCase,
@@ -59,6 +63,12 @@ class ScheduledBackfill {
           "scheduled backfill is on but radar.ingest.backfill.scheduled-from is not set, nothing runs");
       return;
     }
+    var blockedUntil = useCase.blockedUntil();
+    if (blockedUntil.isPresent()) {
+      // no run is started: it would only be saved as a failed one
+      announce(blockedUntil.get());
+      return;
+    }
     var yesterday = LocalDate.now(clock.withZone(ZONE)).minusDays(1);
     var modality = properties.scheduledModality();
     for (var day = properties.scheduledFrom(); !day.isAfter(yesterday); day = day.plusDays(1)) {
@@ -72,7 +82,23 @@ class ScheduledBackfill {
         useCase.run(day, day, modality);
       } catch (BackfillWindowBusyException e) {
         LOG.info("scheduled backfill skips {}: {}", day, e.getMessage());
+      } catch (BackfillFailedException e) {
+        if (e.getCause() instanceof PncpBlockedException blocked) {
+          announce(blocked.until());
+          return;
+        }
+        throw e;
       }
+    }
+  }
+
+  /** One WARN per block, not one per cron tick. */
+  private void announce(Instant until) {
+    if (!until.equals(announced)) {
+      announced = until;
+      LOG.warn(
+          "scheduled backfill skipped: PNCP blocked the client until {} (docs/runbook.md#pncp-bloqueado)",
+          until);
     }
   }
 }

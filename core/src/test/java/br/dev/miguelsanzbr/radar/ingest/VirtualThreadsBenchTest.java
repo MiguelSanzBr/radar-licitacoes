@@ -16,6 +16,7 @@ import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadMXBean;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -81,8 +82,10 @@ class VirtualThreadsBenchTest {
                 20, 50, Duration.ofSeconds(60), Duration.ofSeconds(60)),
             bulkhead,
             Duration.ofMinutes(10),
-            Duration.ofMinutes(10));
-    return new PncpHttpGateway(props, JsonMapper.builder().build(), new SimpleMeterRegistry());
+            Duration.ofMinutes(10),
+            Duration.ofMinutes(30));
+    return new PncpHttpGateway(
+        props, JsonMapper.builder().build(), new SimpleMeterRegistry(), Clock.systemUTC());
   }
 
   /** Reads every page through the fetcher, in order, like the use cases do. */

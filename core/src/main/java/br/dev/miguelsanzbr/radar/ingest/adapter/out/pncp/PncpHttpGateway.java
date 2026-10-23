@@ -1,5 +1,6 @@
 package br.dev.miguelsanzbr.radar.ingest.adapter.out.pncp;
 
+import br.dev.miguelsanzbr.radar.ingest.application.port.PncpBlockedException;
 import br.dev.miguelsanzbr.radar.ingest.application.port.PncpGateway;
 import br.dev.miguelsanzbr.radar.ingest.application.port.PncpPage;
 import br.dev.miguelsanzbr.radar.ingest.application.port.PncpProtocolException;
@@ -33,17 +34,24 @@ import java.net.http.HttpClient;
 import java.net.http.HttpHeaders;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.Clock;
 import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.json.JsonMapper;
@@ -52,6 +60,11 @@ import tools.jackson.databind.json.JsonMapper;
  * PNCP over {@code java.net.http}. Each attempt goes through, outermost first: retry, rate limiter,
  * bulkhead, circuit breaker, the call itself. The breaker only sees the call, so waiting for a rate
  * permit or a bulkhead slot never counts as slowness.
+ *
+ * <p>A 429 or 403 is a block, not a failure to retry: the call is not repeated and, until the pause
+ * ends, every caller of this instance fails fast with {@link PncpBlockedException} without a
+ * request. The check runs before the permits and again right before sending, so a call that was
+ * already waiting for a permit when the block came does not go out either.
  */
 @Component
 @EnableConfigurationProperties(PncpProperties.class)
@@ -61,16 +74,33 @@ public class PncpHttpGateway implements PncpGateway, AutoCloseable {
       "radar-licitacoes/0.1 (+https://github.com/miguelsanzbr/radar-licitacoes;"
           + " contato: miguelsanzb.p@gmail.com)";
 
+  private static final Logger LOG = LoggerFactory.getLogger(PncpHttpGateway.class);
   private static final String PUBLICATION = "/api/consulta/v1/contratacoes/publicacao";
   private static final String UPDATE = "/api/consulta/v1/contratacoes/atualizacao";
   private static final List<String> ENDPOINTS = List.of("publicacao", "atualizacao");
   private static final List<String> OUTCOMES =
-      List.of("ok", "retryable_error", "client_error", "mapping_error", "io_error", "interrupted");
-  private static final long MAX_RETRY_AFTER_SECONDS = 300;
+      List.of(
+          "ok",
+          "retryable_error",
+          "blocked",
+          "client_error",
+          "mapping_error",
+          "io_error",
+          "interrupted");
+  private static final long MAX_RETRY_WAIT_MILLIS = 300_000;
   private static final int BODY_EXCERPT = 200;
+
+  /** The block in force, shared by every caller: what the PNCP answered and until when. */
+  private record Block(int status, Instant until, Duration retryAfter) {
+
+    PncpBlockedException exception() {
+      return new PncpBlockedException(status, until, retryAfter);
+    }
+  }
 
   private final PncpProperties props;
   private final PncpMapper mapper;
+  private final Clock clock;
   private final Map<String, Counter> itemCounters = new HashMap<>();
   private final Map<String, Timer> timers = new HashMap<>();
   private final ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
@@ -79,9 +109,11 @@ public class PncpHttpGateway implements PncpGateway, AutoCloseable {
   private final RateLimiter rateLimiter;
   private final Bulkhead bulkhead;
   private final CircuitBreaker breaker;
+  private final AtomicReference<Block> blocked = new AtomicReference<>();
 
-  public PncpHttpGateway(PncpProperties props, JsonMapper json, MeterRegistry meters) {
+  public PncpHttpGateway(PncpProperties props, JsonMapper json, MeterRegistry meters, Clock clock) {
     this.props = props;
+    this.clock = clock;
     this.mapper = new PncpMapper(json);
     for (var endpoint : ENDPOINTS) {
       itemCounters.put(endpoint, meters.counter("pncp_items_fetched_total", "endpoint", endpoint));
@@ -125,6 +157,7 @@ public class PncpHttpGateway implements PncpGateway, AutoCloseable {
             .slowCallDurationThreshold(cb.slowCallThreshold())
             .slowCallRateThreshold(cb.failureRatePercent())
             .recordException(PncpHttpGateway::retryable)
+            .ignoreExceptions(PncpBlockedException.class)
             .build();
     var breakerRegistry = CircuitBreakerRegistry.of(breakerConfig);
     this.breaker = breakerRegistry.circuitBreaker("pncp");
@@ -183,6 +216,7 @@ public class PncpHttpGateway implements PncpGateway, AutoCloseable {
                 + page
                 + "&tamanhoPagina="
                 + props.pageSize());
+    failIfBlocked();
     Supplier<PncpPage> attempt = () -> fetch(endpoint, uri, page);
     attempt = CircuitBreaker.decorateSupplier(breaker, attempt);
     attempt = Bulkhead.decorateSupplier(bulkhead, attempt);
@@ -195,6 +229,7 @@ public class PncpHttpGateway implements PncpGateway, AutoCloseable {
   }
 
   private PncpPage fetch(String endpoint, URI uri, int page) {
+    failIfBlocked();
     var request =
         HttpRequest.newBuilder(uri)
             .timeout(props.requestTimeout())
@@ -224,12 +259,18 @@ public class PncpHttpGateway implements PncpGateway, AutoCloseable {
         return new PncpPage(List.of(), page, 0, 0, 0);
       }
       var body = response.body();
-      var message =
-          "PNCP status " + status + ": " + body.substring(0, Math.min(BODY_EXCERPT, body.length()));
-      if (status == 429 || status >= 500) {
+      var excerpt = body.substring(0, Math.min(BODY_EXCERPT, body.length()));
+      var message = "PNCP status " + status + ": " + excerpt;
+      if (status == 429 || status == 403) {
+        outcome = "blocked";
+        var e = block(status, response.headers());
+        LOG.warn("{}, response: {}", e.getMessage(), excerpt);
+        throw e;
+      }
+      if (status >= 500) {
         outcome = "retryable_error";
         throw new PncpRetryableException(
-            status, message, retryAfterMillis(response.headers()), null);
+            status, message, retryAfterMillis(response.headers(), clock.instant()), null);
       }
       outcome = "client_error";
       throw new PncpProtocolException(status, message, null);
@@ -250,19 +291,43 @@ public class PncpHttpGateway implements PncpGateway, AutoCloseable {
     return t instanceof PncpRetryableException;
   }
 
-  /**
-   * Seconds form of {@code Retry-After} only, capped; the HTTP-date form is ignored (shortcut: the
-   * PNCP has never sent one, revisit if the probe shows otherwise).
-   */
-  static long retryAfterMillis(HttpHeaders headers) {
-    return headers.firstValue("Retry-After").map(PncpHttpGateway::seconds).orElse(0L);
+  @Override
+  public Optional<Instant> blockedUntil() {
+    var b = blocked.get();
+    return b != null && clock.instant().isBefore(b.until())
+        ? Optional.of(b.until())
+        : Optional.empty();
   }
 
-  private static long seconds(String value) {
-    try {
-      return Math.min(Long.parseLong(value.trim()), MAX_RETRY_AFTER_SECONDS) * 1000;
-    } catch (NumberFormatException e) {
-      return 0;
+  /**
+   * Starts the pause shared by every caller: the {@code Retry-After} (never less than one rate
+   * limiter interval), else the default pause. A block that ends earlier than the one in force does
+   * not replace it, so a late answer cannot shorten the pause.
+   */
+  PncpBlockedException block(int status, HttpHeaders headers) {
+    var now = clock.instant();
+    var retryAfter = RetryAfter.parse(headers, now).orElse(null);
+    var interval = Duration.ofNanos((long) (1_000_000_000 / props.requestsPerSecond()));
+    var pause =
+        retryAfter == null ? props.blockPause() : Collections.max(List.of(retryAfter, interval));
+    var latest =
+        blocked.accumulateAndGet(
+            new Block(status, now.plus(pause), retryAfter),
+            (current, next) ->
+                current != null && !next.until().isAfter(current.until()) ? current : next);
+    return latest.exception();
+  }
+
+  private void failIfBlocked() {
+    if (blockedUntil().isPresent()) {
+      throw blocked.get().exception();
     }
+  }
+
+  /** Wait asked by a retried error ({@code Retry-After}, seconds or date), at most 5 minutes. */
+  static long retryAfterMillis(HttpHeaders headers, Instant now) {
+    return RetryAfter.parse(headers, now)
+        .map(wait -> Math.min(wait.toMillis(), MAX_RETRY_WAIT_MILLIS))
+        .orElse(0L);
   }
 }

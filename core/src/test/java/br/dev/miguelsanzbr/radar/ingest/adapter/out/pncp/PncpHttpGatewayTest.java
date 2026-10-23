@@ -9,10 +9,17 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.catchThrowable;
 
+import br.dev.miguelsanzbr.radar.MutableClock;
+import br.dev.miguelsanzbr.radar.ingest.application.port.PncpBlockedException;
 import br.dev.miguelsanzbr.radar.ingest.application.port.PncpPage;
 import br.dev.miguelsanzbr.radar.ingest.application.port.PncpProtocolException;
 import br.dev.miguelsanzbr.radar.ingest.application.port.PncpUnavailableException;
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import com.github.tomakehurst.wiremock.client.ResponseDefinitionBuilder;
 import com.github.tomakehurst.wiremock.extension.ResponseDefinitionTransformerV2;
 import com.github.tomakehurst.wiremock.http.Fault;
@@ -20,13 +27,17 @@ import com.github.tomakehurst.wiremock.http.ResponseDefinition;
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
 import com.github.tomakehurst.wiremock.stubbing.Scenario;
 import com.github.tomakehurst.wiremock.stubbing.ServeEvent;
+import com.sun.net.httpserver.HttpServer;
 import io.github.resilience4j.bulkhead.BulkheadFullException;
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import io.github.resilience4j.ratelimiter.RequestNotPermitted;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.http.HttpHeaders;
 import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -34,13 +45,16 @@ import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.slf4j.LoggerFactory;
 import tools.jackson.databind.json.JsonMapper;
 
 class PncpHttpGatewayTest {
@@ -86,7 +100,10 @@ class PncpHttpGatewayTest {
           .options(wireMockConfig().dynamicPort().extensions(PROBE))
           .build();
 
+  private static final Instant NOW = Instant.parse("2026-10-21T07:00:00Z");
+
   private final SimpleMeterRegistry meters = new SimpleMeterRegistry();
+  private final MutableClock clock = new MutableClock(NOW);
   private PncpHttpGateway gateway;
 
   @AfterEach
@@ -127,11 +144,12 @@ class PncpHttpGatewayTest {
         breaker,
         bulkhead,
         bulkheadWait,
-        rateWait);
+        rateWait,
+        Duration.ofMinutes(30));
   }
 
   private PncpHttpGateway gateway(PncpProperties properties) {
-    gateway = new PncpHttpGateway(properties, JsonMapper.builder().build(), meters);
+    gateway = new PncpHttpGateway(properties, JsonMapper.builder().build(), meters, clock);
     return gateway;
   }
 
@@ -225,25 +243,25 @@ class PncpHttpGatewayTest {
   }
 
   @Test
-  void tooManyRequestsWaitsAtLeastRetryAfter() throws IOException {
+  void serviceUnavailableWaitsAtLeastRetryAfter() throws IOException {
     sequence(
-        aResponse().withStatus(429).withHeader("Retry-After", "1"),
+        aResponse().withStatus(503).withHeader("Retry-After", "1"),
         okJson(body("publicacao-page2.json")));
     var started = System.nanoTime();
 
     var page = lenientGateway().publications(DAY, DAY, 6, 1);
 
     var elapsed = Duration.ofNanos(System.nanoTime() - started);
-    report("429 Retry-After 1 s", started);
+    report("503 Retry-After 1 s", started);
     assertThat(page.items()).hasSize(1);
     assertThat(wm.getAllServeEvents()).hasSize(2);
     assertThat(elapsed).isGreaterThanOrEqualTo(Duration.ofSeconds(1));
   }
 
   @Test
-  void tooManyRequestsWithoutAUsableRetryAfterUsesTheBackoff() throws IOException {
+  void serviceUnavailableWithoutAUsableRetryAfterUsesTheBackoff() throws IOException {
     sequence(
-        aResponse().withStatus(429).withHeader("Retry-After", "soon"),
+        aResponse().withStatus(503).withHeader("Retry-After", "soon"),
         okJson(body("publicacao-page2.json")));
 
     var page = lenientGateway().publications(DAY, DAY, 6, 1);
@@ -253,12 +271,284 @@ class PncpHttpGatewayTest {
   }
 
   @Test
-  void retryAfterIsParsedInSecondsAndCapped() {
-    assertThat(PncpHttpGateway.retryAfterMillis(headers("Retry-After", "2"))).isEqualTo(2000);
-    assertThat(PncpHttpGateway.retryAfterMillis(headers("Retry-After", "99999")))
+  void retryAfterOfARetriedErrorIsInSecondsOrDateAndCapped() {
+    assertThat(PncpHttpGateway.retryAfterMillis(headers("Retry-After", "2"), NOW)).isEqualTo(2000);
+    assertThat(
+            PncpHttpGateway.retryAfterMillis(
+                headers("Retry-After", "Wed, 21 Oct 2026 07:00:03 GMT"), NOW))
+        .isEqualTo(3000);
+    assertThat(PncpHttpGateway.retryAfterMillis(headers("Retry-After", "99999"), NOW))
         .isEqualTo(300_000);
-    assertThat(PncpHttpGateway.retryAfterMillis(headers("Retry-After", "x"))).isZero();
-    assertThat(PncpHttpGateway.retryAfterMillis(headers("Other", "1"))).isZero();
+    assertThat(PncpHttpGateway.retryAfterMillis(headers("Retry-After", "x"), NOW)).isZero();
+    assertThat(PncpHttpGateway.retryAfterMillis(headers("Other", "1"), NOW)).isZero();
+  }
+
+  private static void blockedBy(int status, String... header) {
+    var response = aResponse().withStatus(status).withBody("<html>request blocked</html>");
+    if (header.length > 0) {
+      response.withHeader("Retry-After", header[0]);
+    }
+    wm.stubFor(get(urlPathEqualTo(PUBLICATION)).willReturn(response));
+  }
+
+  private PncpBlockedException blocked(PncpHttpGateway g) {
+    return (PncpBlockedException) catchThrowable(() -> g.publications(DAY, DAY, 6, 1));
+  }
+
+  @Test
+  void tooManyRequestsBlocksWithoutRetryAndFailsFastUntilThePauseEnds() throws IOException {
+    blockedBy(429);
+    var g = lenientGateway();
+
+    var first = blocked(g);
+
+    assertThat(first).isInstanceOf(PncpUnavailableException.class);
+    assertThat(first.status()).isEqualTo(429);
+    assertThat(first.until()).isEqualTo(NOW.plus(Duration.ofMinutes(30)));
+    assertThat(first.retryAfter()).isEmpty();
+    assertThat(first).hasMessageContaining("blocked").hasMessageContaining("429");
+    assertThat(wm.getAllServeEvents()).hasSize(1);
+
+    clock.advance(Duration.ofMinutes(29).plusSeconds(59));
+    assertThat(blocked(g).until()).isEqualTo(first.until());
+    assertThatThrownBy(() -> g.updates(DAY, DAY, 6, 1)).isInstanceOf(PncpBlockedException.class);
+    assertThat(wm.getAllServeEvents()).hasSize(1);
+
+    clock.advance(Duration.ofSeconds(1));
+    wm.stubFor(get(urlPathEqualTo(PUBLICATION)).willReturn(okJson(body("publicacao-page2.json"))));
+    assertThat(g.publications(DAY, DAY, 6, 1).items()).hasSize(1);
+    assertThat(wm.getAllServeEvents()).hasSize(2);
+  }
+
+  @Test
+  void forbiddenBlocksLikeTooManyRequests() {
+    blockedBy(403);
+    var g = lenientGateway();
+
+    var e = blocked(g);
+
+    assertThat(e.status()).isEqualTo(403);
+    assertThat(blocked(g).status()).isEqualTo(403);
+    assertThat(wm.getAllServeEvents()).hasSize(1);
+  }
+
+  @Test
+  void retryAfterInSecondsSetsThePauseEvenBelowTheDefault() {
+    blockedBy(429, "90");
+    var g = lenientGateway();
+
+    var e = blocked(g);
+
+    assertThat(e.until()).isEqualTo(NOW.plusSeconds(90));
+    assertThat(e.retryAfter()).contains(Duration.ofSeconds(90));
+    clock.advance(Duration.ofSeconds(90));
+    wm.stubFor(get(urlPathEqualTo(PUBLICATION)).willReturn(aResponse().withStatus(204)));
+    assertThat(g.publications(DAY, DAY, 6, 1).items()).isEmpty();
+  }
+
+  @Test
+  void retryAfterAsAHttpDateSetsThePause() {
+    blockedBy(429, "Wed, 21 Oct 2026 07:10:00 GMT");
+
+    var e = blocked(lenientGateway());
+
+    assertThat(e.until()).isEqualTo(Instant.parse("2026-10-21T07:10:00Z"));
+    assertThat(e.retryAfter()).contains(Duration.ofMinutes(10));
+  }
+
+  @Test
+  void aGarbageRetryAfterFallsBackToTheDefaultPause() {
+    blockedBy(429, "soon");
+
+    var e = blocked(lenientGateway());
+
+    assertThat(e.until()).isEqualTo(NOW.plus(Duration.ofMinutes(30)));
+    assertThat(e.retryAfter()).isEmpty();
+  }
+
+  @Test
+  void theBlockIsCountedUnderItsOwnOutcome() {
+    blockedBy(429);
+
+    blocked(lenientGateway());
+
+    assertThat(
+            meters
+                .timer("pncp_request_duration", "endpoint", "publicacao", "outcome", "blocked")
+                .count())
+        .isEqualTo(1);
+  }
+
+  /** Answers 429 to the first request, but only after the test lets it; counts every request. */
+  private static final class GatedServer implements AutoCloseable {
+    final AtomicInteger hits = new AtomicInteger();
+    final CountDownLatch arrived = new CountDownLatch(1);
+    final CountDownLatch release = new CountDownLatch(1);
+    final HttpServer server;
+
+    GatedServer() throws IOException {
+      server = HttpServer.create(new InetSocketAddress(InetAddress.getLoopbackAddress(), 0), 0);
+      server.setExecutor(Executors.newCachedThreadPool());
+      server.createContext(
+          "/",
+          exchange -> {
+            hits.incrementAndGet();
+            arrived.countDown();
+            try {
+              release.await();
+            } catch (InterruptedException e) {
+              Thread.currentThread().interrupt();
+            }
+            exchange.sendResponseHeaders(429, -1);
+            exchange.close();
+          });
+      server.start();
+    }
+
+    String baseUrl() {
+      return "http://127.0.0.1:" + server.getAddress().getPort();
+    }
+
+    @Override
+    public void close() {
+      server.stop(0);
+      ((ExecutorService) server.getExecutor()).shutdownNow();
+    }
+  }
+
+  private static Thread call(PncpHttpGateway g, int page, AtomicReference<Throwable> failure) {
+    return Thread.ofPlatform()
+        .start(() -> failure.set(catchThrowable(() -> g.publications(DAY, DAY, 6, page))));
+  }
+
+  @Test
+  void aCallAdmittedBeforeTheBlockDoesNotReachThePncpAfterIt() throws Exception {
+    try (var pncp = new GatedServer()) {
+      var props =
+          new PncpProperties(
+              pncp.baseUrl(),
+              50,
+              1000,
+              Duration.ofSeconds(5),
+              Duration.ofSeconds(2),
+              new PncpProperties.Retry(1, Duration.ofMillis(10), 2.0, 0.5),
+              new PncpProperties.CircuitBreaker(
+                  100, 50f, Duration.ofSeconds(60), Duration.ofSeconds(10)),
+              1,
+              Duration.ofSeconds(30),
+              Duration.ofSeconds(10),
+              Duration.ofMinutes(30));
+      var g = gateway(props);
+      var firstFailure = new AtomicReference<Throwable>();
+      var secondFailure = new AtomicReference<Throwable>();
+
+      var first = call(g, 1, firstFailure);
+      assertThat(pncp.arrived.await(5, TimeUnit.SECONDS)).isTrue();
+      var second = call(g, 2, secondFailure);
+      // the only thing the second call can wait on is the bulkhead slot the first one holds
+      var deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
+      while (second.getState() != Thread.State.TIMED_WAITING) {
+        assertThat(System.nanoTime()).as("second call parked on the bulkhead").isLessThan(deadline);
+        Thread.onSpinWait();
+      }
+      pncp.release.countDown();
+      first.join();
+      second.join();
+
+      assertThat(firstFailure.get()).isInstanceOf(PncpBlockedException.class);
+      assertThat(secondFailure.get()).isInstanceOf(PncpBlockedException.class);
+      assertThat(pncp.hits).hasValue(1);
+    }
+  }
+
+  @Test
+  void aLateBareTooManyRequestsDoesNotShortenALongerBlock() {
+    var g = lenientGateway();
+    var longer = g.block(429, headers("Retry-After", "3600"));
+
+    var late = g.block(429, HttpHeaders.of(Map.of(), (a, b) -> true));
+
+    assertThat(longer.until()).isEqualTo(NOW.plusSeconds(3600));
+    assertThat(late.until()).isEqualTo(NOW.plusSeconds(3600));
+    assertThat(g.blockedUntil()).contains(NOW.plusSeconds(3600));
+    assertThat(blocked(g).until()).isEqualTo(NOW.plusSeconds(3600));
+  }
+
+  @Test
+  void aLaterBlockExtendsAShorterOne() {
+    var g = lenientGateway();
+    g.block(429, headers("Retry-After", "60"));
+
+    var later = g.block(403, headers("Retry-After", "600"));
+
+    assertThat(later.until()).isEqualTo(NOW.plusSeconds(600));
+    assertThat(later.status()).isEqualTo(403);
+    assertThat(blocked(g).status()).isEqualTo(403);
+  }
+
+  @Test
+  void blockedUntilIsEmptyBeforeAndAfterTheBlockAndSetDuringIt() {
+    blockedBy(429);
+    var g = lenientGateway();
+    assertThat(g.blockedUntil()).isEmpty();
+
+    blocked(g);
+    assertThat(g.blockedUntil()).contains(NOW.plus(Duration.ofMinutes(30)));
+
+    clock.advance(Duration.ofMinutes(30));
+    assertThat(g.blockedUntil()).isEmpty();
+  }
+
+  @Test
+  void aBlockDoesNotCountForTheCircuitBreaker() {
+    // window of 2: a failure plus a block counted as a success would open the circuit
+    wm.stubFor(get(urlPathEqualTo(PUBLICATION)).willReturn(aResponse().withStatus(503)));
+    var g = gateway(props(Duration.ofSeconds(5), 1, 2, 1000, 4));
+    assertThatThrownBy(() -> g.publications(DAY, DAY, 6, 1))
+        .isInstanceOf(PncpUnavailableException.class);
+    blockedBy(429);
+    blocked(g);
+    clock.advance(Duration.ofMinutes(30));
+    wm.stubFor(get(urlPathEqualTo(PUBLICATION)).willReturn(aResponse().withStatus(204)));
+
+    assertThat(g.publications(DAY, DAY, 6, 1).items()).isEmpty();
+
+    assertThat(wm.getAllServeEvents()).hasSize(3);
+  }
+
+  @Test
+  void aRetryAfterShorterThanTheRateLimiterIntervalIsRaisedToIt() {
+    blockedBy(429, "1");
+
+    var e = blocked(gateway(props(Duration.ofSeconds(5), 4, 100, 0.2, 4)));
+
+    assertThat(e.until()).isEqualTo(NOW.plusSeconds(5));
+    assertThat(e.retryAfter()).contains(Duration.ofSeconds(1));
+  }
+
+  @Test
+  void theBlockIsLoggedAsAWarnWithTheStartOfTheResponseBody() {
+    blockedBy(429);
+    var logs = new ListAppender<ILoggingEvent>();
+    var logger = (Logger) LoggerFactory.getLogger(PncpHttpGateway.class);
+    logs.start();
+    logger.addAppender(logs);
+    try {
+      blocked(lenientGateway());
+    } finally {
+      logger.detachAppender(logs);
+    }
+
+    assertThat(logs.list)
+        .singleElement()
+        .satisfies(
+            event -> {
+              assertThat(event.getLevel()).isEqualTo(Level.WARN);
+              assertThat(event.getFormattedMessage())
+                  .startsWith("PNCP blocked the client (HTTP 429)")
+                  .contains(NOW.plus(Duration.ofMinutes(30)).toString())
+                  .contains("<html>request blocked</html>");
+            });
   }
 
   private static HttpHeaders headers(String name, String value) {

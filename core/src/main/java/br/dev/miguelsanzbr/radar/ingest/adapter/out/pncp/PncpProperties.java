@@ -7,7 +7,9 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
 /**
  * Client and resilience settings; the defaults are the policy of ADR-0017. The rate is 0.2 req/s
  * because the real PNCP answered 429 at a sustained 0.5 req/s (provisional until the probe
- * decides); it is the one cap on requests per second, whatever the page fetch concurrency.
+ * decides); it is the one cap on requests per second, whatever the page fetch concurrency. {@code
+ * blockPause} is how long the client stays silent after a 429 or 403 that came without a usable
+ * {@code Retry-After}.
  */
 @ConfigurationProperties("radar.pncp")
 public record PncpProperties(
@@ -20,7 +22,8 @@ public record PncpProperties(
     @DefaultValue CircuitBreaker circuitBreaker,
     @DefaultValue("4") int maxConcurrentCalls,
     @DefaultValue("30s") Duration bulkheadMaxWait,
-    @DefaultValue("120s") Duration rateLimiterMaxWait) {
+    @DefaultValue("120s") Duration rateLimiterMaxWait,
+    @DefaultValue("PT30M") Duration blockPause) {
 
   public PncpProperties {
     check(pageSize >= 10, "pageSize must be >= 10");
@@ -31,6 +34,7 @@ public record PncpProperties(
     check(maxConcurrentCalls >= 1, "maxConcurrentCalls must be >= 1");
     check(!bulkheadMaxWait.isNegative(), "bulkheadMaxWait must be >= 0");
     check(!rateLimiterMaxWait.isNegative(), "rateLimiterMaxWait must be >= 0");
+    check(blockPause.compareTo(Duration.ofMinutes(1)) >= 0, "blockPause must be >= 1 minute");
   }
 
   private static void check(boolean ok, String message) {

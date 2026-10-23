@@ -1,6 +1,7 @@
 package br.dev.miguelsanzbr.radar.ingest.adapter.in.ops;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.doThrow;
@@ -11,9 +12,11 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import br.dev.miguelsanzbr.radar.ingest.application.BackfillFailedException;
 import br.dev.miguelsanzbr.radar.ingest.application.BackfillUseCase;
 import br.dev.miguelsanzbr.radar.ingest.application.BackfillWindowBusyException;
 import br.dev.miguelsanzbr.radar.ingest.application.BackfillWindowPolicy;
+import br.dev.miguelsanzbr.radar.ingest.application.port.PncpBlockedException;
 import br.dev.miguelsanzbr.radar.ops.Flag;
 import java.time.Clock;
 import java.time.Instant;
@@ -23,6 +26,7 @@ import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.ArrayDeque;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.boot.test.system.CapturedOutput;
@@ -171,5 +175,42 @@ class ScheduledBackfillTest {
     at("2026-10-22T05:00:00Z").run();
 
     assertThat(output.getAll()).doesNotContain("radar.ingest.backfill.scheduled-from");
+  }
+
+  private static final Instant UNTIL = Instant.parse("2026-10-22T05:30:00Z");
+
+  @Test
+  void whileTheGatewayIsBlockedNoRunIsStartedAndTheBlockIsAnnouncedOnce(CapturedOutput output) {
+    when(useCase.blockedUntil()).thenReturn(Optional.of(UNTIL));
+    var scheduled = at("2026-10-22T05:00:00Z");
+
+    scheduled.run();
+    scheduled.run();
+
+    verify(useCase, never()).run(any(), any(), anyInt());
+    assertThat(output.getAll())
+        .containsOnlyOnce("scheduled backfill skipped: PNCP blocked the client until " + UNTIL)
+        .contains("pncp-bloqueado");
+  }
+
+  @Test
+  void aBlockThatStopsADayEndsTheLoopWithAWarnInsteadOfAFailure(CapturedOutput output) {
+    var blocked = new PncpBlockedException(429, UNTIL, null);
+    doThrow(new BackfillFailedException(D19, 2, blocked)).when(useCase).run(D19, D19, 12);
+
+    at("2026-10-22T05:00:00Z").run();
+
+    verify(useCase, never()).run(D20, D20, 12);
+    assertThat(output.getAll()).contains("scheduled backfill skipped: PNCP blocked the client");
+  }
+
+  @Test
+  void anyOtherFailureOfADayStillEscapes() {
+    doThrow(new BackfillFailedException(D19, 2, new IllegalStateException("db")))
+        .when(useCase)
+        .run(D19, D19, 12);
+    var scheduled = at("2026-10-22T05:00:00Z");
+
+    assertThatThrownBy(scheduled::run).isInstanceOf(BackfillFailedException.class);
   }
 }

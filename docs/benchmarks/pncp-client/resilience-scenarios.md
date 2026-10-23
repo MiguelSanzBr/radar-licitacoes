@@ -14,9 +14,9 @@ Os testes imprimem uma linha `SCENARIO|nome|requests=N|elapsedMs=T` por cenário
 |---|---|---|---|
 | 1 | 200 paginado, páginas 1 e 2 | itens mapeados campo a campo, `isLast` falso na 1 e verdadeiro na 2, horários convertidos de `America/Sao_Paulo` | 2 requisições, 48 ms |
 | 2 | 204 sem corpo | página vazia, `totalPages` 0, `isLast` verdadeiro | 1 requisição, 12 ms |
-| 3 | 429 com `Retry-After: 1`, depois 200 | sucesso na 2ª tentativa, espera de pelo menos 1 s | 2 requisições, 1038 ms |
+| 3 | 503 com `Retry-After: 1`, depois 200 | sucesso na 2ª tentativa, espera de pelo menos 1 s | 2 requisições, 1093 ms |
 | 4 | 500, 500, 200 | sucesso na 3ª tentativa | 3 requisições, 96 ms |
-| 4b | 503 em todas as tentativas | 4 tentativas, depois `PncpUnavailableException` com status 503 | 4 requisições, 110 ms |
+| 4b | 503 em todas as tentativas | 4 tentativas, depois `PncpUnavailableException` com status 503 | 4 requisições, 134 ms |
 | 5 | resposta com atraso de 15 s e timeout de 1 s; janela do disjuntor de 2 chamadas | 2 timeouts, circuito abre, 3ª chamada falha na hora com `PncpUnavailableException` (causa `CallNotPermittedException`) sem chegar ao servidor | 2 requisições, 2022 ms (2 timeouts de 1 s) |
 | 6 | 5 chamadas a 2 req/s (após 1 chamada de aquecimento) | pelo menos 2 s | 6 requisições, 2507 ms |
 | 7 | 6 chamadas simultâneas com bulkhead de 2 vagas | as excedentes esperam; no máximo 2 requisições simultâneas no servidor | 6 requisições, 513 ms, máximo simultâneo observado dentro do limite de 2 |
@@ -27,9 +27,10 @@ Os testes imprimem uma linha `SCENARIO|nome|requests=N|elapsedMs=T` por cenário
 
 Cenários extras, sem tempo impresso:
 
-- `Retry-After` inválido (`soon`): cai no backoff exponencial, 2 requisições.
+- `Retry-After` inválido (`soon`) num 503: cai no backoff exponencial, 2 requisições.
+- 429 ou 403 (bloqueio): sem retentativa, 1 requisição e nenhuma durante a pausa; `PncpBlockedException` com o `Retry-After` (segundos ou data HTTP) ou a pausa padrão. Coberto por `PncpHttpGatewayTest` e `PncpBlockedIT` (que também confirma que 5xx e timeout seguem retentados).
 - Conexão derrubada pelo servidor (`CONNECTION_RESET_BY_PEER`): tratada como falha de transporte (status 0), retentada e depois levantada.
 - Interrupção da thread no meio da chamada: levanta `CancellationException` e mantém o sinal de interrupção.
-- `Retry-After` em segundos, com teto de 300 s, e demais formatos ignorados: teste unitário de `retryAfterMillis`.
+- `Retry-After` em segundos ou data HTTP, com teto de 300 s na espera entre tentativas, e valor inválido ignorado: testes de `RetryAfter` e de `retryAfterMillis`.
 
 Observação sobre o cenário 6: o limitador já nasce com uma permissão, então a primeira chamada passa sem espera e as 5 seguintes são espaçadas de 500 ms; o tempo medido parte da 2ª chamada.

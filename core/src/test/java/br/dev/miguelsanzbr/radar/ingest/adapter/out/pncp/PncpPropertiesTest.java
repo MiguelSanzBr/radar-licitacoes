@@ -33,6 +33,7 @@ class PncpPropertiesTest {
     assertThat(p.maxConcurrentCalls()).isEqualTo(4);
     assertThat(p.bulkheadMaxWait()).isEqualTo(Duration.ofSeconds(30));
     assertThat(p.rateLimiterMaxWait()).isEqualTo(Duration.ofSeconds(120));
+    assertThat(p.blockPause()).isEqualTo(Duration.ofMinutes(30));
     assertThat(p.retry()).isEqualTo(new PncpProperties.Retry(4, Duration.ofSeconds(1), 2.0, 0.5));
     assertThat(p.circuitBreaker())
         .isEqualTo(
@@ -46,10 +47,12 @@ class PncpPropertiesTest {
         bind(
             Map.of(
                 "radar.pncp.base-url", "http://localhost:9",
-                "radar.pncp.requests-per-second", "0.5"));
+                "radar.pncp.requests-per-second", "0.5",
+                "radar.pncp.block-pause", "PT2H"));
 
     assertThat(p.baseUrl()).isEqualTo("http://localhost:9");
     assertThat(p.requestsPerSecond()).isEqualTo(0.5);
+    assertThat(p.blockPause()).isEqualTo(Duration.ofHours(2));
   }
 
   /** Mutable copy of the defaults, so each case changes one value. */
@@ -69,6 +72,7 @@ class PncpPropertiesTest {
     int bulkhead = 4;
     Duration bulkheadWait = Duration.ofSeconds(30);
     Duration rateWait = Duration.ofSeconds(60);
+    Duration blockPause = Duration.ofMinutes(30);
 
     PncpProperties build() {
       return new PncpProperties(
@@ -81,7 +85,8 @@ class PncpPropertiesTest {
           new PncpProperties.CircuitBreaker(window, failurePercent, openWait, slow),
           bulkhead,
           bulkheadWait,
-          rateWait);
+          rateWait,
+          blockPause);
     }
   }
 
@@ -99,6 +104,7 @@ class PncpPropertiesTest {
         invalid("maxConcurrentCalls", v -> v.bulkhead = 0),
         invalid("bulkheadMaxWait", v -> v.bulkheadWait = Duration.ofMillis(-1)),
         invalid("rateLimiterMaxWait", v -> v.rateWait = Duration.ofMillis(-1)),
+        invalid("blockPause", v -> v.blockPause = Duration.ofSeconds(59)),
         invalid("maxAttempts", v -> v.attempts = 0),
         invalid("initialBackoff", v -> v.backoff = Duration.ZERO),
         invalid("multiplier", v -> v.multiplier = 0.9),
@@ -133,6 +139,7 @@ class PncpPropertiesTest {
     values.multiplier = 1;
     values.bulkheadWait = Duration.ZERO;
     values.rateWait = Duration.ZERO;
+    values.blockPause = Duration.ofMinutes(1);
 
     assertThat(values.build().pageSize()).isEqualTo(10);
     assertThat(new Values().build().pageSize()).isEqualTo(50);

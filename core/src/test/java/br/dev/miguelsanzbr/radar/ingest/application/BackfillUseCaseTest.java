@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import br.dev.miguelsanzbr.radar.ingest.application.port.IngestMetrics;
 import br.dev.miguelsanzbr.radar.ingest.application.port.IngestionRunRepository;
 import br.dev.miguelsanzbr.radar.ingest.application.port.OutboxAppender;
+import br.dev.miguelsanzbr.radar.ingest.application.port.PncpBlockedException;
 import br.dev.miguelsanzbr.radar.ingest.application.port.PncpGateway;
 import br.dev.miguelsanzbr.radar.ingest.application.port.PncpPage;
 import br.dev.miguelsanzbr.radar.ingest.application.port.PncpProtocolException;
@@ -87,6 +88,7 @@ class BackfillUseCaseTest {
   static final class FakeGateway implements PncpGateway {
     final Map<String, Object> responses = new ConcurrentHashMap<>();
     final List<String> calls = Collections.synchronizedList(new ArrayList<>());
+    Instant blockedUntil;
     Runnable beforeCall = () -> {};
     IntConsumer beforePage = page -> {};
 
@@ -113,6 +115,11 @@ class BackfillUseCaseTest {
     @Override
     public PncpPage updates(LocalDate from, LocalDate to, int modalityId, int page) {
       throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Optional<Instant> blockedUntil() {
+      return Optional.ofNullable(blockedUntil);
     }
   }
 
@@ -149,8 +156,16 @@ class BackfillUseCaseTest {
 
   record Counted(IngestionKind kind, int discovered, int updated, int unchanged) {}
 
+  record Blocked(int status, Instant until) {}
+
   static final class RecordingMetrics implements IngestMetrics {
     final List<Counted> calls = new ArrayList<>();
+    final List<Blocked> blocked = new ArrayList<>();
+
+    @Override
+    public void pncpBlocked(int status, Instant until) {
+      blocked.add(new Blocked(status, until));
+    }
 
     @Override
     public void itemsProcessed(IngestionKind kind, int discovered, int updated, int unchanged) {
@@ -423,6 +438,47 @@ class BackfillUseCaseTest {
     assertThat(run.finishedAt()).isEqualTo(NOW);
     assertThat(gateway.calls).doesNotContain("2026-10-21/1");
     assertThat(procurements.store).hasSize(2);
+    assertThat(metrics.blocked).isEmpty();
+  }
+
+  @Test
+  void itTellsWhetherTheGatewayIsBlocked() {
+    assertThat(useCase.blockedUntil()).isEmpty();
+
+    gateway.blockedUntil = NOW.plusSeconds(60);
+
+    assertThat(useCase.blockedUntil()).contains(NOW.plusSeconds(60));
+  }
+
+  @Test
+  void aBlockedPncpFailsTheRunKeepingItsCursorSoALaterRunResumes() {
+    var until = NOW.plusSeconds(1800);
+    gateway.stub(D20, 1, page(1, 3, snapshot(1)));
+    gateway.stub(D20, 2, page(2, 3, snapshot(2)));
+    gateway.stub(D20, 3, new PncpBlockedException(429, until, null));
+    gateway.stub(D21, 1, page(1, 1, snapshot(9)));
+
+    assertThatThrownBy(() -> useCase.run(D20, D21, 6))
+        .isInstanceOf(BackfillFailedException.class)
+        .hasMessageContaining("page 3")
+        .hasMessageContaining("PNCP blocked")
+        .hasMessageContaining(until.toString())
+        .hasCauseInstanceOf(PncpBlockedException.class);
+
+    var run = runs.store.values().iterator().next();
+    assertThat(run.status()).isEqualTo(RunStatus.FAILED);
+    assertThat(run.cursorPage()).isEqualTo(2);
+    assertThat(run.error()).contains("PNCP blocked");
+    assertThat(metrics.blocked).containsExactly(new Blocked(429, until));
+    assertThat(gateway.calls).doesNotContain("2026-10-21/1");
+
+    gateway.calls.clear();
+    gateway.stub(D20, 3, page(3, 3, snapshot(3)));
+    var resumed = useCase.run(D20, D20, 6).getFirst();
+
+    assertThat(gateway.calls).containsExactly("2026-10-20/3");
+    assertThat(resumed.id()).isEqualTo(run.id());
+    assertThat(resumed.status()).isEqualTo(RunStatus.DONE);
   }
 
   @Test
