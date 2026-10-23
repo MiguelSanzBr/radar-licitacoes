@@ -68,7 +68,8 @@ class JooqSearchReadModelIT {
   private void truncate() {
     jdbc.execute(
         "TRUNCATE search.procurement_search_view, search.procurement_detail_view,"
-            + " search.processed_event, search.projection_checkpoint");
+            + " search.processed_event, search.projection_checkpoint,"
+            + " search.procurement_stats_view");
   }
 
   private static Filters only(Uf uf) {

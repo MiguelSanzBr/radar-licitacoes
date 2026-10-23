@@ -69,7 +69,8 @@ class ProjectionIdempotencyIT {
   void clean() {
     jdbc.execute(
         "TRUNCATE search.procurement_search_view, search.procurement_detail_view,"
-            + " search.processed_event, search.projection_checkpoint");
+            + " search.processed_event, search.projection_checkpoint,"
+            + " search.procurement_stats_view");
   }
 
   /**
@@ -172,7 +173,9 @@ class ProjectionIdempotencyIT {
                 + " FROM search.procurement_search_view ORDER BY numero_controle_pncp",
             "SELECT numero_controle_pncp, detail::text, etag, source_version"
                 + " FROM search.procurement_detail_view ORDER BY numero_controle_pncp",
-            "SELECT consumer, event_id FROM search.processed_event ORDER BY consumer, event_id");
+            "SELECT consumer, event_id FROM search.processed_event ORDER BY consumer, event_id",
+            "SELECT uf, modality_id, month, value_band, count, estimated_sum"
+                + " FROM search.procurement_stats_view ORDER BY uf, modality_id, month, value_band");
     return queries.stream()
         .map(
             sql ->

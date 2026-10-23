@@ -92,7 +92,7 @@ class JooqProjectionReplayIT {
     store.projectAll(
         List.of(new OffsetEvent(discovered("d1", view(id(1), "Contratação", "1000.00", 1), 1), 0)));
     jdbc.update(
-        "INSERT INTO search.procurement_stats_view VALUES ('SP', 6, DATE '2026-10-01', 1, 3, 10.00)");
+        "INSERT INTO search.procurement_stats_view VALUES ('RJ', 6, DATE '2026-10-01', 1, 3, 10.00)");
     jdbc.update(
         "INSERT INTO search.processed_event VALUES ('other-consumer', ?, now())", eventId("x"));
 

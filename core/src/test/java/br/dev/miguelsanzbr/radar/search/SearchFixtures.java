@@ -106,6 +106,29 @@ public final class SearchFixtures {
         json.toString());
   }
 
+  /** The same procurement filed under another uf, modality and publication instant. */
+  public static ProcurementView rebucket(
+      ProcurementView v, String uf, int modalityId, Instant publishedAt) {
+    return new ProcurementView(
+        v.id(),
+        v.status(),
+        v.situation(),
+        v.organName(),
+        v.unitName(),
+        uf,
+        v.municipalityName(),
+        v.ibgeCode(),
+        modalityId,
+        v.modalityName(),
+        v.estimatedValue(),
+        v.proposalOpeningAt(),
+        v.proposalClosingAt(),
+        publishedAt,
+        v.pncpUpdatedAt(),
+        v.objectDescription(),
+        v.json());
+  }
+
   public static ProcurementEvent.Discovered discovered(
       String seed, ProcurementView view, long version) {
     return new ProcurementEvent.Discovered(eventId(seed), view.id(), version, T0, view);

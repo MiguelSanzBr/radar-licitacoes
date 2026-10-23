@@ -68,7 +68,7 @@ class DlqFlowIT {
     jdbc.execute(
         "TRUNCATE ops.dlq_message, search.procurement_search_view,"
             + " search.procurement_detail_view, search.processed_event,"
-            + " search.projection_checkpoint");
+            + " search.projection_checkpoint, search.procurement_stats_view");
   }
 
   private int count(String sql) {
