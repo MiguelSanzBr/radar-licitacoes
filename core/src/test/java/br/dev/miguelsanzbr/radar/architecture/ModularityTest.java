@@ -92,10 +92,16 @@ class ModularityTest {
   }
 
   @Test
-  void identityDependsOnNoOtherModule() {
+  void identityDependsOnlyOnTheSharedKernelAndTheApiContract() {
     var identity = MODULES.getModuleByName("identity").orElseThrow();
 
-    assertThat(identity.getDirectDependencies(MODULES).stream()).isEmpty();
+    var targets =
+        identity.getDirectDependencies(MODULES).stream()
+            .map(dependency -> dependency.getTargetModule().getIdentifier().toString())
+            .distinct()
+            .toList();
+
+    assertThat(targets).containsExactlyInAnyOrder("shared", "api");
   }
 
   @Test

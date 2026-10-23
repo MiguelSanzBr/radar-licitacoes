@@ -48,9 +48,11 @@ services:
       retries: 30
 
   redis:
-    # A aplicacao ainda nao usa Redis (entra no marco M5); ele faz parte da pilha de um comando.
+    # Contador do limite de requisicoes da API publica (ADR-0027); sem persistencia de proposito: perder o estado so devolve o balde cheio.
+    # volatile-ttl: toda chave da aplicacao tem TTL, entao com a memoria cheia o Redis descarta as que expiram primeiro
+    # (o padrao noeviction recusaria a escrita e o limite passaria a abrir para todos).
     image: redis:8.8-alpine@sha256:dc95ea2fcf5d5c4253be0f967c28143d0f625846197eed2fd32c748eb99abfca
-    command: ["redis-server", "--save", "", "--maxmemory", "64mb"]
+    command: ["redis-server", "--save", "", "--maxmemory", "64mb", "--maxmemory-policy", "volatile-ttl"]
     mem_limit: 96m
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
@@ -142,6 +144,7 @@ services:
     depends_on:
       postgres: {condition: service_healthy}
       kafka: {condition: service_healthy}
+      redis: {condition: service_healthy}
       keycloak: {condition: service_healthy}
       pncp-fixture: {condition: service_healthy}
       otel-lgtm: {condition: service_healthy}
@@ -160,6 +163,7 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/radar
       SPRING_DATASOURCE_USERNAME: radar
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      SPRING_DATA_REDIS_HOST: redis
       SPRING_MAIL_HOST: mailpit
       SPRING_MAIL_PORT: "1025"
       # Emissor = URL do navegador; chaves e token pelo nome do servico (back-channel)

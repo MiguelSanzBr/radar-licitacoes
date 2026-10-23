@@ -21,6 +21,7 @@ As rotas de API recebem um JWT (Bearer); as páginas, a sessão criada pelo logi
 | `DELETE /api/v1/saved-searches/{id}` | API | 401 | permitido | 403 |
 | `DELETE /api/v1/me` | API | 401 | permitido | 403 |
 | `POST /api/v1/api-keys` | API | 401 | permitido | 403 |
+| `DELETE /api/v1/api-keys/{prefix}` | API | 401 | permitido | 403 |
 | `GET /ops/health-panel` | API | 401 | 403 | permitido |
 | `POST /ops/replay` | API | 401 | 403 | permitido |
 | `POST /ops/dlq/{topic}/reprocess` | API | 401 | 403 | permitido |

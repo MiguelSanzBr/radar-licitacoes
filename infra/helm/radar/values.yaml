@@ -14,7 +14,8 @@ service:
 
 # Variaveis de ambiente nao secretas (ConfigMap). Postgres e externo: aponte o URL para o seu.
 # Alem do banco e do Kafka, defina aqui o que muda por ambiente (inventario completo em docs/config-12-factor.md):
-# RADAR_OIDC_ISSUER, RADAR_PNCP_BASE_URL, SPRING_MAIL_HOST, SPRING_MAIL_PORT, OTEL_EXPORTER_OTLP_ENDPOINT.
+# RADAR_OIDC_ISSUER, RADAR_PNCP_BASE_URL, SPRING_MAIL_HOST, SPRING_MAIL_PORT, SPRING_DATA_REDIS_HOST, OTEL_EXPORTER_OTLP_ENDPOINT.
+# O Redis e externo e precisa de maxmemory-policy volatile-ttl (toda chave tem TTL; ADR-0027): com noeviction o limite deixa de medir.
 config:
   SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/radar
 

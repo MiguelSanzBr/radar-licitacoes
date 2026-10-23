@@ -245,6 +245,16 @@ curl -fsS -X POST -H "Authorization: Bearer $TOKEN" \
 
 ## Operações rotineiras
 
+### Redis fora do ar (limite abre)
+
+**Sintoma.** `rate_limit_fail_open_total` cresce e o log traz, no máximo uma vez por minuto, `WARN Rate limiter unavailable, public reads pass unmetered (fail-open)`. As respostas das rotas públicas ficam sem `RateLimit-*`.
+
+**Impacto.** A leitura pública continua no ar, sem limite (ADR-0027). Com o Redis recusando conexão, o cliente rejeita os comandos na hora e a leitura não espera. Com o Redis pendurado (sem responder), cada leitura espera até 250 ms (`spring.data.redis.timeout`) antes de seguir e a latência sobe nesse valor enquanto durar.
+
+**Ação.** Suba o Redis (`$COMPOSE up -d redis`); o cliente reconecta sozinho. O estado dos baldes se perde sem prejuízo: balde ausente é balde cheio. Se a queda for longa e houver abuso, reduza a exposição na borda (proxy) ou desligue o limite com `RADAR_RATE_LIMIT_ENABLED=false` para eliminar a espera de 250 ms.
+
+**Cuidados.** O Redis precisa de `maxmemory-policy volatile-ttl` (toda chave tem TTL); com `noeviction` e a memória cheia o limite passa a abrir para todos (`rate_limit_fail_open_total` sobe com `OOM` no log). Em produção o log DEBUG de requisição e resposta deve ficar desligado: a resposta de `POST /api/v1/api-keys` leva a chave em claro.
+
 ### Backfill
 
 Carrega dias do PNCP pelo operador. A janela noturna é de 00:00 a 06:00 (America/Sao_Paulo); `force=true` ignora a janela. Até 400 dias por chamada, um dia por vez, uma transação por página.

@@ -1,12 +1,13 @@
 package br.dev.miguelsanzbr.radar.identity;
 
+import br.dev.miguelsanzbr.radar.identity.adapter.in.web.Problems;
+import br.dev.miguelsanzbr.radar.identity.adapter.in.web.RateLimitFilter;
 import jakarta.servlet.DispatcherType;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.context.annotation.Bean;
@@ -28,7 +29,6 @@ import org.springframework.security.oauth2.jwt.JwtIssuerValidator;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy;
-import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Two chains. The API ({@code /api}, {@code /ops}, {@code /actuator}) is a stateless JWT resource
@@ -43,10 +43,6 @@ public class SecurityConfig {
   static final String CSP =
       "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:;"
           + " frame-ancestors 'none'; base-uri 'self'; form-action 'self'";
-
-  private static final String DOCS =
-      "https://github.com/miguelsanzbr/radar-licitacoes/blob/main/docs/problems/";
-  private static final JsonMapper JSON = JsonMapper.builder().build();
 
   @Bean
   @Order(1)
@@ -67,10 +63,7 @@ public class SecurityConfig {
                     .requestMatchers("/actuator/**")
                     .hasRole("operator")
                     .requestMatchers(
-                        HttpMethod.GET,
-                        "/api/v1/procurements/**",
-                        "/api/v1/stats",
-                        "/api/v1/organs")
+                        HttpMethod.GET, RateLimitFilter.PUBLIC_READS.toArray(String[]::new))
                     .permitAll()
                     .anyRequest()
                     .denyAll())
@@ -85,7 +78,7 @@ public class SecurityConfig {
                     .authenticationEntryPoint((request, response, e) -> unauthorized(response))
                     .accessDeniedHandler(
                         (request, response, e) ->
-                            problem(
+                            Problems.write(
                                 response,
                                 403,
                                 "forbidden",
@@ -166,16 +159,6 @@ public class SecurityConfig {
 
   private static void unauthorized(HttpServletResponse response) throws IOException {
     response.setHeader("WWW-Authenticate", "Bearer");
-    problem(response, 401, "unauthorized", "Não autenticado", "Token ausente ou inválido.");
-  }
-
-  private static void problem(
-      HttpServletResponse response, int status, String code, String title, String detail)
-      throws IOException {
-    response.setStatus(status);
-    response.setContentType("application/problem+json");
-    JSON.writeValue(
-        response.getOutputStream(),
-        Map.of("type", DOCS + code + ".md", "title", title, "status", status, "detail", detail));
+    Problems.write(response, 401, "unauthorized", "Não autenticado", "Token ausente ou inválido.");
   }
 }

@@ -18,6 +18,15 @@
     <Bug pattern="EI_EXPOSE_REP2"/>
   </Match>
   <Match>
+    <Package name="br.dev.miguelsanzbr.radar.identity.application"/>
+    <Bug pattern="EI_EXPOSE_REP2"/>
+  </Match>
+  <!-- O RedisRateLimiter guarda o StringRedisTemplate injetado (colaborador compartilhado, nao estado mutavel). -->
+  <Match>
+    <Class name="br.dev.miguelsanzbr.radar.identity.adapter.out.redis.RedisRateLimiter"/>
+    <Bug pattern="EI_EXPOSE_REP2"/>
+  </Match>
+  <Match>
     <Package name="br.dev.miguelsanzbr.radar.search.application"/>
     <Bug pattern="EI_EXPOSE_REP2"/>
   </Match>

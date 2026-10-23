@@ -5,13 +5,13 @@ plantuml::components.puml[,,format=svg]
 plantuml::module-api.puml[,,format=svg]
 include::module-api.adoc[]
 
-== Identity
-plantuml::module-identity.puml[,,format=svg]
-include::module-identity.adoc[]
-
 == Shared
 plantuml::module-shared.puml[,,format=svg]
 include::module-shared.adoc[]
+
+== Identity
+plantuml::module-identity.puml[,,format=svg]
+include::module-identity.adoc[]
 
 == Observability
 plantuml::module-observability.puml[,,format=svg]

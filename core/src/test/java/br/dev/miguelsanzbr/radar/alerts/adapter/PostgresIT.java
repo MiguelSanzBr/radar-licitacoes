@@ -57,7 +57,8 @@ public abstract class PostgresIT {
   void cleanDatabase() {
     jdbc.sql(
             "TRUNCATE alerts.alert_delivery, alerts.saved_search, alerts.verification_token,"
-                + " alerts.idempotency_key, alerts.subscriber, alerts.processed_event")
+                + " alerts.idempotency_key, alerts.subscriber, alerts.processed_event,"
+                + " identity.api_key")
         .update();
     mailer.sent.clear();
   }

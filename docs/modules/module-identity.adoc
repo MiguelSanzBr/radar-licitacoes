@@ -4,4 +4,6 @@
 |`br.dev.miguelsanzbr.radar.identity`
 |Spring components
 |* `b.d.m.r.i.SecurityConfig`
+|Bean references
+|* `b.d.m.r.s.UuidV7` (in Shared)
 |===

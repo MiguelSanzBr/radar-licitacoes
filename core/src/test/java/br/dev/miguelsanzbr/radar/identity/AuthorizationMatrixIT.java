@@ -89,6 +89,12 @@ class AuthorizationMatrixIT extends PostgresIT {
           new Route("DELETE", "/api/v1/saved-searches/{id}", SEARCH, Caller.SUPPLIER, false),
           new Route("DELETE", "/api/v1/me", Caller.SUPPLIER, false),
           new Route("POST", "/api/v1/api-keys", Caller.SUPPLIER, false),
+          new Route(
+              "DELETE",
+              "/api/v1/api-keys/{prefix}",
+              "/api/v1/api-keys/ab12cd34",
+              Caller.SUPPLIER,
+              false),
           new Route("GET", "/ops/health-panel", Caller.OPERATOR, false),
           new Route("POST", "/ops/replay", Caller.OPERATOR, false),
           new Route(

@@ -152,6 +152,16 @@ class SecurityConfigTest {
   }
 
   @Test
+  void anApiKeyIsNotACredentialOnAnyProtectedRoute() throws Exception {
+    for (var path : List.of("/api/v1/me", "/ops/probe", "/actuator/probe", "/api/v1/unknown")) {
+      mvc.perform(get(path).header("X-Api-Key", "rk_abcd1234_secret"))
+          .andExpect(problem(401, "unauthorized"));
+    }
+    mvc.perform(post("/api/v1/procurements").header("X-Api-Key", "rk_abcd1234_secret"))
+        .andExpect(problem(401, "unauthorized"));
+  }
+
+  @Test
   void apiPathsOutsideTheContractAreDeniedEvenForReading() throws Exception {
     mvc.perform(get("/api/v1/unknown")).andExpect(problem(401, "unauthorized"));
     mvc.perform(get("/api/v1/unknown").with(Auth.supplier("kc-1")))

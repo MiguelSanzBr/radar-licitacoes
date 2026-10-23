@@ -446,20 +446,16 @@ paths:
       operationId: createApiKey
       tags: [api-keys]
       summary: Cria uma chave de API
-      description: A chave completa aparece só nesta resposta. Depois resta o prefixo.
+      description: |
+        A chave completa aparece só nesta resposta. Depois resta o prefixo. Cada conta pode ter
+        até 5 chaves ativas; a sexta é 422 (`validation`). A chave só identifica o cliente nas
+        rotas públicas para o limite de requisições: não dá papel nenhum.
       security:
         - bearerAuth: []
       x-required-role: supplier
       responses:
         '201':
           description: Chave criada.
-          headers:
-            RateLimit-Limit:
-              $ref: '#/components/headers/RateLimitLimit'
-            RateLimit-Remaining:
-              $ref: '#/components/headers/RateLimitRemaining'
-            RateLimit-Reset:
-              $ref: '#/components/headers/RateLimitReset'
           content:
             application/json:
               schema:
@@ -468,8 +464,29 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
-        '429':
-          $ref: '#/components/responses/TooManyRequests'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+  /api/v1/api-keys/{prefix}:
+    parameters:
+      - $ref: '#/components/parameters/ApiKeyPrefix'
+    delete:
+      operationId: revokeApiKey
+      tags: [api-keys]
+      summary: Revoga uma chave de API
+      description: Revoga uma chave do próprio usuário pelo prefixo. Chave de outro usuário, inexistente ou já revogada é 404.
+      security:
+        - bearerAuth: []
+      x-required-role: supplier
+      responses:
+        '204':
+          description: Chave revogada. Passa a responder 401 nas rotas públicas.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   /ops/health-panel:
     get:
@@ -628,6 +645,15 @@ components:
         minimum: 1
         maximum: 50
         default: 20
+    ApiKeyPrefix:
+      name: prefix
+      in: path
+      required: true
+      description: Os oito caracteres que identificam a chave, devolvidos na criação.
+      schema:
+        type: string
+        minLength: 8
+        maxLength: 8
     IfNoneMatch:
       name: If-None-Match
       in: header
