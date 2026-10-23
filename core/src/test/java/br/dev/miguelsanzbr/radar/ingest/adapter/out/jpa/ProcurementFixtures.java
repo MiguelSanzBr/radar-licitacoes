@@ -73,6 +73,25 @@ public final class ProcurementFixtures {
         s.rawJson());
   }
 
+  public static PncpSnapshot withEstimatedValue(PncpSnapshot s, Money estimatedValue) {
+    return new PncpSnapshot(
+        s.id(),
+        s.situation(),
+        s.organ(),
+        s.unit(),
+        s.modality(),
+        s.disputeMode(),
+        s.legalBasis(),
+        s.srp(),
+        estimatedValue,
+        s.awardedValue(),
+        s.proposalWindow(),
+        s.publishedAt(),
+        s.pncpUpdatedAt(),
+        s.objectDescription(),
+        s.rawJson());
+  }
+
   /** Same notice with every optional field absent. */
   public static PncpSnapshot bare(ProcurementId id) {
     var full = snapshot(id);

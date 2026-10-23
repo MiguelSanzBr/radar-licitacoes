@@ -53,7 +53,7 @@
 
     <!-- why: testes com @Tag("bench") medem tempo e @Tag("chaos") derruba infraestrutura: ficam fora do verify; -Pbench e -Pchaos trocam os dois filtros -->
     <test.groups></test.groups>
-    <test.excluded.groups>bench,chaos</test.excluded.groups>
+    <test.excluded.groups>bench,chaos,compat</test.excluded.groups>
 
     <!-- why: o JaCoCo prepende o agente a este valor; o perfil jfr acrescenta flags via @{argLine} -->
     <argLine></argLine>
@@ -214,6 +214,7 @@
             <excludedGroups>
               <param>bench</param>
               <param>chaos</param>
+              <param>compat</param>
             </excludedGroups>
           </configuration>
         </plugin>
@@ -335,6 +336,35 @@
       <id>chaos</id>
       <properties>
         <test.groups>chaos</test.groups>
+        <test.excluded.groups></test.excluded.groups>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <!-- O agente continua ligado (o enforcer exige jacoco.exec); so o gate de 100% sai. -->
+            <groupId>org.jacoco</groupId>
+            <artifactId>jacoco-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>check</id>
+                <configuration>
+                  <skip>true</skip>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <!--
+        ./mvnw -Pcompat verify -pl core -am -Dit.test=PreviousReleaseCompatIT (make compat): roda so os
+        testes com @Tag("compat"), que sobem a imagem radar-licitacoes:prev (a release anterior)
+        contra o schema atual. Fora do verify padrao e sem o gate de cobertura.
+      -->
+      <id>compat</id>
+      <properties>
+        <test.groups>compat</test.groups>
         <test.excluded.groups></test.excluded.groups>
       </properties>
       <build>

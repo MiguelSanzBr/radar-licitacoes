@@ -1,4 +1,4 @@
-.PHONY: verify chaos mutation check-coverage-policy lint-openapi audit-repo tf-fmt tf-validate tf-lint tf-plan up down logs seed e2e replay bench slo synth probe deploy rollback test-scripts profile image image-size image-scan image-test lint-observability probe-report backfill helm-lint helm-smoke sbom sbom-scan secrets-scan
+.PHONY: verify chaos compat mutation check-coverage-policy lint-openapi audit-repo tf-fmt tf-validate tf-lint tf-plan up down logs seed e2e replay bench slo synth probe deploy rollback test-scripts profile image image-size image-scan image-test lint-observability probe-report backfill helm-lint helm-smoke sbom sbom-scan secrets-scan
 
 verify:
 	./mvnw verify
@@ -7,6 +7,12 @@ verify:
 # Rode sozinho (uns 4 GB livres) e leia as perdas e duplicatas impressas no fim (ambas devem ser 0).
 chaos:
 	./mvnw -Pchaos verify -pl core -am -Dit.test=ChaosIT
+
+# Release anterior contra o schema expandido (ADR-0010, docs/benchmarks/db/expand-contract.md): precisa da imagem
+# radar-licitacoes:prev, construida do commit anterior com `make image RADAR_TAG=prev` num worktree temporario.
+compat:
+	@docker image inspect radar-licitacoes:prev >/dev/null 2>&1 || { echo "compat: falta radar-licitacoes:prev (make image RADAR_TAG=prev no commit anterior)" >&2; exit 1; }
+	./mvnw -Pcompat verify -pl core -am -Dit.test=PreviousReleaseCompatIT
 
 TRIVY_IMAGE := aquasec/trivy:0.76.0@sha256:2416d1f74045b57274df1a340eee6b510cacd73c66a6ccb8da092b117eb7d222
 

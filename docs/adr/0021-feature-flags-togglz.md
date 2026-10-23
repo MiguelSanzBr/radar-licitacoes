@@ -24,6 +24,7 @@ Togglz 4.6.4, com o estado em JDBC (`ops.togglz_feature`, criada pelo Flyway V13
 | `BACKFILL_SCHEDULED` | coleta histórica agendada da madrugada | `radar.ingest.backfill.scheduled-enabled` (padrão: desligada) | ligar e desligar a carga histórica sem reiniciar |
 | `ALERT_DIGEST` | resumo diário de alertas | `radar.alerts.digest.enabled` (padrão: ligada) | cortar o envio em massa de e-mail em um incidente de SMTP |
 | `MAX_SAVED_SEARCHES_LIMIT` | aplica o limite de buscas salvas por assinante | ligada | desligar o limite em um caso de suporte; o valor do limite continua configuração |
+| `READ_VALUE_CENTS` | lê o valor estimado da licitação da coluna `estimated_value_cents` em vez de `estimated_value` | desligada | passo 3 da troca de coluna do ADR-0010: liga depois do backfill e volta atrás sem deploy; sai do código no contract |
 
 O `application.properties` traz o valor inicial como `togglz.features.<FLAG>.enabled=${propriedade.antiga:padrão}`: quem configura por ambiente continua configurando do mesmo jeito. Enquanto a flag não tem linha em `ops.togglz_feature`, vale esse valor; depois que o operador mexe no console, vale o estado gravado. Mudar a variável de ambiente depois disso não muda a flag. Para voltar ao valor inicial, apague a linha: `DELETE FROM ops.togglz_feature WHERE feature_name = 'INCREMENTAL_SYNC'`.
 

@@ -82,6 +82,16 @@ final class ArchitectureRules {
         .because("ingest is the write side and does not know who reads it");
   }
 
+  static ArchRule ingestDoesNotKnowTogglz(String root) {
+    return noClasses()
+        .that()
+        .resideInAPackage(root + ".ingest..")
+        .should()
+        .dependOnClassesThat()
+        .resideInAPackage("org.togglz..")
+        .because("ingest reads flags through its own port; only ops knows the flag library");
+  }
+
   static ArchRule inboundAdaptersAreNotTransactional() {
     var because = "the transaction boundary belongs to the use case, not to the inbound adapter";
     var classes =

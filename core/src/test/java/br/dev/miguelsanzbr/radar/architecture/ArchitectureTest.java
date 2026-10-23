@@ -34,6 +34,10 @@ class ArchitectureTest {
       ArchitectureRules.ingestIsIndependentOfSearch(ROOT);
 
   @ArchTest
+  static final ArchRule ingest_does_not_know_the_flag_library =
+      ArchitectureRules.ingestDoesNotKnowTogglz(ROOT);
+
+  @ArchTest
   static final ArchRule inbound_adapters_have_no_transaction_boundary =
       ArchitectureRules.inboundAdaptersAreNotTransactional();
 }

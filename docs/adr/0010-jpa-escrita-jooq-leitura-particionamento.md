@@ -53,3 +53,35 @@ Inbox e projeção ficam na mesma transação do gerenciador do lado de leitura 
 Alternativa rejeitada: `tsvector` como coluna gerada, por causa do `unaccent` (o wrapper imutável fica registrado no ADR-0011).
 
 Prova: `ProjectionIdempotencyIT` (mesmo lote de 200 envelopes três vezes, esquema `search` byte a byte idêntico), `JooqProjectionStoreIT` (versão antiga depois da nova, situação antes do `Discovered`, vetor sem acento, objeto de 2 milhões de caracteres) e `docs/benchmarks/cqrs/idempotency.md`.
+
+## Troca de coluna sem downtime: expand-contract (valor estimado em centavos)
+
+Decisão da PR 2.9, acrescentada a esta ADR porque o que muda é o schema de `ingest.procurement` que ela define. `estimated_value numeric(18,2)` ganha a coluna irmã `estimated_value_cents bigint` e a leitura passa para ela sem parar a aplicação e sem uma migration que reescreva a tabela de uma vez. O motivo de escolher centavos inteiros é o `Money` do domínio: o valor circula em centavos (`Money.cents()`) e comparar inteiros dispensa a escala do `numeric`. O que importa aqui é o método, que serve para qualquer troca de coluna.
+
+Só `ingest.procurement` entra. As cópias de leitura, `search.procurement_search_view` (V5) e a coluna de `alerts` (V11), mantêm o próprio `estimated_value`: são projeções reconstruídas dos eventos e não dependem da coluna da escrita.
+
+### Sequência de releases
+
+1. **Expand** (release atual, migration V14): `SET LOCAL lock_timeout = '5s'` (o `ALTER` pede trava exclusiva; atrás de uma transação longa ele falharia em 5 s em vez de enfileirar todas as consultas seguintes, e o deploy é repetido), `ADD COLUMN estimated_value_cents bigint` (só catálogo, propaga para as partições), o gatilho `sync_estimated_value`, `BEFORE INSERT OR UPDATE` no pai particionado (vale para todas as partições, as de hoje e as futuras; PG 13 ou mais) e o índice parcial `procurement_cents_pending_idx` das linhas ainda sem centavos. O gatilho faz a dupla escrita nos dois sentidos: só o valor mudou, calcula os centavos; só os centavos mudaram, calcula o valor; os dois mudaram e discordam, falha alto (`check_violation`). O código novo escreve só `estimated_value`; os centavos vêm do gatilho.
+2. **Backfill**: o job `EstimatedValueCentsBackfill` (desligado por padrão, `RADAR_INGEST_VALUE_CENTS_BACKFILL_ENABLED=true`) preenche as linhas antigas em lotes de 5 000 por chave primária, uma transação curta por lote. A métrica `ingest_value_cents_pending_rows` mostra o que falta; ao chegar a 0 o passo terminou, e os ticks seguintes só fazem um `EXISTS` sobre o índice parcial, que está vazio. O job não tem trava entre instâncias: duas instâncias repetem trabalho sem dano, então ligue-o em uma só.
+3. **Flag**: com o backfill concluído, o operador liga `READ_VALUE_CENTS` em `/ops/togglz` e o mapper passa a ler o `Money` dos centavos. Reverter é desligar a flag, sem deploy. A leitura cai para o `numeric` quando a linha ainda não tem centavos, então ligar a flag antes do fim do backfill é seguro (sem isso, o próximo `save` de uma linha sem centavos gravaria `NULL` e o gatilho apagaria os dois campos); a ordem 2 antes de 3 é uma recomendação.
+4. **Contract** (release seguinte, depois de uma release inteira com a flag ligada): `core/src/main/resources/db/contract/V16__drop_estimated_value.sql.next` derruba o índice dos pendentes, o gatilho, a função e a coluna `estimated_value`. O mesmo PR remove o campo da entidade e do mapper e a flag. O arquivo existe desde já, com a extensão `.next` e fora de `db/migration` para o Flyway não o executar hoje; `ContractScriptIT` roda o script numa transação de teste para provar que ele é válido contra o schema expandido.
+
+Rollback: até o passo 3 a release anterior continua funcionando contra o schema expandido (ela ignora a coluna e o gatilho a mantém); no passo 3, desligar a flag; só o passo 4 é sem volta, e por isso espera uma release inteira.
+
+### Decisões de implementação
+
+- O gatilho fica no pai particionado: o Postgres o clona em cada partição, inclusive nas criadas por `ingest.ensure_partition` depois da migration. `EstimatedValueTriggerIT` confirma com um `insert` direto numa partição existente e noutra criada depois.
+- O backfill usa a chave primária completa `(numero_controle_pncp, published_at)` como cursor, não o `ctid`: o `ctid` se repete entre partições. O cursor anda para frente e a escolha do lote lê o índice parcial dos pendentes (`Merge Append` sobre `Index Only Scan` por partição, sem `Sort`: `JdbcEstimatedValueCentsStoreIT` confere o `EXPLAIN`), então nenhum lote relê o que os anteriores preencheram.
+- A entidade JPA mapeia `estimated_value_cents` como somente leitura (`insertable = false, updatable = false`) e `@Generated` em `INSERT` e `UPDATE`: o Hibernate lê de volta o que o gatilho gravou, com `RETURNING estimated_value_cents` no mesmo statement (sem consulta extra), então a licitação recém-salva já traz os centavos mesmo com a flag ligada.
+- A flag chega ao `ingest` pela porta de aplicação `FeatureFlags` (adaptador `OpsFeatureFlags` sobre `ops.Flags`), o mesmo padrão do `alerts`: o `ingest` não importa o Togglz, e uma regra do ArchUnit (`ingestDoesNotKnowTogglz`, com fixture) o garante.
+- A imagem da release anterior (`radar-licitacoes:prev`, construída do commit anterior ao expand) sobe contra o schema V14: o Flyway aceita a migration aplicada que ela não conhece (`ignoreMigrationPatterns` padrão `*:future`), verificado no log pelo teste de compatibilidade. O plano cita a imagem no GHCR; sem repositório remoto, a tag local a substitui.
+
+### Consequências
+
+- Durante o expand, cada linha inserida custa a execução do gatilho (de 0% a 10% a mais na inserção de 100 000 linhas medida; o custo no `UPDATE` não ficou acima do ruído do host e não está medido com precisão) e o backfill dobra o arquivo das partições com linhas antigas até um `VACUUM FULL`; o índice parcial cresce com as linhas pendentes e sua construção na V14 segura as escritas da tabela: números em `docs/benchmarks/db/vacuum-bloat.md` e `expand-contract.md`.
+- Dois campos com o mesmo dado convivem por uma release: uma escrita que tente fixar os dois com valores diferentes falha em vez de gravar o desvio.
+
+### Prova
+
+`EstimatedValueTriggerIT`, `JdbcEstimatedValueCentsStoreIT`, `EstimatedValueCentsBackfillTest`, `ReadValueCentsFlagIT`, `ProcurementEntityMapperTest`, `JpaProcurementRepositoryIT`, `ContractScriptIT`, `ExpandMigrationLockIT` e `PreviousReleaseCompatIT` (`make compat`). Medições e resultado do teste de compatibilidade: `docs/benchmarks/db/expand-contract.md` e `docs/benchmarks/db/vacuum-bloat.md`.

@@ -302,6 +302,15 @@ Repetir o comando é seguro: os consumidores guardam o `event_id` no inbox e abs
 
 Roda sozinha na partida do app e todo dia às 03:15 UTC (`radar.ingest.partitions.cron`) e cobre o mês atual e os próximos `radar.ingest.partitions.months-ahead` (3). Para rodar à mão, use o comando do passo 1 de [particao-ausente](#particao-ausente).
 
+### Troca de coluna: centavos do valor estimado
+
+Sequência do ADR-0010 (expand, backfill, flag, contract), em ordem:
+
+1. A migration V14 criou `estimated_value_cents`, o gatilho e o índice dos pendentes no deploy. Ela pede trava exclusiva em `ingest.procurement` e desiste em 5 s (`lock_timeout`) se houver transação longa aberta: o deploy falha sem aplicar nada, então encerre a transação (veja `pg_stat_activity`) e repita. Confira: `$PSQL -c "SELECT count(*) FROM ingest.procurement WHERE estimated_value_cents IS NULL AND estimated_value IS NOT NULL"` (o que falta preencher).
+2. Ligue o job em uma instância só (ele não tem trava entre instâncias; duas repetem trabalho sem dano): `RADAR_INGEST_VALUE_CENTS_BACKFILL_ENABLED=true` e reinicie o app. Acompanhe a métrica `ingest_value_cents_pending_rows`; ao chegar a 0, o job pode ficar ligado (sem nada a fazer ele só conta). O backfill dobra o arquivo das partições com linhas antigas ([vacuum-bloat](benchmarks/db/vacuum-bloat.md)).
+3. Com o pendente em 0 (recomendado; a leitura cai para o valor antigo nas linhas sem centavos, então não há perda se for antes), ligue `READ_VALUE_CENTS` em `/ops/togglz`. Para voltar, desligue a flag no mesmo lugar.
+4. O contract (`db/contract/V16__drop_estimated_value.sql.next`) só entra na release seguinte, depois de uma release inteira com a flag ligada.
+
 ### Rotação de segredos
 
 - Senha do banco (`radar`): `$PSQL -c "ALTER ROLE radar PASSWORD '<nova>'"`, grave a nova senha em `infra/compose/secrets/db_password` (ou no Secret do Kubernetes, chave `SPRING_DATASOURCE_PASSWORD`) e reinicie o app. A variável `POSTGRES_PASSWORD_FILE` do Postgres só vale na criação do volume.

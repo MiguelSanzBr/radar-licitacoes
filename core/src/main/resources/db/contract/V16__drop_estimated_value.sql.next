@@ -1,0 +1,14 @@
+-- Passo "contract" da troca de ingest.procurement.estimated_value por estimated_value_cents
+-- (docs/adr/0010, secao expand-contract). NAO e uma migration de hoje: a extensao .next a deixa
+-- fora do Flyway. Na release seguinte, com a flag READ_VALUE_CENTS ligada ha uma release inteira
+-- e o backfill concluido (ingest_value_cents_pending_rows em 0), o mesmo PR que remove o campo
+-- estimatedValue da entidade e do mapper move este arquivo para db/migration/V16__drop_estimated_value.sql
+-- (ou o proximo numero livre) e a flag READ_VALUE_CENTS sai do codigo.
+--
+-- Sem o gatilho a coluna numerica deixa de ser mantida, por isso a ordem importa: primeiro o
+-- gatilho, depois a coluna. O DROP COLUMN so mexe no catalogo e vale para todas as particoes.
+-- As copias de leitura (search.procurement_search_view, alerts) tem a propria coluna e nao mudam.
+DROP INDEX ingest.procurement_cents_pending_idx;
+DROP TRIGGER sync_estimated_value ON ingest.procurement;
+DROP FUNCTION ingest.sync_estimated_value();
+ALTER TABLE ingest.procurement DROP COLUMN estimated_value;

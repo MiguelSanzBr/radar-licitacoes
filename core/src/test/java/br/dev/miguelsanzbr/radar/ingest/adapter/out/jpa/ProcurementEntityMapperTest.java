@@ -11,6 +11,8 @@ import br.dev.miguelsanzbr.radar.ingest.domain.OrganUnit;
 import br.dev.miguelsanzbr.radar.ingest.domain.PncpSnapshot;
 import br.dev.miguelsanzbr.radar.ingest.domain.Procurement;
 import br.dev.miguelsanzbr.radar.ingest.domain.ProposalWindow;
+import br.dev.miguelsanzbr.radar.shared.Money;
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -47,7 +49,7 @@ class ProcurementEntityMapperTest {
     var entity = ProcurementEntityMapper.toEntity(original);
     entity.version = 0;
 
-    assertThat(ProcurementEntityMapper.toDomain(entity, rowsOf(original)))
+    assertThat(ProcurementEntityMapper.toDomain(entity, rowsOf(original), false))
         .usingRecursiveComparison()
         .isEqualTo(original);
   }
@@ -80,6 +82,59 @@ class ProcurementEntityMapperTest {
   }
 
   @Test
+  void roundTripsAValueReadFromTheCents() {
+    var original = discovered(snapshot(id(20)));
+    var entity = ProcurementEntityMapper.toEntity(original);
+    entity.version = 0;
+    entity.estimatedValueCents = 150050L;
+
+    assertThat(ProcurementEntityMapper.toDomain(entity, rowsOf(original), true))
+        .usingRecursiveComparison()
+        .isEqualTo(original);
+  }
+
+  @Test
+  void theSwitchPicksWhichColumnTheValueIsReadFrom() {
+    var entity = ProcurementEntityMapper.toEntity(discovered(snapshot(id(21))));
+    entity.version = 0;
+    entity.estimatedValue = new BigDecimal("1.00");
+    entity.estimatedValueCents = 250L;
+
+    assertThat(ProcurementEntityMapper.toDomain(entity, List.of(), false).estimatedValue())
+        .isEqualTo(Money.of("1.00"));
+    assertThat(ProcurementEntityMapper.toDomain(entity, List.of(), true).estimatedValue())
+        .isEqualTo(Money.of(250));
+  }
+
+  @Test
+  void aRowWithoutCentsFallsBackToTheNumericColumnWhenReadFromTheCents() {
+    var entity = ProcurementEntityMapper.toEntity(discovered(snapshot(id(22))));
+    entity.version = 0;
+    entity.estimatedValueCents = null;
+
+    assertThat(ProcurementEntityMapper.toDomain(entity, List.of(), true).estimatedValue())
+        .isEqualTo(Money.of("1500.50"));
+  }
+
+  @Test
+  void aRowWithNeitherColumnHasNoValueInEitherMode() {
+    var entity = ProcurementEntityMapper.toEntity(discovered(bare(id(24))));
+    entity.version = 0;
+
+    assertThat(ProcurementEntityMapper.toDomain(entity, List.of(), true).estimatedValue()).isNull();
+    assertThat(ProcurementEntityMapper.toDomain(entity, List.of(), false).estimatedValue())
+        .isNull();
+  }
+
+  @Test
+  void writesLeaveTheCentsToTheTrigger() {
+    var entity = ProcurementEntityMapper.toEntity(discovered(snapshot(id(23))));
+
+    assertThat(entity.estimatedValue).isEqualByComparingTo("1500.50");
+    assertThat(entity.estimatedValueCents).isNull();
+  }
+
+  @Test
   void statusColumnHoldsTheUpperCaseStatusName() {
     var entity = ProcurementEntityMapper.toEntity(discovered(snapshot(id(5))));
 
@@ -93,7 +148,7 @@ class ProcurementEntityMapperTest {
     entity.version = 0;
     entity.status = "SUSPENDED";
 
-    assertThatThrownBy(() -> ProcurementEntityMapper.toDomain(entity, List.of()))
+    assertThatThrownBy(() -> ProcurementEntityMapper.toDomain(entity, List.of(), false))
         .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("SUSPENDED");
   }
@@ -113,7 +168,8 @@ class ProcurementEntityMapperTest {
             ProcurementEntityMapper.toEntity(id(8).value(), entry),
             ProcurementEntityMapper.toEntity(id(8).value(), entry));
 
-    var restored = ProcurementEntityMapper.toDomain(List.of(firstEntity, secondEntity), rows);
+    var restored =
+        ProcurementEntityMapper.toDomain(List.of(firstEntity, secondEntity), rows, false);
 
     assertThat(restored).extracting(p -> p.history().size()).containsExactly(2, 1);
     assertThat(restored).extracting(Procurement::id).containsExactly(id(8), id(9));

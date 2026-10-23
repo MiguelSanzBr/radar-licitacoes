@@ -16,5 +16,5 @@ import org.springframework.context.annotation.Import;
 @Target(ElementType.TYPE)
 @DataJpaTest(properties = "spring.jpa.properties.hibernate.generate_statistics=true")
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({PostgresTestConfig.class, JpaProcurementRepository.class})
+@Import({PostgresTestConfig.class, ValueReadSwitchTestConfig.class, JpaProcurementRepository.class})
 @interface PostgresJpaTest {}

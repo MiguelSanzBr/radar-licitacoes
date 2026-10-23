@@ -73,6 +73,13 @@ class ArchitectureRulesSeeViolationsTest {
   }
 
   @Test
+  void togglzRuleFlagsIngestClassesThatTouchTheFlagLibrary() {
+    var failures = failures(ArchitectureRules.ingestDoesNotKnowTogglz(FIXTURES));
+
+    assertThat(failures).contains("IngestReadsTogglz").doesNotContain("IngestInternals");
+  }
+
+  @Test
   void transactionRuleFlagsSpringAndJakartaOnClassesAndMethodsOfInboundAdaptersOnly() {
     var failures = failures(ArchitectureRules.inboundAdaptersAreNotTransactional());
 

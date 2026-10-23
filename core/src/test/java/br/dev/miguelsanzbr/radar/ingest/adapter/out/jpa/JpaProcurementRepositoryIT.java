@@ -6,16 +6,20 @@ import static br.dev.miguelsanzbr.radar.ingest.adapter.out.jpa.ProcurementFixtur
 import static br.dev.miguelsanzbr.radar.ingest.adapter.out.jpa.ProcurementFixtures.discovered;
 import static br.dev.miguelsanzbr.radar.ingest.adapter.out.jpa.ProcurementFixtures.id;
 import static br.dev.miguelsanzbr.radar.ingest.adapter.out.jpa.ProcurementFixtures.snapshot;
+import static br.dev.miguelsanzbr.radar.ingest.adapter.out.jpa.ProcurementFixtures.withEstimatedValue;
 import static br.dev.miguelsanzbr.radar.ingest.adapter.out.jpa.ProcurementFixtures.withPublishedAt;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import br.dev.miguelsanzbr.radar.ingest.application.port.ProcurementRepository;
 import br.dev.miguelsanzbr.radar.ingest.domain.Procurement;
+import br.dev.miguelsanzbr.radar.shared.Money;
 import br.dev.miguelsanzbr.radar.shared.ProcurementId;
+import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
@@ -30,6 +34,7 @@ class JpaProcurementRepositoryIT {
   @Autowired TestEntityManager entityManager;
   @Autowired JdbcTemplate jdbc;
   @Autowired jakarta.persistence.EntityManagerFactory entityManagerFactory;
+  @Autowired ValueReadSwitchTestConfig.Switch valueRead;
 
   private Procurement reload(ProcurementId id) {
     entityManager.flush();
@@ -252,5 +257,86 @@ class JpaProcurementRepositoryIT {
     assertThat(all).extracting(Procurement::id).containsExactlyInAnyOrder(id(70), id(71), id(72));
     assertThat(limited).hasSize(2);
     assertThat(repository.findClosingCandidates(T0.plus(Duration.ofDays(5)), 10)).isEmpty();
+  }
+
+  @AfterEach
+  void readFromTheNumericColumnAgain() {
+    valueRead.fromCents(false);
+  }
+
+  @Test
+  void theSwitchDecidesWhichColumnTheRepositoryReadsTheValueFrom() {
+    repository.save(discovered(snapshot(id(30))));
+    jdbc.execute("set local session_replication_role = replica");
+    jdbc.update(
+        "update ingest.procurement set estimated_value_cents = 99999 where numero_controle_pncp = ?",
+        id(30).value());
+    jdbc.execute("set local session_replication_role = origin");
+
+    assertThat(reload(id(30)).estimatedValue()).isEqualTo(Money.of("1500.50"));
+    valueRead.fromCents(true);
+    assertThat(reload(id(30)).estimatedValue()).isEqualTo(Money.of(99999));
+    assertThat(repository.findAllById(List.of(id(30))).getFirst().estimatedValue())
+        .isEqualTo(Money.of(99999));
+  }
+
+  @Test
+  void aSavedNoticeKeepsItsValueInCentsModeBecauseTheTriggerResultIsReadBack() {
+    valueRead.fromCents(true);
+
+    var inserted = repository.save(discovered(snapshot(id(31))));
+    assertThat(inserted.estimatedValue()).isEqualTo(Money.of("1500.50"));
+
+    var loaded = reload(id(31));
+    loaded.applySnapshot(
+        withEstimatedValue(snapshot(id(31)), Money.of("20.25")),
+        clockAt(T0.plus(Duration.ofHours(1))));
+    assertThat(repository.save(loaded).estimatedValue()).isEqualTo(Money.of("20.25"));
+    assertThat(reload(id(31)).estimatedValue()).isEqualTo(Money.of("20.25"));
+  }
+
+  private void withoutCents(ProcurementId id) {
+    jdbc.execute("set local session_replication_role = replica");
+    jdbc.update(
+        "update ingest.procurement set estimated_value_cents = null where numero_controle_pncp = ?",
+        id.value());
+    jdbc.execute("set local session_replication_role = origin");
+  }
+
+  private BigDecimal storedValue(ProcurementId id) {
+    entityManager.flush();
+    return jdbc.queryForObject(
+        "select estimated_value from ingest.procurement where numero_controle_pncp = ?",
+        BigDecimal.class,
+        id.value());
+  }
+
+  @Test
+  void aRowStillWithoutCentsKeepsItsValueWhenAnUpdateIsSavedUnderTheFlag() {
+    repository.save(discovered(snapshot(id(32))));
+    withoutCents(id(32));
+    valueRead.fromCents(true);
+    var loaded = reload(id(32));
+
+    loaded.applySnapshot(
+        snapshot(id(32), 1, "Objeto revisado"), clockAt(T0.plus(Duration.ofHours(1))));
+    repository.save(loaded);
+
+    assertThat(storedValue(id(32))).isEqualByComparingTo("1500.50");
+    assertThat(reload(id(32)).estimatedValue()).isEqualTo(Money.of("1500.50"));
+  }
+
+  @Test
+  void aRowStillWithoutCentsKeepsItsValueWhenItIsClosedUnderTheFlag() {
+    repository.save(discovered(snapshot(id(33))));
+    withoutCents(id(33));
+    valueRead.fromCents(true);
+    var later = T0.plus(Duration.ofDays(6));
+    var candidate = repository.findClosingCandidates(later, 10).getFirst();
+
+    assertThat(candidate.closeIfExpired(clockAt(later))).isPresent();
+    repository.save(candidate);
+
+    assertThat(storedValue(id(33))).isEqualByComparingTo("1500.50");
   }
 }

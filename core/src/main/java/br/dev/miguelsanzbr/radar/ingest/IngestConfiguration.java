@@ -3,14 +3,17 @@ package br.dev.miguelsanzbr.radar.ingest;
 import br.dev.miguelsanzbr.radar.ingest.adapter.in.ops.BackfillProperties;
 import br.dev.miguelsanzbr.radar.ingest.adapter.in.scheduler.IngestScheduleProperties;
 import br.dev.miguelsanzbr.radar.ingest.adapter.in.scheduler.PartitionProperties;
+import br.dev.miguelsanzbr.radar.ingest.adapter.in.scheduler.ValueCentsBackfillProperties;
 import br.dev.miguelsanzbr.radar.ingest.adapter.out.pncp.PncpProperties;
 import br.dev.miguelsanzbr.radar.ingest.application.BackfillUseCase;
 import br.dev.miguelsanzbr.radar.ingest.application.BackfillWindowPolicy;
 import br.dev.miguelsanzbr.radar.ingest.application.CloseExpiredUseCase;
+import br.dev.miguelsanzbr.radar.ingest.application.EstimatedValueCentsBackfill;
 import br.dev.miguelsanzbr.radar.ingest.application.IncrementalSyncUseCase;
 import br.dev.miguelsanzbr.radar.ingest.application.PageFetcher;
 import br.dev.miguelsanzbr.radar.ingest.application.PageProcessor;
 import br.dev.miguelsanzbr.radar.ingest.application.PartitionMaintenance;
+import br.dev.miguelsanzbr.radar.ingest.application.port.EstimatedValueCentsStore;
 import br.dev.miguelsanzbr.radar.ingest.application.port.IngestMetrics;
 import br.dev.miguelsanzbr.radar.ingest.application.port.IngestionCursorRepository;
 import br.dev.miguelsanzbr.radar.ingest.application.port.IngestionRunRepository;
@@ -18,6 +21,7 @@ import br.dev.miguelsanzbr.radar.ingest.application.port.OutboxAppender;
 import br.dev.miguelsanzbr.radar.ingest.application.port.PartitionCatalog;
 import br.dev.miguelsanzbr.radar.ingest.application.port.PncpGateway;
 import br.dev.miguelsanzbr.radar.ingest.application.port.ProcurementRepository;
+import br.dev.miguelsanzbr.radar.ingest.application.port.ValueCentsMetrics;
 import java.time.Clock;
 import java.time.ZoneId;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -31,6 +35,7 @@ import org.springframework.transaction.support.TransactionOperations;
   BackfillProperties.class,
   IngestScheduleProperties.class,
   PartitionProperties.class,
+  ValueCentsBackfillProperties.class,
   IngestFetchProperties.class
 })
 class IngestConfiguration {
@@ -108,5 +113,13 @@ class IngestConfiguration {
   PartitionMaintenance partitionMaintenance(
       PartitionCatalog catalog, Clock clock, PartitionProperties properties) {
     return new PartitionMaintenance(catalog, clock, properties.monthsAhead());
+  }
+
+  @Bean
+  EstimatedValueCentsBackfill estimatedValueCentsBackfill(
+      EstimatedValueCentsStore store,
+      ValueCentsMetrics metrics,
+      ValueCentsBackfillProperties properties) {
+    return new EstimatedValueCentsBackfill(store, metrics, properties.batchSize());
   }
 }

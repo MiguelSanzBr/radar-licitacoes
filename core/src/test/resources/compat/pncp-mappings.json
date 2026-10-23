@@ -1,0 +1,40 @@
+{
+  "mappings": [
+    {
+      "scenarioName": "release anterior",
+      "requiredScenarioState": "Started",
+      "newScenarioState": "segunda leitura",
+      "priority": 1,
+      "request": {
+        "method": "GET",
+        "urlPath": "/api/consulta/v1/contratacoes/atualizacao",
+        "queryParameters": { "pagina": { "equalTo": "1" } }
+      },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/json" },
+        "bodyFileName": "pncp-page-v1.json"
+      }
+    },
+    {
+      "scenarioName": "release anterior",
+      "requiredScenarioState": "segunda leitura",
+      "priority": 1,
+      "request": {
+        "method": "GET",
+        "urlPath": "/api/consulta/v1/contratacoes/atualizacao",
+        "queryParameters": { "pagina": { "equalTo": "1" } }
+      },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/json" },
+        "bodyFileName": "pncp-page-v2.json"
+      }
+    },
+    {
+      "priority": 10,
+      "request": { "method": "GET", "urlPathPattern": "/api/consulta/v1/.*" },
+      "response": { "status": 204 }
+    }
+  ]
+}

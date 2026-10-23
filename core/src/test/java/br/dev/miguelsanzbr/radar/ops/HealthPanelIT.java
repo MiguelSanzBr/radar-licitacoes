@@ -62,7 +62,7 @@ class HealthPanelIT {
         .andExpect(jsonPath("$.cursors[0].modalityId").value(6))
         .andExpect(jsonPath("$.dlq[?(@.topic=='radar.procurement.v1.dlq')].unreprocessed").value(1))
         .andExpect(jsonPath("$.dlq.length()").value(2))
-        .andExpect(jsonPath("$.flags.length()").value(5))
+        .andExpect(jsonPath("$.flags.length()").value(6))
         .andExpect(jsonPath("$.flags[?(@.name=='MAX_SAVED_SEARCHES_LIMIT')].enabled").value(true))
         .andExpect(conforms());
   }

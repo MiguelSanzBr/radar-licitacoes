@@ -1,5 +1,6 @@
 package br.dev.miguelsanzbr.radar.ingest.adapter.out.jpa;
 
+import br.dev.miguelsanzbr.radar.ingest.application.port.FeatureFlags;
 import br.dev.miguelsanzbr.radar.ingest.application.port.ProcurementRepository;
 import br.dev.miguelsanzbr.radar.ingest.domain.Procurement;
 import br.dev.miguelsanzbr.radar.shared.ProcurementId;
@@ -24,11 +25,15 @@ public class JpaProcurementRepository implements ProcurementRepository {
 
   private final ProcurementJpaRepository procurements;
   private final SituationHistoryJpaRepository history;
+  private final FeatureFlags flags;
 
   JpaProcurementRepository(
-      ProcurementJpaRepository procurements, SituationHistoryJpaRepository history) {
+      ProcurementJpaRepository procurements,
+      SituationHistoryJpaRepository history,
+      FeatureFlags flags) {
     this.procurements = procurements;
     this.history = history;
+    this.flags = flags;
   }
 
   @Override
@@ -47,7 +52,9 @@ public class JpaProcurementRepository implements ProcurementRepository {
       var batch = numbers.subList(from, Math.min(from + BATCH_SIZE, numbers.size()));
       found.addAll(
           ProcurementEntityMapper.toDomain(
-              procurements.findByNumeroControlePncpIn(batch), history.findAllOrdered(batch)));
+              procurements.findByNumeroControlePncpIn(batch),
+              history.findAllOrdered(batch),
+              flags.readValueFromCents()));
     }
     return found;
   }
@@ -61,7 +68,8 @@ public class JpaProcurementRepository implements ProcurementRepository {
       return List.of();
     }
     var numbers = found.stream().map(e -> e.numeroControlePncp).toList();
-    return ProcurementEntityMapper.toDomain(found, history.findAllOrdered(numbers));
+    return ProcurementEntityMapper.toDomain(
+        found, history.findAllOrdered(numbers), flags.readValueFromCents());
   }
 
   /**
@@ -84,7 +92,8 @@ public class JpaProcurementRepository implements ProcurementRepository {
             .skip(persisted)
             .map(entry -> ProcurementEntityMapper.toEntity(number, entry))
             .toList());
-    return ProcurementEntityMapper.toDomain(entity, history.findAllOrdered(List.of(number)));
+    return ProcurementEntityMapper.toDomain(
+        entity, history.findAllOrdered(List.of(number)), flags.readValueFromCents());
   }
 
   private ProcurementEntity update(ProcurementEntity entity, Procurement procurement) {

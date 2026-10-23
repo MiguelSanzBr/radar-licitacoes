@@ -93,14 +93,23 @@ final class ProcurementEntityMapper {
 
   /** Restores each entity with its own rows from {@code rows}, which are already in order. */
   static List<Procurement> toDomain(
-      List<ProcurementEntity> entities, List<SituationHistoryEntity> rows) {
+      List<ProcurementEntity> entities, List<SituationHistoryEntity> rows, boolean valueFromCents) {
     var byNumber = rows.stream().collect(Collectors.groupingBy(r -> r.numeroControlePncp));
     return entities.stream()
-        .map(e -> toDomain(e, byNumber.getOrDefault(e.numeroControlePncp, List.of())))
+        .map(
+            e ->
+                toDomain(e, byNumber.getOrDefault(e.numeroControlePncp, List.of()), valueFromCents))
         .toList();
   }
 
-  static Procurement toDomain(ProcurementEntity e, List<SituationHistoryEntity> rows) {
+  /**
+   * {@code valueFromCents} is the READ_VALUE_CENTS switch: the estimated value comes from the cents
+   * column instead of the numeric one (the writes never depend on it, the trigger fills both). A
+   * row the backfill has not reached has no cents and keeps its numeric value: reading it as absent
+   * would make the next save write NULL and the trigger would erase both columns.
+   */
+  static Procurement toDomain(
+      ProcurementEntity e, List<SituationHistoryEntity> rows, boolean valueFromCents) {
     var unit =
         new OrganUnit(
             e.unitCode,
@@ -122,7 +131,9 @@ final class ProcurementEntityMapper {
             mapIfPresent(e.disputeModeId, id -> new DisputeMode(id, e.disputeModeName)),
             mapIfPresent(e.legalBasisId, code -> new LegalBasis(code, e.legalBasisName)),
             e.srp,
-            mapIfPresent(e.estimatedValue, Money::new),
+            valueFromCents && e.estimatedValueCents != null
+                ? Money.of(e.estimatedValueCents)
+                : mapIfPresent(e.estimatedValue, Money::new),
             mapIfPresent(e.awardedValue, Money::new),
             window,
             e.publishedAt,
