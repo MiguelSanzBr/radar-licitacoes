@@ -103,3 +103,18 @@ Durante o replay as consultas veem as tabelas vazias e depois parciais: é uma o
 Por que o tópico e não o outbox: as linhas publicadas do outbox são apagadas depois de 7 dias (`OutboxCleanup`), então só o tópico guarda a história inteira. Exigência derivada: o tópico `radar.procurement.v1` tem `retention.ms=-1` (retenção infinita), configurado no `NewTopic` de `KafkaOutboxConfiguration`. Um tópico com retenção finita tornaria o replay uma reconstrução parcial sem aviso. A DLQ continua com a retenção padrão.
 
 Prova: `ProjectionReplayIT` (50 mil eventos sintéticos: projeta ao vivo, despeja as visões, roda o replay e despeja de novo; iguais, linha a linha por SHA-256, ignorando só as colunas de horário), `JooqProjectionReplayIT` (lote com evento adiado no meio, `reset` preserva outros consumidores) e `docs/benchmarks/replay/`.
+
+## Níveis de isolamento por caminho de escrita
+
+Decisão da PR 2.8, acrescentada a esta ADR porque o que se escolhe é o nível de cada transação que grava no schema que ela define. O padrão da aplicação é **READ COMMITTED**, o do Postgres: nenhuma conexão do Hikari e nenhuma transação sobe o nível por conta própria. Cada caminho de escrita ganha a garantia de outra forma, e três testes com duas transações sincronizadas mostram o que acontece sem ela. Números e montagem: `docs/benchmarks/db/isolation.md`.
+
+| Caminho | Nível | Como a concorrência é resolvida | Por quê |
+|---|---|---|---|
+| `ingest.procurement` (JPA) | READ COMMITTED | trava otimista com `@Version`; conflito vira `OptimisticLockingFailureException` e o chamador relê e reaplica; descoberta concorrente da mesma chave perde na chave primária e vira a mesma exceção | sem a versão, a segunda gravação apaga a primeira (200 de 200 corridas no teste); o conflito só ocorre quando dois fluxos tocam a mesma licitação ao mesmo tempo e relê-lo é barato, então travar a linha com `SELECT ... FOR UPDATE` custaria espera sem ganho |
+| `alerts.alert_delivery` | READ COMMITTED | chave primária `(saved_search_id, procurement_id)` e `INSERT ... ON CONFLICT DO NOTHING` | uma tentativa por escritor, sem falha e sem laço de retry; a alternativa em SERIALIZABLE precisou de 1,6 vezes mais tentativas e de uma pausa aleatória no retry para não esgotá-las, com o mesmo resultado |
+| projeções de `search` (inbox e upsert) | READ COMMITTED | `processed_event ... ON CONFLICT DO NOTHING` e `WHERE source_version <` na mesma transação | a unicidade e a ordem já estão em restrição e em guarda de versão, nada pede nível maior |
+| leitura que combina mais de uma consulta sobre o mesmo agregado (estatísticas) | REPEATABLE READ, só na transação que lê | instantâneo do primeiro comando; não trava quem escreve | sob READ COMMITTED duas leituras do mesmo conjunto deram respostas diferentes (10 linhas e 1000,00, depois 11 e 1150,00); a escolha do projetor de estatísticas fica registrada na PR 2.3 |
+
+Alternativa rejeitada: SERIALIZABLE como nível padrão ou na entrega de alertas. Ele dá a garantia sem pedir restrição, mas cobra com falhas `40001` certas sob sobreposição (um escritor recusado em todas as 200 corridas) e exige retry com pausa; onde a unicidade cabe em uma restrição, a restrição é mais barata e mais simples. O nível fica reservado para regras que uma restrição não expressa.
+
+Prova: `LostUpdateIT`, `NonRepeatableReadIT` e `SerializableDeliveryIT`, e `docs/benchmarks/db/isolation.md`.
