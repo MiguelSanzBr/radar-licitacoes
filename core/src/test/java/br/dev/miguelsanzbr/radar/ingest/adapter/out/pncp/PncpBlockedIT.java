@@ -7,6 +7,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.awaitility.Awaitility.await;
 
 import br.dev.miguelsanzbr.radar.MutableClock;
 import br.dev.miguelsanzbr.radar.ingest.application.port.PncpBlockedException;
@@ -127,6 +128,9 @@ class PncpBlockedIT {
         .isInstanceOf(PncpUnavailableException.class)
         .isNotInstanceOf(PncpBlockedException.class);
 
-    assertThat(wm.getAllServeEvents()).hasSize(3);
+    // the stub logs a request only after its 3 s delay, so the last attempt can still be pending
+    await()
+        .atMost(Duration.ofSeconds(10))
+        .untilAsserted(() -> assertThat(wm.getAllServeEvents()).hasSize(3));
   }
 }
