@@ -7,7 +7,8 @@
 
 * `b.d.m.r.i.IngestFetchProperties`
 |Bean references
-|* `b.d.m.r.o.OutboxWriter` (in Outbox)
+|* `b.d.m.r.o.Flags` (in Ops)
+* `b.d.m.r.o.OutboxWriter` (in Outbox)
 |Events listened to
 |* `org.springframework.boot.context.event.ApplicationReadyEvent` 
 |===

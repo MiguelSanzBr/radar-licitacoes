@@ -37,7 +37,6 @@ class BackfillController {
     this.clock = clock;
   }
 
-  // shortcut: unsecured until PR 5.1 adds the operator role
   @PostMapping("/backfill")
   ResponseEntity<Object> backfill(
       @RequestParam @DateTimeFormat(iso = ISO.DATE) LocalDate from,

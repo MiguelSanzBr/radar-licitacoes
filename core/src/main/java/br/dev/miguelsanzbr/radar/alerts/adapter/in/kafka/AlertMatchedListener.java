@@ -5,6 +5,7 @@ import br.dev.miguelsanzbr.radar.alerts.application.SendInstantAlertUseCase;
 import br.dev.miguelsanzbr.radar.alerts.application.port.NotifierMetrics;
 import br.dev.miguelsanzbr.radar.alerts.domain.Frequency;
 import br.dev.miguelsanzbr.radar.observability.TraceparentExtractor;
+import br.dev.miguelsanzbr.radar.ops.DeadLetters;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Duration;
@@ -63,7 +64,9 @@ class AlertMatchedListener {
   public void onMessage(ConsumerRecord<String, String> record) {
     var event = parse(record.value());
     // why: a backlog read after an outage or a replay must not turn old matches into fresh mail
-    if (event.occurredAt().isBefore(clock.instant().minus(maxEventAge))) {
+    // an alert the operator put back from the dead letters is old by definition and is wanted
+    if (!DeadLetters.reprocessed(record)
+        && event.occurredAt().isBefore(clock.instant().minus(maxEventAge))) {
       metrics.staleSkipped();
       return;
     }

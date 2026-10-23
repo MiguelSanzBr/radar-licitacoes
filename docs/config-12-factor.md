@@ -1,6 +1,6 @@
 # Configuração 12-factor
 
-Regra (fator III do 12-factor): tudo que varia por ambiente vem do ambiente, e nenhum segredo vive no repositório. As flags de operação (Togglz) e o ADR-0021 chegam no PR 4.3 e vão apontar para este arquivo.
+Regra (fator III do 12-factor): tudo que varia por ambiente vem do ambiente, e nenhum segredo vive no repositório. As flags de funcionalidade (Togglz) e a fronteira entre flag e configuração estão no [ADR-0021](adr/0021-feature-flags-togglz.md), que aponta para este arquivo.
 
 ## Como a configuração chega
 
@@ -29,6 +29,8 @@ Auditoria de `core/src/main/resources/application*.properties`, de `infra/compos
 | PNCP | `RADAR_PNCP_BASE_URL`, `RADAR_PNCP_REQUESTS_PER_SECOND` | `https://pncp.gov.br`, 1 req/s | não |
 | Telemetria | `OTEL_EXPORTER_OTLP_ENDPOINT`, `MANAGEMENT_OTLP_METRICS_EXPORT_*`, `MANAGEMENT_TRACING_SAMPLING_PROBABILITY` | `http://localhost:4318`, amostragem 1.0 | não |
 | Coleta, partições, alertas, outbox, projetor | `RADAR_INGEST_*`, `RADAR_ALERTS_*`, `RADAR_OUTBOX_*`, `RADAR_SEARCH_PROJECTOR_*` | padrões das ADRs 0006, 0015 e 0018 | não |
+| Estado inicial das flags (Togglz) | `RADAR_INGEST_INCREMENTAL_ENABLED`, `RADAR_INGEST_CLOSE_EXPIRED_ENABLED`, `RADAR_INGEST_BACKFILL_SCHEDULED_ENABLED`, `RADAR_ALERTS_DIGEST_ENABLED` | ligadas só a coleta incremental, o fechamento e o resumo; `MAX_SAVED_SEARCHES_LIMIT` nasce ligada | não |
+| Painel de operação e DLQ | `RADAR_OPS_CONSUMER_GROUPS`, `RADAR_OPS_KAFKA_TIMEOUT`, `RADAR_OPS_REPUBLISH_TIMEOUT`, `RADAR_OPS_DLQ_RECORDER_ENABLED` | grupos `search-projector`, `alerts-matcher`, `alerts-notifier`, `ops-dlq-recorder`; 5 s; 10 s; ligado | não |
 
 ## Achados
 

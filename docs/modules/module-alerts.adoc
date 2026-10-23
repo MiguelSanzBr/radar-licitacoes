@@ -4,6 +4,7 @@
 |`br.dev.miguelsanzbr.radar.alerts`
 |Bean references
 |* `b.d.m.r.o.TraceparentExtractor` (in Observability)
+* `b.d.m.r.o.Flags` (in Ops)
 * `b.d.m.r.o.OutboxWriter` (in Outbox)
 * `b.d.m.r.s.UuidV7` (in Shared)
 |===

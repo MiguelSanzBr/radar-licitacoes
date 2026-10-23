@@ -3,12 +3,13 @@ package br.dev.miguelsanzbr.radar.ingest.adapter.in.ops;
 import br.dev.miguelsanzbr.radar.ingest.application.BackfillUseCase;
 import br.dev.miguelsanzbr.radar.ingest.application.BackfillWindowBusyException;
 import br.dev.miguelsanzbr.radar.ingest.application.BackfillWindowPolicy;
+import br.dev.miguelsanzbr.radar.ops.Flag;
+import br.dev.miguelsanzbr.radar.ops.Flags;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -21,7 +22,6 @@ import org.springframework.stereotype.Component;
  * moves, move the cron with it, or the window check will skip every run.
  */
 @Component
-@ConditionalOnProperty(name = "radar.ingest.backfill.scheduled-enabled", havingValue = "true")
 class ScheduledBackfill {
 
   private static final Logger LOG = LoggerFactory.getLogger(ScheduledBackfill.class);
@@ -31,22 +31,34 @@ class ScheduledBackfill {
   private final BackfillWindowPolicy policy;
   private final BackfillProperties properties;
   private final Clock clock;
+  private final Flags flags;
 
   ScheduledBackfill(
       BackfillUseCase useCase,
       BackfillWindowPolicy policy,
       BackfillProperties properties,
-      Clock clock) {
+      Clock clock,
+      Flags flags) {
     this.useCase = useCase;
     this.policy = policy;
     this.properties = properties;
     this.clock = clock;
+    this.flags = flags;
   }
 
   @Scheduled(
       cron = "${radar.ingest.backfill.scheduled-cron:0 5 0 * * *}",
       zone = "America/Sao_Paulo")
   void run() {
+    if (!flags.isActive(Flag.BACKFILL_SCHEDULED)) {
+      return;
+    }
+    // the flag can be switched on later without the starting day the property check asks for
+    if (properties.scheduledFrom() == null) {
+      LOG.warn(
+          "scheduled backfill is on but radar.ingest.backfill.scheduled-from is not set, nothing runs");
+      return;
+    }
     var yesterday = LocalDate.now(clock.withZone(ZONE)).minusDays(1);
     var modality = properties.scheduledModality();
     for (var day = properties.scheduledFrom(); !day.isAfter(yesterday); day = day.plusDays(1)) {

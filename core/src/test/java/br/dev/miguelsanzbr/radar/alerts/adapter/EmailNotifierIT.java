@@ -232,10 +232,10 @@ class EmailNotifierIT {
       assertThat(record.get().value()).contains(search.toString());
       assertThat(
               new String(
-                  record.get().headers().lastHeader("kafka_dlt-exception-cause-fqcn").value(),
+                  record.get().headers().lastHeader("x-error-class").value(),
                   StandardCharsets.UTF_8))
           .contains("MailDeliveryException");
-      assertThat(record.get().headers().lastHeader("kafka_dlt-original-topic")).isNotNull();
+      assertThat(record.get().headers().lastHeader("x-original-topic")).isNotNull();
     } finally {
       sender.setPort(workingPort);
     }

@@ -4,12 +4,14 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import br.dev.miguelsanzbr.radar.ingest.application.IncrementalSyncUseCase;
 import br.dev.miguelsanzbr.radar.ingest.application.port.PncpUnavailableException;
 import br.dev.miguelsanzbr.radar.ingest.domain.IngestionKind;
 import br.dev.miguelsanzbr.radar.ingest.domain.IngestionRun;
+import br.dev.miguelsanzbr.radar.ops.Flag;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -24,8 +26,10 @@ class ScheduledIncrementalSyncTest {
   private final IngestScheduleProperties properties =
       new IngestScheduleProperties(
           List.of(6, 12), new IngestScheduleProperties.Incremental(Duration.ZERO, Duration.ZERO));
+  private boolean on = true;
   private final ScheduledIncrementalSync scheduled =
-      new ScheduledIncrementalSync(useCase, properties);
+      new ScheduledIncrementalSync(
+          useCase, properties, flag -> flag == Flag.INCREMENTAL_SYNC && on);
 
   private static IngestionRun run() {
     var now = Instant.parse("2026-10-22T12:00:00Z");
@@ -45,6 +49,15 @@ class ScheduledIncrementalSyncTest {
     var order = inOrder(useCase);
     order.verify(useCase).sync(6);
     order.verify(useCase).sync(12);
+  }
+
+  @Test
+  void whileTheFlagIsOffNothingIsSynced() {
+    on = false;
+
+    scheduled.run();
+
+    verifyNoInteractions(useCase);
   }
 
   @Test

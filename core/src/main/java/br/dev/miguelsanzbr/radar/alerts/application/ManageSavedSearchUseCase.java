@@ -1,5 +1,6 @@
 package br.dev.miguelsanzbr.radar.alerts.application;
 
+import br.dev.miguelsanzbr.radar.alerts.application.port.FeatureFlags;
 import br.dev.miguelsanzbr.radar.alerts.application.port.SavedSearchRepository;
 import br.dev.miguelsanzbr.radar.alerts.application.port.SubscriberRepository;
 import br.dev.miguelsanzbr.radar.alerts.application.port.UnitOfWork;
@@ -17,6 +18,7 @@ public class ManageSavedSearchUseCase {
   private final SubscriberRepository subscribers;
   private final SavedSearchRepository searches;
   private final SavedSearchLimit limit;
+  private final FeatureFlags flags;
   private final UnitOfWork unitOfWork;
   private final Clock clock;
   private final UuidV7 ids;
@@ -25,12 +27,14 @@ public class ManageSavedSearchUseCase {
       SubscriberRepository subscribers,
       SavedSearchRepository searches,
       SavedSearchLimit limit,
+      FeatureFlags flags,
       UnitOfWork unitOfWork,
       Clock clock,
       UuidV7 ids) {
     this.subscribers = subscribers;
     this.searches = searches;
     this.limit = limit;
+    this.flags = flags;
     this.unitOfWork = unitOfWork;
     this.clock = clock;
     this.ids = ids;
@@ -41,7 +45,9 @@ public class ManageSavedSearchUseCase {
         () -> {
           // The row lock serializes concurrent creates, so the limit cannot be overshot.
           var owner = subscribers.lockById(subscriberId).orElseThrow(UnauthenticatedException::new);
-          limit.check(searches.countActive(subscriberId));
+          if (flags.savedSearchLimitEnforced()) {
+            limit.check(searches.countActive(subscriberId));
+          }
           var search = SavedSearch.create(owner, name, query, frequency, clock, ids);
           searches.save(search);
           return search;

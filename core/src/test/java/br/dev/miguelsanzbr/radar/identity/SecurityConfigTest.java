@@ -64,6 +64,8 @@ class SecurityConfigTest {
       "/api/v1/me",
       "/api/v1/unknown",
       "/ops/probe",
+      "/ops/painel",
+      "/ops/togglz/probe",
       "/actuator/probe",
       "/buscas/probe",
       "/pagina"
@@ -227,6 +229,34 @@ class SecurityConfigTest {
         .andExpect(status().isFound())
         .andExpect(header().string("Location", "/oauth2/authorization/keycloak"));
     mvc.perform(get("/buscas/probe").with(Auth.webOperator())).andExpect(status().isForbidden());
+  }
+
+  /** The panel and the flag console are pages: they log in through the browser session. */
+  @Test
+  void theOpsPagesLogInThroughTheBrowserSessionAndNeedTheOperatorRole() throws Exception {
+    for (var path : List.of("/ops/painel", "/ops/togglz/probe")) {
+      mvc.perform(get(path))
+          .andExpect(status().isFound())
+          .andExpect(header().string("Location", "/oauth2/authorization/keycloak"));
+      mvc.perform(get(path).with(Auth.webSupplier("kc-1", "a@example.com")))
+          .andExpect(status().isForbidden());
+      mvc.perform(get(path).with(Auth.webOperator())).andExpect(status().isOk());
+    }
+  }
+
+  @Test
+  void theConsoleAndThePanelBothRequireTheSessionCsrfToken() throws Exception {
+    var cookie = mvc.perform(get("/pagina")).andReturn().getResponse().getCookie("XSRF-TOKEN");
+
+    for (var path : List.of("/ops/togglz/probe", "/ops/painel")) {
+      mvc.perform(post(path).with(Auth.webOperator())).andExpect(status().isForbidden());
+      mvc.perform(
+              post(path)
+                  .with(Auth.webOperator())
+                  .cookie(cookie)
+                  .header("X-XSRF-TOKEN", cookie.getValue()))
+          .andExpect(status().isOk());
+    }
   }
 
   @Test

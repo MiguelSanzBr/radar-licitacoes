@@ -182,6 +182,36 @@ class AlertMatchedListenerTest {
   }
 
   @Test
+  void anOldEventTheOperatorPutBackFromTheDeadLettersIsHandledNotSkipped() {
+    var stale = Facts.NOW.minus(Duration.ofDays(3));
+    var record =
+        record(AlertEnvelopes.node(UUID.randomUUID(), alert(Frequency.INSTANT), TRACE, stale));
+    record
+        .headers()
+        .add("x-reprocessed-from", "dlq".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+
+    listener.onMessage(record);
+
+    verify(instant).send(any(), any());
+    assertThat(metrics.stale).isZero();
+  }
+
+  @Test
+  void aReprocessMarkerOtherThanTheDeadLettersDoesNotLiftTheAgeLimit() {
+    var stale = Facts.NOW.minus(Duration.ofDays(3));
+    var record =
+        record(AlertEnvelopes.node(UUID.randomUUID(), alert(Frequency.INSTANT), TRACE, stale));
+    record
+        .headers()
+        .add("x-reprocessed-from", "elsewhere".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+
+    listener.onMessage(record);
+
+    verifyNoInteractions(instant, digest);
+    assertThat(metrics.stale).isEqualTo(1);
+  }
+
+  @Test
   void anEventExactlyAtTheMaximumAgeIsStillHandled() {
     var edge = Facts.NOW.minus(Duration.ofDays(1));
 

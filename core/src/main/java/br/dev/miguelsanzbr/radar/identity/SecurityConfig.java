@@ -29,12 +29,20 @@ import org.springframework.security.oauth2.jwt.JwtIssuerValidator;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy;
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
+import org.springframework.security.web.util.matcher.AndRequestMatcher;
+import org.springframework.security.web.util.matcher.NegatedRequestMatcher;
+import org.springframework.security.web.util.matcher.OrRequestMatcher;
+import org.springframework.security.web.util.matcher.RequestMatcher;
 
 /**
  * Two chains. The API ({@code /api}, {@code /ops}, {@code /actuator}) is a stateless JWT resource
  * server without CSRF that answers 401/403 as problem+json. The pages log in through OIDC, keep a
  * session and require the CSRF token, which scripts read from the {@code XSRF-TOKEN} cookie and
  * send back in {@code X-XSRF-TOKEN}. Roles come from the Keycloak claim {@code realm_access.roles}.
+ * The two operator pages under {@code /ops} (the panel and the Togglz console) are pages: they sit
+ * in the second chain, for the operator only. The console forms carry the session CSRF token (the
+ * Togglz Spring Security module adds it) and the console also checks its own.
  */
 @Configuration(proxyBeanMethods = false)
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
@@ -44,12 +52,27 @@ public class SecurityConfig {
       "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:;"
           + " frame-ancestors 'none'; base-uri 'self'; form-action 'self'";
 
+  private static final String[] OPS_PAGES = {"/ops/painel", "/ops/togglz/**"};
+
+  /** {@code /api}, {@code /ops} and {@code /actuator}, except the two operator pages. */
+  private static RequestMatcher apiPaths() {
+    var matcher = PathPatternRequestMatcher.withDefaults();
+    return new AndRequestMatcher(
+        new OrRequestMatcher(
+            matcher.matcher("/api/**"),
+            matcher.matcher("/ops/**"),
+            matcher.matcher("/actuator/**")),
+        new NegatedRequestMatcher(
+            new OrRequestMatcher(
+                matcher.matcher("/ops/painel"), matcher.matcher("/ops/togglz/**"))));
+  }
+
   @Bean
   @Order(1)
   SecurityFilterChain apiChain(HttpSecurity http) {
     var roles = new JwtAuthenticationConverter();
     roles.setJwtGrantedAuthoritiesConverter(SecurityConfig::realmRoles);
-    return http.securityMatcher("/api/**", "/ops/**", "/actuator/**")
+    return http.securityMatcher(apiPaths())
         .authorizeHttpRequests(
             requests ->
                 requests
@@ -101,6 +124,8 @@ public class SecurityConfig {
                     .permitAll()
                     .requestMatchers("/assinatura", "/buscas/**")
                     .hasRole("supplier")
+                    .requestMatchers(OPS_PAGES)
+                    .hasRole("operator")
                     .requestMatchers(HttpMethod.GET, "/**")
                     .permitAll()
                     .anyRequest()

@@ -1,5 +1,6 @@
 package br.dev.miguelsanzbr.radar.ingest.adapter.in.ops;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.doThrow;
@@ -7,11 +8,13 @@ import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import br.dev.miguelsanzbr.radar.ingest.application.BackfillUseCase;
 import br.dev.miguelsanzbr.radar.ingest.application.BackfillWindowBusyException;
 import br.dev.miguelsanzbr.radar.ingest.application.BackfillWindowPolicy;
+import br.dev.miguelsanzbr.radar.ops.Flag;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -21,7 +24,11 @@ import java.time.ZoneOffset;
 import java.util.ArrayDeque;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 
+@ExtendWith(OutputCaptureExtension.class)
 class ScheduledBackfillTest {
 
   private static final LocalDate D19 = LocalDate.of(2026, 10, 19);
@@ -61,8 +68,12 @@ class ScheduledBackfillTest {
     };
   }
 
+  private boolean on = true;
+  private BackfillProperties configured = properties;
+
   private ScheduledBackfill at(Clock clock) {
-    return new ScheduledBackfill(useCase, policy, properties, clock);
+    return new ScheduledBackfill(
+        useCase, policy, configured, clock, flag -> flag == Flag.BACKFILL_SCHEDULED && on);
   }
 
   private ScheduledBackfill at(String instant) {
@@ -131,5 +142,34 @@ class ScheduledBackfillTest {
     at("2026-10-22T05:00:00Z").run();
 
     verify(useCase).run(D21, D21, 12);
+  }
+
+  @Test
+  void whileTheFlagIsOffNothingRuns() {
+    on = false;
+
+    at("2026-10-22T05:00:00Z").run();
+
+    verifyNoInteractions(useCase);
+  }
+
+  @Test
+  void switchedOnWithoutAStartingDayNothingRunsAndTheOperatorIsWarnedOnce(CapturedOutput output) {
+    configured = new BackfillProperties(LocalTime.of(0, 0), LocalTime.of(6, 0), false, null, 12);
+
+    at("2026-10-22T05:00:00Z").run();
+
+    verifyNoInteractions(useCase);
+    assertThat(output.getAll()).containsOnlyOnce("radar.ingest.backfill.scheduled-from");
+  }
+
+  @Test
+  void withTheFlagOffAndNoStartingDayThereIsNoWarning(CapturedOutput output) {
+    on = false;
+    configured = new BackfillProperties(LocalTime.of(0, 0), LocalTime.of(6, 0), false, null, 12);
+
+    at("2026-10-22T05:00:00Z").run();
+
+    assertThat(output.getAll()).doesNotContain("radar.ingest.backfill.scheduled-from");
   }
 }

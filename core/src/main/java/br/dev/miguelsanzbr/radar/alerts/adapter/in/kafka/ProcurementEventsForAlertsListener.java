@@ -2,6 +2,9 @@ package br.dev.miguelsanzbr.radar.alerts.adapter.in.kafka;
 
 import br.dev.miguelsanzbr.radar.alerts.application.MatchProcurementUseCase;
 import br.dev.miguelsanzbr.radar.observability.TraceparentExtractor;
+import br.dev.miguelsanzbr.radar.ops.DeadLetters;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Duration;
@@ -31,16 +34,23 @@ class ProcurementEventsForAlertsListener {
   private final MatchProcurementUseCase useCase;
   private final TraceparentExtractor traces;
   private final Clock clock;
+  private final Counter staleSkipped;
   private final Duration maxEventAge;
 
   ProcurementEventsForAlertsListener(
       MatchProcurementUseCase useCase,
       TraceparentExtractor traces,
       Clock clock,
+      MeterRegistry registry,
       @Value("${radar.alerts.max-event-age:P1D}") Duration maxEventAge) {
     this.useCase = useCase;
     this.traces = traces;
     this.clock = clock;
+    this.staleSkipped =
+        Counter.builder("alerts_stale_events_skipped_total")
+            .description(
+                "Procurement events the matcher skipped for being older than the maximum age")
+            .register(registry);
     this.maxEventAge = maxEventAge;
   }
 
@@ -71,7 +81,10 @@ class ProcurementEventsForAlertsListener {
    */
   private void match(
       ConsumerRecord<String, String> record, ProcurementEnvelope event, Runnable work) {
-    if (event.occurredAt().isBefore(clock.instant().minus(maxEventAge))) {
+    // an event the operator put back from the dead letters is old by definition and is wanted
+    if (!DeadLetters.reprocessed(record)
+        && event.occurredAt().isBefore(clock.instant().minus(maxEventAge))) {
+      staleSkipped.increment();
       return;
     }
     // why: the container's observation does not restore the trace of the producer; the Kafka header

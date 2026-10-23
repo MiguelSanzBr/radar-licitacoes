@@ -10,6 +10,7 @@ import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.DataAccessResourceFailureException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.kafka.listener.DefaultErrorHandler;
 import org.springframework.kafka.listener.ListenerExecutionFailedException;
 import org.springframework.kafka.listener.MessageListenerContainer;
@@ -100,10 +101,17 @@ class NotifierKafkaConfigurationTest {
   }
 
   @Test
-  void theDeadLetterTopicIsTheAlertTopicWithTheDlqSuffixOnAnyPartition() {
-    var target = NotifierKafkaConfiguration.deadLetterTopic(RECORD, new IllegalStateException());
+  void badDataTheDatabaseRejectsIsRetriedThenDeadLettered() {
+    var recovered = new ArrayList<Exception>();
+    var handler =
+        NotifierKafkaConfiguration.errorHandler((record, e) -> recovered.add(e), 1L, 3, 5_000L);
+    var results = new ArrayList<Boolean>();
 
-    assertThat(target.topic()).isEqualTo("radar.alert.v1.dlq");
-    assertThat(target.partition()).isNegative();
+    for (var attempt = 0; attempt < 4; attempt++) {
+      results.add(recover(handler, wrapped(new DataIntegrityViolationException("too long"))));
+    }
+
+    assertThat(results).containsExactly(false, false, false, true);
+    assertThat(recovered).hasSize(1);
   }
 }

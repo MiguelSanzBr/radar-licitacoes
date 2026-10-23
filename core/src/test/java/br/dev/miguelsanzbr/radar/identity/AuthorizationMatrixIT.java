@@ -108,6 +108,8 @@ class AuthorizationMatrixIT extends PostgresIT {
           new Route("GET", "/actuator/info", Caller.VISITOR, false),
           new Route("GET", "/actuator/metrics", Caller.OPERATOR, false),
           new Route("GET", "/actuator/prometheus", Caller.OPERATOR, false),
+          new Route("GET", "/ops/painel", Caller.OPERATOR, true),
+          new Route("GET", "/ops/togglz/index", Caller.OPERATOR, true),
           new Route("GET", "/privacidade", Caller.VISITOR, true),
           new Route("GET", "/assinatura/confirmar", Caller.VISITOR, true),
           new Route("GET", "/assinatura", Caller.SUPPLIER, true),

@@ -30,6 +30,15 @@
     <Package name="br.dev.miguelsanzbr.radar.search.application"/>
     <Bug pattern="EI_EXPOSE_REP2"/>
   </Match>
+  <!-- HealthPanel copia as listas no construtor (imutaveis); DeadLetters guarda o MeterRegistry injetado (colaborador compartilhado). -->
+  <Match>
+    <Class name="br.dev.miguelsanzbr.radar.ops.domain.HealthPanel"/>
+    <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+  </Match>
+  <Match>
+    <Class name="br.dev.miguelsanzbr.radar.ops.DeadLetters"/>
+    <Bug pattern="EI_EXPOSE_REP2"/>
+  </Match>
   <!-- O valor devolvido no cabecalho so passa se casar com [A-Za-z0-9._-]{1,64}; o analisador nao enxerga o regex. -->
   <Match>
     <Class name="br.dev.miguelsanzbr.radar.observability.CorrelationIdFilter"/>

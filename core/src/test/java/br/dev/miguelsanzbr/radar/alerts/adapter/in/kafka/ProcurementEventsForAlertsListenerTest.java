@@ -13,6 +13,7 @@ import br.dev.miguelsanzbr.radar.alerts.domain.ProcurementFacts;
 import br.dev.miguelsanzbr.radar.ingest.adapter.out.outbox.EventSchemas;
 import br.dev.miguelsanzbr.radar.observability.TraceparentExtractor;
 import com.networknt.schema.InputFormat;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.micrometer.tracing.Tracer;
 import io.micrometer.tracing.propagation.Propagator;
 import java.time.Clock;
@@ -34,6 +35,7 @@ class ProcurementEventsForAlertsListenerTest {
   private static final String TRACE = "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01";
 
   private final MatchProcurementUseCase useCase = mock(MatchProcurementUseCase.class);
+  private final SimpleMeterRegistry registry = new SimpleMeterRegistry();
   private final List<String> traces = new ArrayList<>();
   private final List<String> spans = new ArrayList<>();
   private final List<String> closed = new ArrayList<>();
@@ -50,6 +52,7 @@ class ProcurementEventsForAlertsListenerTest {
             }
           },
           Clock.fixed(Facts.NOW, ZoneOffset.UTC),
+          registry,
           Duration.ofDays(1));
 
   private static ConsumerRecord<String, String> record(String value) {
@@ -311,6 +314,27 @@ class ProcurementEventsForAlertsListenerTest {
 
     verifyNoInteractions(useCase);
     assertThat(traces).isEmpty();
+    assertThat(registry.get("alerts_stale_events_skipped_total").counter().count()).isEqualTo(2);
+  }
+
+  @Test
+  void theStaleCounterExistsFromTheStart() {
+    assertThat(registry.get("alerts_stale_events_skipped_total").counter().count()).isZero();
+  }
+
+  @Test
+  void anOldEventTheOperatorPutBackFromTheDeadLettersIsMatchedNotSkipped() {
+    var id = UUID.randomUUID();
+    var old = Facts.NOW.minus(Duration.ofDays(3));
+    var record = record(occurringAt(discovered(id, snapshot(), null), old));
+    record
+        .headers()
+        .add("x-reprocessed-from", "dlq".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+
+    listener.onMessage(record);
+
+    verify(useCase).onDiscovered(id, Facts.procurement().build());
+    assertThat(registry.get("alerts_stale_events_skipped_total").counter().count()).isZero();
   }
 
   @Test

@@ -57,7 +57,7 @@ Métricas por tarefa (nomes fixos, os mesmos dos dashboards):
 |---|---|---|
 | `pncp_items_fetched_total` | 1.4 | existe |
 | `outbox_pending`, `outbox_oldest_age_seconds`, `outbox_poison_pending`, `outbox_poison_total` | 1.6 | existe |
-| `dlq_messages_total{topic}` | 4.1 registra em zero para os tópicos `.dlq`; 4.3 incrementa | registrada |
+| `dlq_messages_total{topic}` | 4.1 registra em zero para os tópicos `.dlq`; 4.3 incrementa a cada registro enviado à DLQ | existe |
 | `http_server_requests_seconds_*` (buckets 50 ms, 200 ms, 500 ms) | 4.1 | existe |
 | `projection_lag_seconds` | 1.9 | pendente |
 | `kafka_consumer_lag` | 1.9 | pendente |

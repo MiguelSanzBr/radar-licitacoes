@@ -37,12 +37,13 @@ class ManageSavedSearchUseCaseTest {
   @Mock SavedSearchRepository searches;
 
   ManageSavedSearchUseCase useCase;
+  boolean limited = true;
 
   @BeforeEach
   void setUp() {
     useCase =
         new ManageSavedSearchUseCase(
-            subscribers, searches, new SavedSearchLimit(20), DIRECT, CLOCK, IDS);
+            subscribers, searches, new SavedSearchLimit(20), () -> limited, DIRECT, CLOCK, IDS);
   }
 
   @Test
@@ -68,6 +69,18 @@ class ManageSavedSearchUseCaseTest {
         .isInstanceOf(SavedSearchLimitExceededException.class);
 
     verify(searches, never()).save(any());
+  }
+
+  @Test
+  void withTheLimitFlagOffTheLimitIsNotEnforced() {
+    limited = false;
+    var owner = Fixtures.subscriber();
+    when(subscribers.lockById(owner.id())).thenReturn(Optional.of(owner));
+
+    var created = useCase.create(owner.id(), "x", QUERY, Frequency.DAILY);
+
+    verify(searches).save(created);
+    verify(searches, never()).countActive(any());
   }
 
   @Test

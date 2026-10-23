@@ -14,6 +14,7 @@ import br.dev.miguelsanzbr.radar.alerts.application.port.AlertDeliveries;
 import br.dev.miguelsanzbr.radar.alerts.application.port.AlertEvents;
 import br.dev.miguelsanzbr.radar.alerts.application.port.AlertMailer;
 import br.dev.miguelsanzbr.radar.alerts.application.port.DeliveryLog;
+import br.dev.miguelsanzbr.radar.alerts.application.port.FeatureFlags;
 import br.dev.miguelsanzbr.radar.alerts.application.port.IdempotencyStore;
 import br.dev.miguelsanzbr.radar.alerts.application.port.MatcherMetrics;
 import br.dev.miguelsanzbr.radar.alerts.application.port.NotifierMetrics;
@@ -80,10 +81,12 @@ class AlertsConfig {
       SubscriberRepository subscribers,
       SavedSearchRepository searches,
       SavedSearchLimit limit,
+      FeatureFlags flags,
       UnitOfWork unitOfWork,
       Clock clock,
       UuidV7 ids) {
-    return new ManageSavedSearchUseCase(subscribers, searches, limit, unitOfWork, clock, ids);
+    return new ManageSavedSearchUseCase(
+        subscribers, searches, limit, flags, unitOfWork, clock, ids);
   }
 
   @Bean

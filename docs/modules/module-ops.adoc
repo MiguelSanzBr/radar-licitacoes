@@ -1,0 +1,8 @@
+[%autowidth.stretch, cols="h,a"]
+|===
+|Base package
+|`br.dev.miguelsanzbr.radar.ops`
+|Spring components
+|* `b.d.m.r.o.DeadLetters`
+* `b.d.m.r.o.Flags`, `b.d.m.r.o.application.port.FlagStates` (via `b.d.m.r.o.adapter.out.togglz.TogglzFlags`)
+|===

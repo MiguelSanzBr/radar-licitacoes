@@ -24,9 +24,9 @@ System_Boundary("RadarApplication_boundary", "RadarApplication", $tags="") {
 
 }
 
+Rel(RadarApplication.RadarApplication.Observability, RadarApplication.RadarApplication.Shared, "uses", $techn="", $tags="", $link="")
 Rel(RadarApplication.RadarApplication.Outbox, RadarApplication.RadarApplication.Shared, "uses", $techn="", $tags="", $link="")
 Rel(RadarApplication.RadarApplication.Outbox, RadarApplication.RadarApplication.Observability, "uses", $techn="", $tags="", $link="")
-Rel(RadarApplication.RadarApplication.Observability, RadarApplication.RadarApplication.Shared, "uses", $techn="", $tags="", $link="")
 
 SHOW_LEGEND(true)
 hide stereotypes

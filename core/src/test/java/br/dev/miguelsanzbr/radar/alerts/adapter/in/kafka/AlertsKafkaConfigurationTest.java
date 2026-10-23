@@ -1,7 +1,6 @@
 package br.dev.miguelsanzbr.radar.alerts.adapter.in.kafka;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.Mockito.mock;
 
 import java.util.ArrayList;
@@ -14,6 +13,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.dao.DataAccessResourceFailureException;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.QueryTimeoutException;
 import org.springframework.kafka.listener.ListenerExecutionFailedException;
 import org.springframework.kafka.listener.MessageListenerContainer;
 import org.springframework.transaction.CannotCreateTransactionException;
@@ -34,6 +35,7 @@ class AlertsKafkaConfigurationTest {
     return Stream.of(
         Arguments.of("data access", outage),
         Arguments.of("data access in the cause chain", wrapped(outage)),
+        Arguments.of("transient data access", new QueryTimeoutException("slow")),
         Arguments.of(
             "transaction", wrapped(new CannotCreateTransactionException("no connection"))));
   }
@@ -41,6 +43,7 @@ class AlertsKafkaConfigurationTest {
   static Stream<Arguments> otherFailures() {
     return Stream.of(
         Arguments.of("illegal state", new IllegalStateException("odd")),
+        Arguments.of("value too long", wrapped(new DataIntegrityViolationException("too long"))),
         Arguments.of("runtime in a wrapper", wrapped(new UnsupportedOperationException("x"))));
   }
 
@@ -86,10 +89,22 @@ class AlertsKafkaConfigurationTest {
   }
 
   @Test
-  void aSkippedRecordIsLoggedWithoutThrowing() {
-    assertThatCode(
-            () ->
-                AlertsKafkaConfiguration.logAndSkip(RECORD, new IllegalArgumentException("poison")))
-        .doesNotThrowAnyException();
+  void badDataTheDatabaseRejectsGoesToTheDeadLettersAfterTheRetries() {
+    var recovered = new ArrayList<Exception>();
+    var handler =
+        AlertsKafkaConfiguration.errorHandler((record, e) -> recovered.add(e), 1L, 3L, 5_000L);
+    var results = new ArrayList<Boolean>();
+
+    for (var attempt = 0; attempt < 4; attempt++) {
+      results.add(
+          handler.handleOne(
+              wrapped(new DataIntegrityViolationException("too long")),
+              RECORD,
+              mock(Consumer.class),
+              mock(MessageListenerContainer.class)));
+    }
+
+    assertThat(results).containsExactly(false, false, false, true);
+    assertThat(recovered).hasSize(1);
   }
 }

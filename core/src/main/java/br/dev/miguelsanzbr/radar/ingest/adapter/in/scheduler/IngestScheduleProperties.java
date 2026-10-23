@@ -7,8 +7,8 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
 
 /**
  * The modalities to keep in sync and the incremental window. {@code
- * radar.ingest.incremental.enabled}, {@code .interval} and {@code
- * radar.ingest.close-expired.enabled}, {@code .interval} are read by the schedulers themselves.
+ * radar.ingest.incremental.interval} and {@code radar.ingest.close-expired.interval} are read by
+ * the schedulers themselves; the on/off switches are the feature flags of the ops context.
  */
 @ConfigurationProperties("radar.ingest")
 public record IngestScheduleProperties(

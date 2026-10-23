@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Painel de operação | Radar de Licitações</title>
+  <link rel="stylesheet" href="/css/painel.css">
+</head>
+<body>
+  <main>
+    <h1>Painel de operação</h1>
+    <p>Situação geral: <strong th:text="${panel.status}" th:class="${'status-' + panel.status}">UP</strong></p>
+
+    <h2>Componentes</h2>
+    <table>
+      <thead><tr><th>Componente</th><th>Situação</th><th>Detalhe</th></tr></thead>
+      <tbody>
+        <tr th:each="c : ${panel.components}">
+          <td th:text="${c.name}">outbox</td>
+          <td th:text="${c.status}" th:class="${'status-' + c.status}">UP</td>
+          <td th:text="${c.detail}">detalhe</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>Coleta</h2>
+    <table>
+      <thead><tr><th>Tipo</th><th>Modalidade</th><th>Situação</th><th>Lidos</th><th>Novos</th><th>Alterados</th><th>Iguais</th><th>Terminou em</th></tr></thead>
+      <tbody>
+        <tr th:each="r : ${panel.lastRuns}">
+          <td th:text="${r.kind}">INCREMENTAL</td>
+          <td th:text="${r.modalityId}">6</td>
+          <td th:text="${r.status}">SUCCEEDED</td>
+          <td th:text="${r.fetched}">0</td>
+          <td th:text="${r.discovered}">0</td>
+          <td th:text="${r.updated}">0</td>
+          <td th:text="${r.unchanged}">0</td>
+          <td th:text="${r.finishedAt}">em andamento</td>
+        </tr>
+      </tbody>
+    </table>
+    <table>
+      <thead><tr><th>Modalidade</th><th>Marca d'água</th></tr></thead>
+      <tbody>
+        <tr th:each="c : ${panel.cursors}">
+          <td th:text="${c.modalityId}">6</td>
+          <td th:text="${c.watermark}">2026-10-22T12:00:00Z</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>Consumidores</h2>
+    <table>
+      <thead><tr><th>Grupo</th><th>Tópico</th><th>Atraso</th></tr></thead>
+      <tbody>
+        <tr th:each="l : ${panel.consumers}">
+          <td th:text="${l.group}">search-projector</td>
+          <td th:text="${l.topic}">radar.procurement.v1</td>
+          <td th:text="${l.lag}">0</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>Fila de mensagens mortas</h2>
+    <table>
+      <thead><tr><th>Tópico</th><th>Grupo</th><th>Sem reprocessar</th></tr></thead>
+      <tbody>
+        <tr th:each="d : ${panel.dlq}">
+          <td th:text="${d.topic}">radar.procurement.v1.dlq</td>
+          <td th:text="${d.consumerGroup}">search-projector</td>
+          <td th:text="${d.unreprocessed}">0</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>Projeção</h2>
+    <table>
+      <thead><tr><th>Projetor</th><th>Último offset</th><th>Atualizado em</th></tr></thead>
+      <tbody>
+        <tr th:each="p : ${panel.projection}">
+          <td th:text="${p.projector}">search</td>
+          <td th:text="${p.lastOffset}">0</td>
+          <td th:text="${p.updatedAt}">2026-10-22T12:00:00Z</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>Flags</h2>
+    <table>
+      <thead><tr><th>Flag</th><th>Ligada</th></tr></thead>
+      <tbody>
+        <tr th:each="f : ${panel.flags}">
+          <td th:text="${f.name}">ALERT_DIGEST</td>
+          <td th:text="${f.enabled} ? 'sim' : 'não'">sim</td>
+        </tr>
+      </tbody>
+    </table>
+    <p><a href="/ops/togglz/index">Alterar flags</a></p>
+
+    <h2>Fila de saída</h2>
+    <p th:if="${panel.outbox != null}"
+       th:text="${'Pendentes: ' + panel.outbox.pending + ', mais antigo: ' + panel.outbox.oldestAgeSeconds + ' s, venenosos: ' + panel.outbox.poisonPending}">Pendentes: 0</p>
+    <p th:if="${panel.outbox == null}">Não foi possível ler a fila de saída.</p>
+  </main>
+</body>
+</html>

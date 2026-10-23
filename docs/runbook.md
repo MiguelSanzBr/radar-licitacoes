@@ -11,7 +11,7 @@ PSQL="$COMPOSE exec postgres psql -U radar -d radar"
 
 - Logs da aplicação: `make logs SERVICE=app` (JSON com `traceId`, `correlationId`, `level`). Para filtrar sem ficar preso no `-f`: `$COMPOSE logs --no-log-prefix --tail=1000 app | grep '"level":"ERROR"'`.
 - Métricas: Grafana em http://localhost:3000 (`admin` / `admin`), pasta dos dashboards "Radar". No compose a aplicação envia métricas por OTLP; as regras de `slo.yml` só são avaliadas onde há Prometheus carregando o arquivo (Kubernetes), então no compose use os dashboards e as consultas abaixo como equivalente.
-- Painel de saúde: `/ops/health-panel` chega no PR 4.3. Até lá use as consultas SQL e os dashboards desta página.
+- Painel de saúde: `/ops/painel` (página, entra com a conta de operador) e `GET /ops/health-panel` (JSON, token de operador) mostram a fila de saída, a última coleta de cada modalidade, o atraso dos consumidores, as mensagens sem reprocessar na DLQ, o ponto de retomada da projeção e o estado das flags. Cada componente sai `UP`, `DEGRADED` ou `DOWN`; a situação geral é a pior delas. As consultas SQL desta página servem para o detalhe.
 - Token de operador (para `/ops/*` e `/actuator/prometheus`):
 
 ```
@@ -84,11 +84,11 @@ $COMPOSE exec kafka /opt/kafka/bin/kafka-consumer-groups.sh --bootstrap-server l
 $PSQL -c "SELECT * FROM search.projection_checkpoint"
 ```
 
-3. Erros do projetor: `$COMPOSE logs --no-log-prefix --tail=1000 app | grep -E 'skipping record|search'`. Falha de banco é tentada a cada 5 s sem limite; registro que nunca valida é pulado com o log `skipping record` (a DLQ chega no PR 4.3).
+3. Erros do projetor: `$COMPOSE logs --no-log-prefix --tail=1000 app | grep -E 'ProcurementEventsListener|search'`. Queda do banco (conexão, tempo esgotado, trava) é tentada a cada 5 s sem limite e nunca vai para a DLQ; registro que nunca valida, ou que o banco rejeita (valor grande demais, por exemplo), vai para `radar.procurement.v1.dlq` e aparece no painel (veja "Reprocessar a DLQ").
 4. Carga concorrente: um backfill histórico gera muitos eventos de uma vez e o lag sobe sem defeito. Confira: `$PSQL -c "SELECT id, kind, status, window_start::date FROM ingest.ingestion_run WHERE status = 'RUNNING'"`.
 5. Projetor desligado: `radar.search.projector.enabled=false`.
 
-**Ação.** Backfill em andamento: aguarde. Banco indisponível: restaure o Postgres, o projetor recupera sozinho. Registros pulados: guarde o offset do log e reprocesse pela DLQ quando existir (veja "Operações rotineiras").
+**Ação.** Backfill em andamento: aguarde. Banco indisponível: restaure o Postgres, o projetor recupera sozinho. Registros na DLQ: corrija a causa e reprocesse pelo endpoint (veja "Reprocessar a DLQ").
 
 **Escalonamento.** Lag crescendo por mais de 30 minutos sem backfill: time de busca.
 
@@ -273,7 +273,30 @@ $PSQL -c "SELECT id, kind, status, window_start::date, cursor_page, fetched FROM
 
 ### Reprocessar a DLQ
 
-Os tópicos `radar.procurement.v1.dlq` e `radar.alert.v1.dlq` existem, mas o consumidor que grava `dlq_message` e o `POST /ops/dlq/{topic}/reprocess` chegam no PR 4.3. Até lá, registros pulados só aparecem no log como `skipping record`.
+Um registro chega à DLQ quando o consumidor desiste dele: mensagem que nunca será lida (JSON ilegível, campo obrigatório ausente), falha que o banco rejeita (valor grande demais, violação de restrição) depois de 3 tentativas, ou envio de e-mail recusado depois de 3 tentativas. Queda do banco nunca vai para a DLQ: o consumidor espera e tenta de novo a cada 5 s. A política completa está no [ADR-0026](adr/0026-dlq-reprocessamento.md).
+
+O tópico `radar.procurement.v1.dlq` recebe o que falhou na projeção de busca e no casamento de alertas; `radar.alert.v1.dlq`, o que falhou no envio de e-mail. O consumidor `ops-dlq-recorder` copia cada registro para `ops.dlq_message`, com a causa.
+
+1. Veja o que está parado: o painel (`/ops/painel`, linha "Fila de mensagens mortas") ou
+
+```
+$PSQL -c "SELECT id, topic, consumer_group, error_class, left(error_message, 80) AS erro, recorded_at FROM ops.dlq_message WHERE reprocessed_at IS NULL ORDER BY id"
+```
+
+2. Corrija a causa: o reprocessamento reenvia a mesma chave e o mesmo valor, então uma mensagem malformada volta à DLQ. Para um erro de código ou de dado do lado do consumidor, publique a correção primeiro. `error_class` e `error_message` dizem o que falhou; a mensagem original está em `message_value`.
+3. Reenvie, tudo de um tópico ou uma mensagem só:
+
+```
+curl -fsS -X POST -H "Authorization: Bearer $TOKEN" \
+  "http://localhost:8080/ops/dlq/radar.procurement.v1.dlq/reprocess"
+curl -fsS -X POST -H "Authorization: Bearer $TOKEN" \
+  "http://localhost:8080/ops/dlq/radar.alert.v1.dlq/reprocess?id=42"
+```
+
+A resposta (`202`) traz `count`, a quantidade reenviada ao tópico original com o cabeçalho `x-reprocessed-from=dlq`, e `more`: cada chamada trata até 500 mensagens, e com `more=true` você repete o comando até vir `false`. Tópico ou `id` desconhecido responde `404` (`problem+json`). Se o broker recusar uma mensagem, o reenvio para na primeira falha e responde `503` (`reprocess-interrupted`, [problema](problems/reprocess-interrupted.md)) com o `count` feito até ali; a mensagem que falhou continua pendente, com o motivo em `reprocess_result`, e uma nova chamada recomeça dela. As mensagens que já falharam passam para o fim da fila, atrás das nunca tentadas, mas uma que falha sempre trava a página que a alcança: para pular a mensagem que falha, reprocesse as outras com `?id=`. Alertas e eventos velhos reprocessados não são descartados pelo limite de idade (`max-event-age`): o cabeçalho `x-reprocessed-from=dlq` o dispensa.
+4. Confirme: `$PSQL -c "SELECT id, reprocessed_at, reprocess_result FROM ops.dlq_message ORDER BY id DESC LIMIT 5"` e o painel. Se a mensagem falhar de novo, ela volta à DLQ como um registro novo.
+
+Repetir o comando é seguro: os consumidores guardam o `event_id` no inbox e absorvem o duplicado. O contador `dlq_messages_total{topic}` conta o que foi enviado à DLQ, não o que foi reenviado.
 
 ### Manutenção de partições
 

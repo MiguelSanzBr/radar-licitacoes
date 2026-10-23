@@ -30,6 +30,8 @@ As rotas de API recebem um JWT (Bearer); as páginas, a sessão criada pelo logi
 | `GET /actuator/info` | API | permitido | permitido | permitido |
 | `GET /actuator/metrics` | API | 401 | 403 | permitido |
 | `GET /actuator/prometheus` | API | 401 | 403 | permitido |
+| `GET /ops/painel` | página | login | 403 | permitido |
+| `GET /ops/togglz/index` | página | login | 403 | permitido |
 | `GET /privacidade` | página | permitido | permitido | permitido |
 | `GET /assinatura/confirmar` | página | permitido | permitido | permitido |
 | `GET /assinatura` | página | login | permitido | 403 |

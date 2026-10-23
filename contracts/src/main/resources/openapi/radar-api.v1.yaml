@@ -561,6 +561,13 @@ paths:
           schema:
             type: string
             pattern: '^radar\.[a-z]+\.v[0-9]+\.dlq$'
+        - name: id
+          in: query
+          required: false
+          description: Reenvia só a mensagem com este identificador.
+          schema:
+            type: integer
+            format: int64
       responses:
         '202':
           description: Reprocessamento aceito.
@@ -578,6 +585,8 @@ paths:
           $ref: '#/components/responses/NotFound'
         '429':
           $ref: '#/components/responses/TooManyRequests'
+        '503':
+          $ref: '#/components/responses/ReprocessInterrupted'
 
   /ops/backfill:
     post:
@@ -755,6 +764,18 @@ components:
                 errors:
                   - field: limit
                     message: deve ser no máximo 50
+    ReprocessInterrupted:
+      description: O broker não aceitou uma mensagem; o reenvio parou. `count` diz quantas voltaram antes.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: https://github.com/miguelsanzbr/radar-licitacoes/blob/main/docs/problems/reprocess-interrupted.md
+            title: Reprocessamento interrompido
+            status: 503
+            detail: O reenvio parou na primeira falha.
+            count: 2
     Unauthorized:
       description: Credencial ausente, inválida ou expirada.
       content:
@@ -1193,6 +1214,119 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/HealthComponent'
+        outbox:
+          type: object
+          description: Fila de saída; ausente quando não pôde ser lida.
+          required: [pending, oldestAgeSeconds, poisonPending]
+          properties:
+            pending:
+              type: integer
+              format: int64
+            oldestAgeSeconds:
+              type: number
+            poisonPending:
+              type: integer
+              format: int64
+        lastRuns:
+          type: array
+          description: Última execução de cada tipo de coleta por modalidade.
+          items:
+            type: object
+            required: [kind, modalityId, status, fetched, discovered, updated, unchanged, startedAt]
+            properties:
+              kind:
+                type: string
+              modalityId:
+                type: integer
+                format: int32
+              status:
+                type: string
+              fetched:
+                type: integer
+                format: int32
+              discovered:
+                type: integer
+                format: int32
+              updated:
+                type: integer
+                format: int32
+              unchanged:
+                type: integer
+                format: int32
+              startedAt:
+                type: string
+                format: date-time
+              finishedAt:
+                type: string
+                format: date-time
+        cursors:
+          type: array
+          description: Marca d'água da coleta incremental por modalidade.
+          items:
+            type: object
+            required: [modalityId, watermark]
+            properties:
+              modalityId:
+                type: integer
+                format: int32
+              watermark:
+                type: string
+                format: date-time
+        consumers:
+          type: array
+          description: Atraso de cada grupo de consumo por tópico.
+          items:
+            type: object
+            required: [group, topic, lag]
+            properties:
+              group:
+                type: string
+              topic:
+                type: string
+              lag:
+                type: integer
+                format: int64
+        dlq:
+          type: array
+          description: Mensagens sem reprocessar por tópico de mensagens mortas.
+          items:
+            type: object
+            required: [topic, unreprocessed]
+            properties:
+              topic:
+                type: string
+              consumerGroup:
+                type: string
+                description: Grupo de consumo que desistiu da mensagem; ausente quando o tópico não tem pendências.
+              unreprocessed:
+                type: integer
+                format: int64
+        projection:
+          type: array
+          description: Ponto de retomada de cada projetor da leitura.
+          items:
+            type: object
+            required: [projector, updatedAt]
+            properties:
+              projector:
+                type: string
+              lastOffset:
+                type: integer
+                format: int64
+              updatedAt:
+                type: string
+                format: date-time
+        flags:
+          type: array
+          description: Estado das flags de funcionalidade.
+          items:
+            type: object
+            required: [name, enabled]
+            properties:
+              name:
+                type: string
+              enabled:
+                type: boolean
 
     ReplayRequest:
       type: object
@@ -1226,6 +1360,14 @@ components:
           enum: [ACCEPTED]
         detail:
           type: [string, 'null']
+        count:
+          type: integer
+          format: int32
+          minimum: 0
+          description: Quantidade de mensagens reenviadas, quando a operação reenvia mensagens.
+        more:
+          type: boolean
+          description: Ainda há mensagens pendentes; repita a chamada para reenviar a próxima página.
 
     ProblemError:
       type: object
@@ -1263,3 +1405,8 @@ components:
           description: Presente em erros de validação.
           items:
             $ref: '#/components/schemas/ProblemError'
+        count:
+          type: integer
+          format: int32
+          minimum: 0
+          description: Em `reprocess-interrupted`, quantas mensagens voltaram antes da falha.

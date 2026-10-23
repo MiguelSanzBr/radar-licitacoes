@@ -33,7 +33,15 @@ class ModularityTest {
   void everyTopLevelPackageIsAModule() {
     assertThat(MODULES.stream().map(module -> module.getIdentifier().toString()))
         .contains(
-            "alerts", "api", "identity", "ingest", "observability", "outbox", "search", "shared");
+            "alerts",
+            "api",
+            "identity",
+            "ingest",
+            "observability",
+            "ops",
+            "outbox",
+            "search",
+            "shared");
   }
 
   @Test
@@ -79,7 +87,7 @@ class ModularityTest {
   }
 
   @Test
-  void alertsDependsOnlyOnTheSharedKernelTheApiContractTheOutboxAndTracing() {
+  void alertsDependsOnlyOnTheSharedKernelTheApiContractTheOutboxTracingAndTheDeadLetters() {
     var alerts = MODULES.getModuleByName("alerts").orElseThrow();
 
     var targets =
@@ -88,7 +96,8 @@ class ModularityTest {
             .distinct()
             .toList();
 
-    assertThat(targets).containsExactlyInAnyOrder("shared", "api", "outbox", "observability");
+    assertThat(targets)
+        .containsExactlyInAnyOrder("shared", "api", "outbox", "observability", "ops");
   }
 
   @Test
@@ -102,6 +111,19 @@ class ModularityTest {
             .toList();
 
     assertThat(targets).containsExactlyInAnyOrder("shared", "api");
+  }
+
+  @Test
+  void opsReadsOtherContextsOnlyThroughTablesAndMetersNeverThroughTheirClasses() {
+    var ops = MODULES.getModuleByName("ops").orElseThrow();
+
+    var targets =
+        ops.getDirectDependencies(MODULES).stream()
+            .map(dependency -> dependency.getTargetModule().getIdentifier().toString())
+            .distinct()
+            .toList();
+
+    assertThat(targets).doesNotContain("ingest", "search", "alerts", "outbox", "identity");
   }
 
   @Test

@@ -53,8 +53,8 @@ class KafkaOutboxConfiguration {
 
   /**
    * Registers {@code dlq_messages_total{topic}} at zero for each dead-letter topic so dashboards
-   * and rate() have a series from the first scrape. Nothing increments it until the consumers (PR
-   * 4.3) dead-letter a message.
+   * and rate() have a series from the first scrape. The dead-letter recoverer of the consumers
+   * increments it.
    */
   @Bean
   MeterBinder deadLetterCounters(KafkaPublisherProperties properties) {
