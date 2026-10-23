@@ -1,0 +1,28 @@
+                                                                                QUERY PLAN                                                                                 
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=158754.78..158757.23 rows=21 width=235) (actual time=782.683..791.949 rows=21.00 loops=1)
+   Buffers: shared hit=22613 read=113181
+   ->  Gather Merge  (cost=158754.78..296258.02 rows=1180625 width=235) (actual time=778.834..788.098 rows=21.00 loops=1)
+         Workers Planned: 2
+         Workers Launched: 2
+         Buffers: shared hit=22613 read=113181
+         ->  Sort  (cost=157754.76..158984.57 rows=491927 width=235) (actual time=765.455..765.456 rows=14.33 loops=3)
+               Sort Key: published_at DESC, numero_controle_pncp DESC
+               Sort Method: top-N heapsort  Memory: 50kB
+               Buffers: shared hit=22613 read=113181
+               Worker 0:  Sort Method: top-N heapsort  Memory: 50kB
+               Worker 1:  Sort Method: top-N heapsort  Memory: 52kB
+               ->  Parallel Seq Scan on procurement_search_view v  (cost=0.00..144491.62 rows=491927 width=235) (actual time=3.430..664.728 rows=393340.00 loops=3)
+                     Filter: (ROW(published_at, numero_controle_pncp) < ROW('2026-10-16 09:50:06+00'::timestamp with time zone, 'SYN-90879148694091-1-000584/2026'::text))
+                     Rows Removed by Filter: 6660
+                     Buffers: shared hit=22581 read=113181
+ Planning:
+   Buffers: shared hit=48
+ Planning Time: 0.255 ms
+ JIT:
+   Functions: 14
+   Options: Inlining false, Optimization false, Expressions true, Deforming true
+   Timing: Generation 1.659 ms (Deform 0.828 ms), Inlining 0.000 ms, Optimization 1.184 ms, Emission 12.370 ms, Total 15.213 ms
+ Execution Time: 792.531 ms
+(24 rows)
+

@@ -1,0 +1,22 @@
+                                                                                           QUERY PLAN                                                                                           
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Subquery Scan on page  (cost=18312.89..18318.45 rows=21 width=235) (actual time=70.220..71.417 rows=21.00 loops=1)
+   Buffers: shared hit=53078
+   ->  Limit  (cost=18312.89..18312.94 rows=21 width=441) (actual time=70.064..70.068 rows=21.00 loops=1)
+         Buffers: shared hit=53074
+         ->  Sort  (cost=18312.89..18321.31 rows=3368 width=441) (actual time=70.063..70.065 rows=21.00 loops=1)
+               Sort Key: ((ts_rank_cd(v.search_vector, '''contrataca'''::tsquery))::double precision) DESC, v.numero_controle_pncp DESC
+               Sort Method: top-N heapsort  Memory: 82kB
+               Buffers: shared hit=53074
+               ->  Index Scan using psv_open_closing on procurement_search_view v  (cost=0.43..18222.08 rows=3368 width=441) (actual time=0.112..68.752 rows=3232.00 loops=1)
+                     Index Cond: (proposal_closing_at > now())
+                     Filter: ((search_vector @@ '''contrataca'''::tsquery) AND (uf = 'SP'::bpchar) AND (modality_id = 6) AND ((proposal_opening_at IS NULL) OR (proposal_opening_at <= now())))
+                     Rows Removed by Filter: 46003
+                     Index Searches: 1
+                     Buffers: shared hit=53068
+ Planning:
+   Buffers: shared hit=336
+ Planning Time: 0.910 ms
+ Execution Time: 71.459 ms
+(18 rows)
+

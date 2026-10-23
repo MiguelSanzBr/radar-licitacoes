@@ -1,0 +1,28 @@
+                                                                                                                               QUERY PLAN                                                                                                                                
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Subquery Scan on page  (cost=152199.88..152205.44 rows=21 width=235) (actual time=383.923..393.506 rows=21.00 loops=1)
+   Buffers: shared hit=104557 read=116637 written=696
+   ->  Limit  (cost=152199.88..152199.93 rows=21 width=441) (actual time=383.774..392.072 rows=21.00 loops=1)
+         Buffers: shared hit=104553 read=116637 written=696
+         ->  Sort  (cost=152199.88..152208.30 rows=3369 width=441) (actual time=375.213..383.508 rows=21.00 loops=1)
+               Sort Key: ((ts_rank_cd(v.search_vector, '''contrataca'''::tsquery))::double precision) DESC, v.numero_controle_pncp DESC
+               Sort Method: top-N heapsort  Memory: 89kB
+               Buffers: shared hit=104553 read=116637 written=696
+               ->  Gather  (cost=1000.00..152109.04 rows=3369 width=441) (actual time=0.724..382.515 rows=3232.00 loops=1)
+                     Workers Planned: 2
+                     Workers Launched: 2
+                     Buffers: shared hit=104547 read=116637 written=696
+                     ->  Parallel Seq Scan on procurement_search_view v  (cost=0.00..150772.14 rows=1404 width=441) (actual time=214.060..357.438 rows=1077.33 loops=3)
+                           Filter: ((search_vector @@ '''contrataca'''::tsquery) AND (uf = 'SP'::bpchar) AND (modality_id = 6) AND (status = 'PUBLISHED'::text) AND (proposal_closing_at > now()) AND ((proposal_opening_at IS NULL) OR (proposal_opening_at <= now())))
+                           Rows Removed by Filter: 398923
+                           Buffers: shared hit=104547 read=116637 written=696
+ Planning:
+   Buffers: shared hit=189
+ Planning Time: 0.810 ms
+ JIT:
+   Functions: 15
+   Options: Inlining false, Optimization false, Expressions true, Deforming true
+   Timing: Generation 2.786 ms (Deform 1.202 ms), Inlining 0.000 ms, Optimization 1.552 ms, Emission 20.968 ms, Total 25.306 ms
+ Execution Time: 419.739 ms
+(24 rows)
+

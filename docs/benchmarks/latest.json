@@ -1,0 +1,166 @@
+{
+  "date": "2026-10-23",
+  "commit": "c82905bdaa626f537c3b95c5cbde11d26b520164",
+  "host": "AMD Ryzen 5 5600GT with Radeon Graphics, 12 threads, 11,6 GiB de RAM",
+  "postgres": "Postgres 18.6",
+  "rows": {
+    "total": 1200000,
+    "real": 1633,
+    "synthetic": 1198367
+  },
+  "thinkMs": 1000,
+  "warmupSeconds": 60,
+  "measuredSeconds": 180,
+  "directory": "docs/benchmarks/search/2026-10-23",
+  "requests": [
+    {
+      "scenario": "S1",
+      "name": "S1 text search",
+      "users": 50,
+      "plannedUsers": 50,
+      "requests": 3943,
+      "errors": 142,
+      "p50": 1005,
+      "p95": 3402,
+      "p99": 5857,
+      "rps": 21.9
+    },
+    {
+      "scenario": "S2",
+      "name": "S2 filtered search",
+      "users": 50,
+      "plannedUsers": 50,
+      "requests": 8879,
+      "errors": 0,
+      "p50": 8,
+      "p95": 44,
+      "p99": 204,
+      "rps": 49.3
+    },
+    {
+      "scenario": "S3",
+      "name": "S3 keyset p1",
+      "users": 10,
+      "plannedUsers": 10,
+      "requests": 300,
+      "errors": 0,
+      "p50": 2,
+      "p95": 3,
+      "p99": 5,
+      "rps": 1.7
+    },
+    {
+      "scenario": "S3",
+      "name": "S3 offset p1",
+      "users": 10,
+      "plannedUsers": 10,
+      "requests": 300,
+      "errors": 0,
+      "p50": 2,
+      "p95": 4,
+      "p99": 6,
+      "rps": 1.7
+    },
+    {
+      "scenario": "S3",
+      "name": "S3 keyset p100",
+      "users": 10,
+      "plannedUsers": 10,
+      "requests": 300,
+      "errors": 0,
+      "p50": 2,
+      "p95": 3,
+      "p99": 6,
+      "rps": 1.7
+    },
+    {
+      "scenario": "S3",
+      "name": "S3 offset p100",
+      "users": 10,
+      "plannedUsers": 10,
+      "requests": 300,
+      "errors": 0,
+      "p50": 5,
+      "p95": 7,
+      "p99": 8,
+      "rps": 1.7
+    },
+    {
+      "scenario": "S3",
+      "name": "S3 keyset p1000",
+      "users": 10,
+      "plannedUsers": 10,
+      "requests": 300,
+      "errors": 0,
+      "p50": 2,
+      "p95": 3,
+      "p99": 7,
+      "rps": 1.7
+    },
+    {
+      "scenario": "S3",
+      "name": "S3 offset p1000",
+      "users": 10,
+      "plannedUsers": 10,
+      "requests": 300,
+      "errors": 0,
+      "p50": 31,
+      "p95": 38,
+      "p99": 48,
+      "rps": 1.7
+    },
+    {
+      "scenario": "S4",
+      "name": "S4 organ typo",
+      "users": 20,
+      "plannedUsers": 20,
+      "requests": 720,
+      "errors": 544,
+      "p50": 4393,
+      "p95": 5025,
+      "p99": 5526,
+      "rps": 4
+    },
+    {
+      "scenario": "S5",
+      "name": "S5 detail",
+      "users": 100,
+      "plannedUsers": 100,
+      "requests": 17955,
+      "errors": 0,
+      "p50": 1,
+      "p95": 2,
+      "p99": 57,
+      "rps": 99.8
+    },
+    {
+      "scenario": "S6",
+      "name": "S6 stats by uf",
+      "users": 10,
+      "plannedUsers": 10,
+      "requests": 900,
+      "errors": 0,
+      "p50": 2,
+      "p95": 2,
+      "p99": 3,
+      "rps": 5
+    },
+    {
+      "scenario": "S6",
+      "name": "S6 stats by month",
+      "users": 10,
+      "plannedUsers": 10,
+      "requests": 900,
+      "errors": 0,
+      "p50": 2,
+      "p95": 2,
+      "p99": 3,
+      "rps": 5
+    }
+  ],
+  "detailCache": {
+    "hits": 19531,
+    "misses": 4413,
+    "hitRatio": 0.8156949548947544
+  }
+}

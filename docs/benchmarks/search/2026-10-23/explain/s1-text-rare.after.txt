@@ -1,0 +1,24 @@
+                                                                        QUERY PLAN                                                                         
+-----------------------------------------------------------------------------------------------------------------------------------------------------------
+ Subquery Scan on page  (cost=8994.59..9000.15 rows=21 width=235) (actual time=5.706..6.538 rows=21.00 loops=1)
+   Buffers: shared hit=949
+   ->  Limit  (cost=8994.59..8994.64 rows=21 width=441) (actual time=5.614..5.617 rows=21.00 loops=1)
+         Buffers: shared hit=945
+         ->  Sort  (cost=8994.59..9000.79 rows=2480 width=441) (actual time=5.612..5.614 rows=21.00 loops=1)
+               Sort Key: ((ts_rank_cd(v.search_vector, '''metalurg'''::tsquery))::double precision) DESC, v.numero_controle_pncp DESC
+               Sort Method: top-N heapsort  Memory: 74kB
+               Buffers: shared hit=945
+               ->  Bitmap Heap Scan on procurement_search_view v  (cost=38.34..8927.72 rows=2480 width=441) (actual time=0.233..5.184 rows=699.00 loops=1)
+                     Recheck Cond: (search_vector @@ '''metalurg'''::tsquery)
+                     Heap Blocks: exact=698
+                     Buffers: shared hit=939
+                     ->  Bitmap Index Scan on psv_fts_gin  (cost=0.00..37.72 rows=2480 width=0) (actual time=0.112..0.112 rows=699.00 loops=1)
+                           Index Cond: (search_vector @@ '''metalurg'''::tsquery)
+                           Index Searches: 1
+                           Buffers: shared hit=4
+ Planning:
+   Buffers: shared hit=304
+ Planning Time: 0.700 ms
+ Execution Time: 6.584 ms
+(20 rows)
+

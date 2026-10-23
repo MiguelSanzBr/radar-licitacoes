@@ -1,0 +1,12 @@
+                                                                        QUERY PLAN                                                                        
+----------------------------------------------------------------------------------------------------------------------------------------------------------
+ Index Scan using procurement_detail_view_pkey on procurement_detail_view  (cost=0.43..8.45 rows=1 width=97) (actual time=0.047..0.047 rows=1.00 loops=1)
+   Index Cond: (numero_controle_pncp = 'SYN-49594940839118-1-000243/2026'::text)
+   Index Searches: 1
+   Buffers: shared hit=4
+ Planning:
+   Buffers: shared hit=24
+ Planning Time: 0.140 ms
+ Execution Time: 0.061 ms
+(8 rows)
+

@@ -1,0 +1,30 @@
+                                                                                QUERY PLAN                                                                                
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Subquery Scan on page  (cost=148789.76..148797.72 rows=21 width=235) (actual time=574.167..586.085 rows=21.00 loops=1)
+   Buffers: shared hit=161028 read=106269
+   ->  Limit  (cost=148789.76..148792.21 rows=21 width=441) (actual time=573.980..583.974 rows=21.00 loops=1)
+         Buffers: shared hit=161024 read=106269
+         ->  Gather Merge  (cost=148789.76..195654.59 rows=402389 width=441) (actual time=569.499..579.490 rows=21.00 loops=1)
+               Workers Planned: 2
+               Workers Launched: 2
+               Buffers: shared hit=161024 read=106269
+               ->  Sort  (cost=147789.74..148208.89 rows=167662 width=441) (actual time=554.816..554.818 rows=16.67 loops=3)
+                     Sort Key: ((ts_rank_cd(v.search_vector, '''contrataca'''::tsquery))::double precision) DESC, v.numero_controle_pncp DESC
+                     Sort Method: top-N heapsort  Memory: 92kB
+                     Buffers: shared hit=161024 read=106269
+                     Worker 0:  Sort Method: top-N heapsort  Memory: 88kB
+                     Worker 1:  Sort Method: top-N heapsort  Memory: 92kB
+                     ->  Parallel Seq Scan on procurement_search_view v  (cost=0.00..143269.30 rows=167662 width=441) (actual time=3.650..511.601 rows=134412.33 loops=3)
+                           Filter: (search_vector @@ '''contrataca'''::tsquery)
+                           Rows Removed by Filter: 265588
+                           Buffers: shared hit=160932 read=106269
+ Planning:
+   Buffers: shared hit=304
+ Planning Time: 0.788 ms
+ JIT:
+   Functions: 14
+   Options: Inlining false, Optimization false, Expressions true, Deforming true
+   Timing: Generation 1.152 ms (Deform 0.454 ms), Inlining 0.000 ms, Optimization 0.889 ms, Emission 13.970 ms, Total 16.012 ms
+ Execution Time: 602.842 ms
+(26 rows)
+

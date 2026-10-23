@@ -1,0 +1,17 @@
+{
+  "date": "2026-01-02",
+  "commit": "abcdef0123456789",
+  "thinkMs": 1000,
+  "warmupSeconds": 60,
+  "measuredSeconds": 180,
+  "directory": "docs/benchmarks/search/2026-01-02",
+  "host": "CPU de teste com 12 threads e 11 GiB de RAM",
+  "postgres": "Postgres 18",
+  "rows": {"total": 1200000, "real": 1633, "synthetic": 1198367},
+  "load": {
+    "s1": {"plannedUsers": 50, "usedUsers": 50},
+    "s5": {"plannedUsers": 100, "usedUsers": 60},
+    "s2": {"plannedUsers": 50, "usedUsers": 50}
+  },
+  "detailCache": {"hits": 9000, "misses": 1000, "hitRatio": 0.9}
+}

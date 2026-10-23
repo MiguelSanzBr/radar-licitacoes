@@ -147,6 +147,14 @@ jobs:
       - name: Container test
         run: make image-test
 
+  docs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Bloco de numeros do README igual ao latest.json
+        run: make docs-check
+
   scripts:
     runs-on: ubuntu-latest
     timeout-minutes: 10

@@ -1,0 +1,58 @@
+[
+  {
+    "name": "S6 stats by uf (warmup)",
+    "requests": 300,
+    "ok": 300,
+    "errors": 0,
+    "rps": 1.23,
+    "min": 1,
+    "p50": 2,
+    "p75": 2,
+    "p95": 4,
+    "p99": 7,
+    "max": 92,
+    "mean": 2
+  },
+  {
+    "name": "S6 stats by month (warmup)",
+    "requests": 300,
+    "ok": 300,
+    "errors": 0,
+    "rps": 1.23,
+    "min": 1,
+    "p50": 2,
+    "p75": 2,
+    "p95": 3,
+    "p99": 4,
+    "max": 8,
+    "mean": 2
+  },
+  {
+    "name": "S6 stats by uf",
+    "requests": 900,
+    "ok": 900,
+    "errors": 0,
+    "rps": 3.69,
+    "min": 1,
+    "p50": 2,
+    "p75": 2,
+    "p95": 2,
+    "p99": 3,
+    "max": 5,
+    "mean": 2
+  },
+  {
+    "name": "S6 stats by month",
+    "requests": 900,
+    "ok": 900,
+    "errors": 0,
+    "rps": 3.69,
+    "min": 1,
+    "p50": 2,
+    "p75": 2,
+    "p95": 2,
+    "p99": 3,
+    "max": 5,
+    "mean": 2
+  }
+]

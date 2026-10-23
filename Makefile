@@ -1,4 +1,4 @@
-.PHONY: verify chaos cdc-test avro-test messaging-test schemas-register compat mutation check-coverage-policy lint-openapi audit-repo tf-fmt tf-validate tf-lint tf-plan up down logs seed e2e replay bench slo synth probe deploy rollback test-scripts profile image image-size image-scan image-test lint-observability probe-report backfill helm-lint helm-smoke sbom sbom-scan secrets-scan e2e-ui
+.PHONY: verify chaos cdc-test avro-test messaging-test schemas-register compat mutation check-coverage-policy lint-openapi audit-repo tf-fmt tf-validate tf-lint tf-plan up down logs seed e2e replay bench docs-check slo synth probe deploy rollback test-scripts profile image image-size image-scan image-test lint-observability probe-report backfill helm-lint helm-smoke sbom sbom-scan secrets-scan e2e-ui
 
 verify:
 	./mvnw verify
@@ -166,7 +166,19 @@ synth:
 	RADAR_DB_PASSWORD="$$pw" $(PROBE_JAVA) -jar $(SYNTH_JAR) --mode=$(SYNTH_MODE) --count=$(SYNTH_COUNT) --seed=$(SYNTH_SEED) \
 	  --out=$(SYNTH_OUT) --jdbc-url=$(SYNTH_JDBC_URL) --user=$(SYNTH_USER)
 
-bench slo profile:
+# Benchmark da busca com mais de 1 milhao de linhas (PR 2.7, docs/benchmarks/search/): mede o ambiente, carrega o dia real
+# mais massa sintetica rotulada, compara os planos sem e com indices, roda o Gatling S1 a S6 e atualiza o README e
+# docs/benchmarks/latest.json. Rode `make image` antes, com o volume vazio (CLEAN=1 make down) e uns 6 GB de RAM livres;
+# leva cerca de uma hora. Variaveis BENCH_* em scripts/bench.sh (BENCH_ROWS, BENCH_SCENARIOS, BENCH_USERS_S1, ...).
+bench:
+	scripts/bench.sh
+
+# O bloco de numeros do README tem de ser o que docs/benchmarks/latest.json gera (scripts/render-metrics.sh readme corrige).
+docs-check:
+	scripts/render-metrics.sh self-test
+	scripts/render-metrics.sh check
+
+slo profile:
 	@echo "$@: not implemented yet" >&2
 	@exit 1
 
@@ -218,7 +230,8 @@ SHELLCHECK_IMAGE := koalaman/shellcheck:v0.10.0@sha256:2097951f02e735b613f4a34de
 BATS_IMAGE := bats/bats:1.12.0@sha256:0257e4f5326dd37046e94d4b8ce07c293447be80a9db6d6dfff1d50d07617e2e
 
 test-scripts:
-	docker run --rm -v "$(CURDIR):$(CURDIR)" -w "$(CURDIR)" $(SHELLCHECK_IMAGE) scripts/deploy-lib.sh scripts/deploy.sh scripts/rollback.sh scripts/smoke.sh scripts/schemas-register.sh
+	docker run --rm -v "$(CURDIR):$(CURDIR)" -w "$(CURDIR)" $(SHELLCHECK_IMAGE) scripts/deploy-lib.sh scripts/deploy.sh scripts/rollback.sh scripts/smoke.sh scripts/schemas-register.sh \
+	  scripts/bench.sh scripts/bench-terms.sh scripts/gatling-stats.sh scripts/render-metrics.sh scripts/explain/run.sh scripts/explain/summarize.sh
 	docker run --rm -v "$(CURDIR):$(CURDIR)" -w "$(CURDIR)" $(BATS_IMAGE) scripts/test
 
 # Reconstroi o modelo de leitura do offset 0 do topico (ADR-0010): dispara o replay do operador e

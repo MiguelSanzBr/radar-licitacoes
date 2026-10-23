@@ -1,0 +1,4 @@
+make[1]: Entering directory '.'
+./mvnw -q -pl tools/synth -am package -DskipTests
+gerou 1198367 linhas em 457.5 s (2619 linhas/s), seed 42, inseridas 1198367
+make[1]: Leaving directory '.'

@@ -1,0 +1,31 @@
+# Ajustes so do benchmark da busca (scripts/bench.sh, make bench): sobrepoe docker-compose.yml.
+# Nada daqui vale para o ambiente de desenvolvimento nem para o deploy.
+services:
+  postgres:
+    # 1,2 mi de linhas com indices GIN nao cabem nos 256 MB do compose de desenvolvimento: sem memoria o
+    # benchmark mediria o disco. shared_buffers e effective_cache_size ficam registrados em env.md.
+    command:
+      - postgres
+      - -c
+      - shared_preload_libraries=pg_stat_statements
+      - -c
+      - max_connections=100
+      - -c
+      - wal_level=logical
+      - -c
+      - max_slot_wal_keep_size=1GB
+      - -c
+      - shared_buffers=512MB
+      - -c
+      - effective_cache_size=1536MB
+      - -c
+      - maintenance_work_mem=256MB
+    mem_limit: 2g
+
+  app:
+    environment:
+      # 50 usuarios de um unico IP passariam do balde anonimo de 30 req/min (ADR-0027): o limite de
+      # requisicoes tem o proprio teste; aqui ele esconderia a latencia da busca atras de 429.
+      RADAR_RATE_LIMIT_ENABLED: "false"
+      # pagina por OFFSET so do S3; a rota nao existe sem esta chave (ver BenchOffsetController)
+      RADAR_BENCH_OFFSET_ENDPOINT: "true"

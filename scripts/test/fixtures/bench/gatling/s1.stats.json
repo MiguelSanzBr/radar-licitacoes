@@ -1,0 +1,30 @@
+[
+ {
+  "name": "S1 text search (warmup)",
+  "requests": 999,
+  "ok": 999,
+  "errors": 0,
+  "rps": 16.6,
+  "min": 1,
+  "p50": 900,
+  "p75": 1000,
+  "p95": 9000,
+  "p99": 9999,
+  "max": 9999,
+  "mean": 900
+ },
+ {
+  "name": "S1 text search",
+  "requests": 9000,
+  "ok": 8997,
+  "errors": 3,
+  "rps": 50.0,
+  "min": 1,
+  "p50": 20,
+  "p75": 30,
+  "p95": 150,
+  "p99": 450,
+  "max": 999,
+  "mean": 25
+ }
+]

@@ -42,7 +42,7 @@ Full-text search nativo do Postgres, sobre a própria projeção.
 
 - `JooqSearchReadModelIT` em `core/src/test/java/br/dev/miguelsanzbr/radar/search/adapter/out/jooq/`: 1.000 linhas semeadas pelo próprio projetor; relevância (objeto acima de órgão), acento e flexão, cada filtro sozinho e combinados, paginação completa com `limit` 7 com e sem texto (sem buracos nem repetição, ordem estritamente decrescente), só stopwords, objeto de 2 milhões de caracteres, e `EXPLAIN` com `psv_fts_gin`, `psv_published_keyset` e `psv_filters_keyset`.
 - `CursorTest`, `CursorPropertiesTest` (jqwik: ida e volta e entrada arbitrária), `FiltersTest` e `SearchQueryTest` em `core/src/test/java/br/dev/miguelsanzbr/radar/search/domain/`.
-- Benchmark com mais de 1 milhão de linhas: PR 2.7 (`docs/benchmarks/search/`).
+- Benchmark com mais de 1 milhão de linhas: ver "Prova do benchmark (PR 2.7)" abaixo e `docs/benchmarks/search/2026-10-23/`.
 
 ## Adendo: busca de órgãos com erro de digitação e estatísticas incrementais (PR 2.3)
 
@@ -74,3 +74,14 @@ Full-text search nativo do Postgres, sobre a própria projeção.
 - `ProjectionStatsConcurrencyIT`: dois consumidores na mesma licitação (soma das contagens igual ao número de licitações) e licitações trocando de balde em sentidos opostos sem deadlock.
 - `JooqProjectionStatsIT`: balde por balde (movimento por valor, UF, modalidade e mês, balde zerado apagado, mês de São Paulo, UF nula, versão antiga, reentrega).
 - `ProcurementStatsIT`: mais de 2 mil eventos com atualizações que mudam faixa, UF e mês; para cada `GroupBy`, o resultado é igual a um `GROUP BY` direto na visão de busca, e continua igual quando os mesmos eventos são entregues de novo e depois de `reset()` seguido de `projectAll` em lotes de 500 (o caminho do replay); a mesma classe valida a migração V15.
+
+## Prova do benchmark (PR 2.7)
+
+Medido em 2026-10-23 por `make bench` com 1.200.000 linhas na visão de busca, das quais 1.198.367 sintéticas (inclui dados sintéticos, 1.198.367 linhas), Postgres 18.6 com 2 GiB, uma execução por cenário (`docs/benchmarks/search/2026-10-23/`).
+
+- **Keyset em vez de `OFFSET`.** Páginas 1, 100 e 1.000 de 20 linhas: keyset com p95 de 3 ms nas três; `OFFSET` equivalente com p95 de 4, 7 e 38 ms. Pelo `EXPLAIN`, a página 1.000 custa 0,1 ms por keyset (9 buffers) e 37,7 ms por `OFFSET` com índice (5.755 buffers); sem índice o `OFFSET` leva 3,3 s, com ordenação externa de cerca de 490 MB em disco. O custo do `OFFSET` cresce com a página e o do keyset não.
+- **GIN (`psv_fts_gin`).** Termo raro: 857 ms sem índice e 6,6 ms com ele. Termo comum ("contratação", casa com 403 mil linhas): 1.774 ms sem índice e 603 ms com, e o plano continua sendo varredura sequencial paralela, porque o planejador acerta ao não usar o GIN para um termo que casa com um terço da tabela: o gargalo vira ordenar 400 mil linhas por `ts_rank_cd`, exatamente o caso ruim previsto em Consequências.
+- **Busca textual S1 (50 usuários).** p50 de 1.005 ms, p95 de 3.402 ms, p99 de 5.857 ms, 142 erros em 3.943 requisições (respostas de erro, consistentes com o `statement_timeout` de 3 s). **Não cumpre** o alvo de p95 de 200 ms e p99 de 500 ms do plano; o valor medido está na ADR-0025. Com 10 usuários: p50 de 108 ms, p95 de 1.888 ms.
+- **Busca com UF, modalidade e `open=true` (S2, 50 usuários).** p95 de 44 ms e p99 de 204 ms, sem erros: **cumpre**. O filtro `open=true` usa `psv_open_closing` e o plano cai de 420 ms para 71 ms.
+- **Órgãos com erro de digitação (S4).** O adendo da PR 2.3 esperava cerca de meio segundo e `Bitmap Index Scan on psv_organ_trgm`. A medição oficial ficou em 2 s por consulta com varredura sequencial (o texto "camraa municipal" casa com dois terços das linhas, porque `municipal` está em quase todo nome), 544 erros em 720 requisições com 20 usuários e 79 em 103 com 2. A alternativa já registrada, a tabela `search.organ` (uma linha por órgão, mantida pelo projetor), passa a ser a recomendação; não foi implementada na PR 2.7.
+- Planos em `docs/benchmarks/search/2026-10-23/explain/`; reprodução com `make bench`.

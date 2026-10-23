@@ -28,8 +28,8 @@ Alvos propostos, não medidos:
 | Frescor interno: `fetched_at` até `projected_at` | p95 até 30 s | proposto, não medido |
 | Frescor ponta a ponta: `dataAtualizacaoGlobal` até visível na busca | p95 até o intervalo de polling mais 1 min | proposto, não medido (medido em `make slo`) |
 | Alerta: `projected_at` até o SMTP aceitar | p95 até 60 s | proposto, não medido |
-| Busca S1 e S2 com 1,2 milhão de linhas | p95 até 200 ms, p99 até 500 ms | proposto, não medido (Gatling em `make slo`) |
-| Detalhe S5 com cache | p95 até 50 ms | proposto, não medido (Gatling em `make slo`) |
+| Busca S1 e S2 com 1,2 milhão de linhas | p95 até 200 ms, p99 até 500 ms | medido em 2026-10-23 (ver abaixo): S2 atende, S1 não atende |
+| Detalhe S5 com cache | p95 até 50 ms | medido em 2026-10-23: atende (p95 de 2 ms) |
 | Outbox | `outbox_oldest_age_seconds` p99 até 5 s | proposto, não medido |
 | Disponibilidade da API durante caos com Toxiproxy | 99,5% em 1 h | proposto, não medido (Gatling em `make slo`) |
 
@@ -91,6 +91,18 @@ Com o envio por OTLP, o Prometheus do `otel-lgtm` traduz os nomes. Consultado de
 - O endpoint `/actuator/prometheus` depende das dependências de Micrometer e Actuator, que entram na tarefa 4.1. Enquanto isso, o scrape não tem alvo que responda.
 - Roteamento dos alertas (Alertmanager, destinos como e-mail ou chat) ainda não está configurado. Por enquanto os alertas aparecem só no Prometheus: `prometheus.yml` tem `rule_files` e não tem bloco `alerting`. Configurar o Alertmanager fica para tarefa posterior.
 - `make slo` (tarefa posterior) preenche os valores medidos e registra os ajustes neste ADR.
+
+### Medido na PR 2.7 (`make bench`, 2026-10-23, 1,2 milhão de linhas, inclui dados sintéticos, 1.198.367 linhas)
+
+Gatling com 1 min de aquecimento descartado e 3 min medidos, uma execução por cenário, na máquina local descrita em `docs/benchmarks/search/2026-10-23/env.md`:
+
+| Cenário | Usuários | p50 | p95 | p99 | Erros | Alvo |
+|---|---|---|---|---|---|---|
+| S1 busca textual | 50 | 1.005 ms | 3.402 ms | 5.857 ms | 142 de 3.943 | **não atende** (p95 200 ms, p99 500 ms) |
+| S2 busca com UF, modalidade e `open=true` | 50 | 8 ms | 44 ms | 204 ms | 0 | atende |
+| S5 detalhe | 100 | 1 ms | 2 ms | 57 ms | 0 | atende (p95 50 ms) |
+
+O alvo do S1 **não foi alterado**: a medição não o confirma. A causa é a busca com termo comum, que precisa ordenar centenas de milhares de linhas por `ts_rank_cd` (ADR-0011, "Prova do benchmark"); com 10 usuários o S1 deu p50 de 108 ms e p95 de 1.888 ms, ainda acima. O ajuste é de implementação (limitar candidatos do ranking), a decidir fora desta PR, e o alvo só muda neste ADR com o valor medido depois dele. Os alvos de frescor, alerta, outbox e disponibilidade seguem não medidos.
 
 ## Prova
 

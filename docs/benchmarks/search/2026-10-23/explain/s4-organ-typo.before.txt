@@ -1,0 +1,46 @@
+ set_config 
+------------
+ 0.3
+(1 row)
+
+                                                                                     QUERY PLAN                                                                                     
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=144245.70..144245.73 rows=10 width=34) (actual time=2243.914..2249.972 rows=10.00 loops=1)
+   Buffers: shared hit=27784 read=107997
+   ->  Sort  (cost=144245.70..144248.51 rows=1125 width=34) (actual time=2238.799..2244.856 rows=10.00 loops=1)
+         Sort Key: (word_similarity('camraa municipal'::text, organ_name)) DESC, organ_name
+         Sort Method: top-N heapsort  Memory: 26kB
+         Buffers: shared hit=27784 read=107997
+         ->  Group  (cost=143897.37..144221.39 rows=1125 width=34) (actual time=2233.067..2244.694 rows=1018.00 loops=1)
+               Group Key: organ_name
+               Buffers: shared hit=27781 read=107997
+               ->  Gather Merge  (cost=143897.37..144211.83 rows=2700 width=30) (actual time=2233.003..2239.765 rows=2496.00 loops=1)
+                     Workers Planned: 2
+                     Workers Launched: 2
+                     Buffers: shared hit=27781 read=107997
+                     ->  Sort  (cost=142897.34..142900.16 rows=1125 width=30) (actual time=2217.733..2217.770 rows=832.00 loops=3)
+                           Sort Key: organ_name
+                           Sort Method: quicksort  Memory: 25kB
+                           Buffers: shared hit=27781 read=107997
+                           Worker 0:  Sort Method: quicksort  Memory: 25kB
+                           Worker 1:  Sort Method: quicksort  Memory: 25kB
+                           ->  Partial HashAggregate  (cost=142829.08..142840.33 rows=1125 width=30) (actual time=2216.061..2216.122 rows=832.00 loops=3)
+                                 Group Key: organ_name
+                                 Batches: 1  Memory Usage: 121kB
+                                 Buffers: shared hit=27765 read=107997
+                                 Worker 0:  Batches: 1  Memory Usage: 121kB
+                                 Worker 1:  Batches: 1  Memory Usage: 121kB
+                                 ->  Parallel Seq Scan on procurement_search_view  (cost=0.00..142011.84 rows=326897 width=30) (actual time=4.159..2131.563 rows=268905.00 loops=3)
+                                       Filter: ('camraa municipal'::text <% organ_name)
+                                       Rows Removed by Filter: 131095
+                                       Buffers: shared hit=27765 read=107997
+ Planning:
+   Buffers: shared hit=109
+ Planning Time: 1.957 ms
+ JIT:
+   Functions: 33
+   Options: Inlining false, Optimization false, Expressions true, Deforming true
+   Timing: Generation 1.564 ms (Deform 0.661 ms), Inlining 0.000 ms, Optimization 1.409 ms, Emission 15.471 ms, Total 18.444 ms
+ Execution Time: 2264.713 ms
+(37 rows)
+

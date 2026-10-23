@@ -1,0 +1,26 @@
+                                                                             QUERY PLAN                                                                             
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=156492.31..156494.75 rows=21 width=235) (actual time=908.989..919.977 rows=21.00 loops=1)
+   Buffers: shared hit=24403 read=111453
+   ->  Gather Merge  (cost=156492.31..296248.47 rows=1199969 width=235) (actual time=905.177..916.163 rows=21.00 loops=1)
+         Workers Planned: 2
+         Workers Launched: 2
+         Buffers: shared hit=24403 read=111453
+         ->  Sort  (cost=155492.28..156742.25 rows=499987 width=235) (actual time=889.832..889.835 rows=20.00 loops=3)
+               Sort Key: published_at DESC, numero_controle_pncp DESC
+               Sort Method: top-N heapsort  Memory: 47kB
+               Buffers: shared hit=24403 read=111453
+               Worker 0:  Sort Method: top-N heapsort  Memory: 54kB
+               Worker 1:  Sort Method: top-N heapsort  Memory: 53kB
+               ->  Parallel Seq Scan on procurement_search_view v  (cost=0.00..142011.84 rows=499987 width=235) (actual time=2.834..782.223 rows=400000.00 loops=3)
+                     Buffers: shared hit=24309 read=111453
+ Planning:
+   Buffers: shared hit=157
+ Planning Time: 0.461 ms
+ JIT:
+   Functions: 8
+   Options: Inlining false, Optimization false, Expressions true, Deforming true
+   Timing: Generation 1.008 ms (Deform 0.442 ms), Inlining 0.000 ms, Optimization 1.022 ms, Emission 10.711 ms, Total 12.741 ms
+ Execution Time: 938.277 ms
+(22 rows)
+
