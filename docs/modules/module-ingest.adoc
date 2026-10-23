@@ -1,0 +1,13 @@
+[%autowidth.stretch, cols="h,a"]
+|===
+|Base package
+|`br.dev.miguelsanzbr.radar.ingest`
+|Spring components
+|_Configuration properties_
+
+* `b.d.m.r.i.IngestFetchProperties`
+|Bean references
+|* `b.d.m.r.o.OutboxWriter` (in Outbox)
+|Events listened to
+|* `org.springframework.boot.context.event.ApplicationReadyEvent` 
+|===

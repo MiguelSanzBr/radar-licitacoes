@@ -1,0 +1,45 @@
+@startuml
+title <size:24>RadarApplication</size>
+
+set separator none
+top to bottom direction
+
+<style>
+  root {
+    BackgroundColor: #ffffff
+    FontColor: #444444
+  }
+</style>
+
+!include <C4/C4>
+!include <C4/C4_Context>
+!include <C4/C4_Component>
+
+System_Boundary("RadarApplication_boundary", "RadarApplication", $tags="") {
+  Container_Boundary("RadarApplication.RadarApplication_boundary", "RadarApplication", $tags="") {
+    Component(RadarApplication.RadarApplication.Ingest, "Ingest", $techn="Module", $descr="", $tags="", $link="")
+    Component(RadarApplication.RadarApplication.Api, "Api", $techn="Module", $descr="", $tags="", $link="")
+    Component(RadarApplication.RadarApplication.Shared, "Shared", $techn="Module", $descr="", $tags="", $link="")
+    Component(RadarApplication.RadarApplication.Observability, "Observability", $techn="Module", $descr="", $tags="", $link="")
+    Component(RadarApplication.RadarApplication.Outbox, "Outbox", $techn="Module", $descr="", $tags="", $link="")
+    Component(RadarApplication.RadarApplication.Search, "Search", $techn="Module", $descr="", $tags="", $link="")
+    Component(RadarApplication.RadarApplication.Alerts, "Alerts", $techn="Module", $descr="", $tags="", $link="")
+  }
+
+}
+
+Rel(RadarApplication.RadarApplication.Search, RadarApplication.RadarApplication.Shared, "depends on", $techn="", $tags="", $link="")
+Rel(RadarApplication.RadarApplication.Search, RadarApplication.RadarApplication.Observability, "uses", $techn="", $tags="", $link="")
+Rel(RadarApplication.RadarApplication.Observability, RadarApplication.RadarApplication.Shared, "uses", $techn="", $tags="", $link="")
+Rel(RadarApplication.RadarApplication.Outbox, RadarApplication.RadarApplication.Shared, "uses", $techn="", $tags="", $link="")
+Rel(RadarApplication.RadarApplication.Outbox, RadarApplication.RadarApplication.Observability, "uses", $techn="", $tags="", $link="")
+Rel(RadarApplication.RadarApplication.Ingest, RadarApplication.RadarApplication.Shared, "depends on", $techn="", $tags="", $link="")
+Rel(RadarApplication.RadarApplication.Ingest, RadarApplication.RadarApplication.Outbox, "uses", $techn="", $tags="", $link="")
+Rel(RadarApplication.RadarApplication.Alerts, RadarApplication.RadarApplication.Api, "depends on", $techn="", $tags="", $link="")
+Rel(RadarApplication.RadarApplication.Alerts, RadarApplication.RadarApplication.Observability, "uses", $techn="", $tags="", $link="")
+Rel(RadarApplication.RadarApplication.Alerts, RadarApplication.RadarApplication.Outbox, "uses", $techn="", $tags="", $link="")
+Rel(RadarApplication.RadarApplication.Alerts, RadarApplication.RadarApplication.Shared, "uses", $techn="", $tags="", $link="")
+
+SHOW_LEGEND(true)
+hide stereotypes
+@enduml

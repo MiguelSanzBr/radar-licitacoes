@@ -34,5 +34,9 @@ O diagrama de contexto e de contêineres está em `docs/diagrams/workspace.dsl`.
 ## Prova
 
 - Sonda de compatibilidade (esta entrega, PR 0.3): contexto Spring Boot 4.1.2 com Modulith 2.1.2 e `ApplicationModules.verify()` passando, registrada em `docs/compat-matrix.md`.
-- PR 1.11 `test(arch): archunit and modulith rules`: regras de ArchUnit e `verify()` sobre o código real, com documentação de módulos gerada em `docs/modules/`.
+- PR 1.11 `test(arch): archunit and modulith rules` (`core/src/test/java/br/dev/miguelsanzbr/radar/architecture/`):
+  - `ArchitectureTest` aplica as regras ao código de produção: `domain` sem Spring, JPA, Hibernate, Jackson, jOOQ nem Kafka; `application` só com `domain`, `application`, `shared`, `java.*` e `TransactionOperations`; `domain` e `application` nunca importam `adapter`; `search` sem `ingest` nem `outbox` e `ingest` sem `search`; nenhum `@Transactional` (Spring ou Jakarta) em `adapter.in`.
+  - `ArchitectureRulesSeeViolationsTest` roda cada regra contra classes que a violam (`architecture/fixture`) e contra classes conformes, então uma regra que deixa de enxergar a violação quebra o build.
+  - `SourceHygieneTest` varre `src/test/java` e falha em `@SuppressWarnings` e `assertTrue(true)` (a anotação tem retenção SOURCE, fora do alcance do ArchUnit).
+  - `ModularityTest` roda `ApplicationModules.verify()`, confere a lista de módulos, exige `shared` aberto e compara a documentação gerada pelo Modulith com os arquivos commitados em `docs/modules/`. O teste gera os arquivos em `target/` e nunca escreve na árvore de fontes: se houver diferença, ele falha e informa o comando para atualizar (`-Dmodules.docs.update=true`, descrito em `CONTRIBUTING.md`).
 - PR 8.2 `refactor(apps): extract ingestor and search-api`: a extração só acontece depois das camadas anteriores, sem alterar os contextos.

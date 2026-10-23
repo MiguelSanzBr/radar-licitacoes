@@ -42,3 +42,4 @@ Até 400 linhas de diff de produção. Se passar disso, divida o trabalho em PRs
 ## Comandos
 
 - `make verify`: build completo com testes, cobertura e análise estática. Precisa de Docker: o modelo jOOQ é gerado das migrations num Postgres descartável (Testcontainers).
+- `./mvnw test -pl core -am -Dtest=ModularityTest -Dsurefire.failIfNoSpecifiedTests=false -Dmodules.docs.update=true`: regenera `docs/modules/` quando o teste de documentação dos módulos acusar diferença; depois commite os arquivos.

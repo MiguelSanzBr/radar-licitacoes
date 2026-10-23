@@ -1,0 +1,35 @@
+== RadarApplication
+plantuml::components.puml[,,format=svg]
+
+== Api
+plantuml::module-api.puml[,,format=svg]
+include::module-api.adoc[]
+
+== Identity
+plantuml::module-identity.puml[,,format=svg]
+include::module-identity.adoc[]
+
+== Shared
+plantuml::module-shared.puml[,,format=svg]
+include::module-shared.adoc[]
+
+== Observability
+plantuml::module-observability.puml[,,format=svg]
+include::module-observability.adoc[]
+
+== Outbox
+plantuml::module-outbox.puml[,,format=svg]
+include::module-outbox.adoc[]
+
+== Search
+plantuml::module-search.puml[,,format=svg]
+include::module-search.adoc[]
+
+== Alerts
+plantuml::module-alerts.puml[,,format=svg]
+include::module-alerts.adoc[]
+
+== Ingest
+plantuml::module-ingest.puml[,,format=svg]
+include::module-ingest.adoc[]
+

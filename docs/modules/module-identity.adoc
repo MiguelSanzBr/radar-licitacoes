@@ -1,0 +1,7 @@
+[%autowidth.stretch, cols="h,a"]
+|===
+|Base package
+|`br.dev.miguelsanzbr.radar.identity`
+|Spring components
+|* `b.d.m.r.i.SecurityConfig`
+|===

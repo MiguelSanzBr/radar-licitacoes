@@ -1,0 +1,7 @@
+[%autowidth.stretch, cols="h,a"]
+|===
+|Base package
+|`br.dev.miguelsanzbr.radar.search`
+|Bean references
+|* `b.d.m.r.o.TraceparentExtractor` (in Observability)
+|===

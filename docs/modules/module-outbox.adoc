@@ -1,0 +1,20 @@
+[%autowidth.stretch, cols="h,a"]
+|===
+|Base package
+|`br.dev.miguelsanzbr.radar.outbox`
+|Spring components
+|_Configuration properties_
+
+* `b.d.m.r.o.OutboxProperties`
+
+_Others_
+
+* `b.d.m.r.o.OutboxCleanup`
+* `b.d.m.r.o.OutboxRelay`
+* `b.d.m.r.o.OutboxWriter`
+* `b.d.m.r.o.EventPublisher` (via `b.d.m.r.o.adapter.kafka.KafkaEventPublisher`)
+|Bean references
+|* `b.d.m.r.s.UuidV7` (in Shared)
+* `b.d.m.r.o.TraceparentInjector` (in Observability)
+* `b.d.m.r.o.TraceparentExtractor` (in Observability)
+|===

@@ -1,0 +1,11 @@
+[%autowidth.stretch, cols="h,a"]
+|===
+|Base package
+|`br.dev.miguelsanzbr.radar.observability`
+|Spring components
+|* `b.d.m.r.o.CorrelationIdFilter`
+* `b.d.m.r.o.TraceparentExtractor`
+* `b.d.m.r.o.TraceparentInjector`
+|Bean references
+|* `b.d.m.r.s.UuidV7` (in Shared)
+|===
