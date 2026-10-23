@@ -8,12 +8,10 @@ import br.dev.miguelsanzbr.radar.identity.application.port.ApiKeys;
 import br.dev.miguelsanzbr.radar.identity.application.port.RateLimitMetrics;
 import br.dev.miguelsanzbr.radar.identity.application.port.RateLimiter;
 import br.dev.miguelsanzbr.radar.identity.domain.RateLimits;
-import io.lettuce.core.ClientOptions.DisconnectedBehavior;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Clock;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.boot.data.redis.autoconfigure.LettuceClientOptionsBuilderCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
@@ -41,17 +39,6 @@ class RateLimitConfiguration {
   @Bean
   RateLimiter rateLimiter(StringRedisTemplate redis) {
     return new RedisRateLimiter(redis);
-  }
-
-  /**
-   * Redis down must not make every read wait for the command timeout: once the client sees the
-   * disconnect it rejects commands at once (the limiter then fails open) and reconnects in the
-   * background. The queue bound keeps a hung (not refused) Redis from piling up requests.
-   */
-  @Bean
-  LettuceClientOptionsBuilderCustomizer rejectCommandsWhileDisconnected() {
-    return options ->
-        options.disconnectedBehavior(DisconnectedBehavior.REJECT_COMMANDS).requestQueueSize(1024);
   }
 
   @Bean

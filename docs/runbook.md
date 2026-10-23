@@ -339,15 +339,15 @@ curl -fsS -X POST -H "Authorization: Bearer $TOKEN" \
 
 **No modo `cdc`** os eventos continuam em JSON, qualquer que seja o formato.
 
-### Redis fora do ar (limite abre)
+### Redis fora do ar (limite abre, cache do detalhe lê o Postgres)
 
-**Sintoma.** `rate_limit_fail_open_total` cresce e o log traz, no máximo uma vez por minuto, `WARN Rate limiter unavailable, public reads pass unmetered (fail-open)`. As respostas das rotas públicas ficam sem `RateLimit-*`.
+**Sintoma.** `rate_limit_fail_open_total` cresce e o log traz, no máximo uma vez por minuto, `WARN Rate limiter unavailable, public reads pass unmetered (fail-open)`. As respostas das rotas públicas ficam sem `RateLimit-*`. O cache do detalhe também falha aberto: `search_detail_cache_errors_total` cresce e o log traz, no máximo uma vez por minuto, `WARN Detail cache unavailable, reading from the database (fail-open)`.
 
-**Impacto.** A leitura pública continua no ar, sem limite (ADR-0027). Com o Redis recusando conexão, o cliente rejeita os comandos na hora e a leitura não espera. Com o Redis pendurado (sem responder), cada leitura espera até 250 ms (`spring.data.redis.timeout`) antes de seguir e a latência sobe nesse valor enquanto durar.
+**Impacto.** A leitura pública continua no ar, sem limite, e o detalhe sai do Postgres (ADR-0027). Enquanto o Redis estiver fora, uma invalidação do cache que não chegou deixa o detalhe antigo até o TTL de 1 h, se o Redis voltar com os dados (queda de rede, não reinício). Com o Redis recusando conexão, o cliente rejeita os comandos na hora e a leitura não espera. Com o Redis pendurado (sem responder), cada leitura espera até 250 ms (`spring.data.redis.timeout`) antes de seguir e a latência sobe nesse valor enquanto durar.
 
-**Ação.** Suba o Redis (`$COMPOSE up -d redis`); o cliente reconecta sozinho. O estado dos baldes se perde sem prejuízo: balde ausente é balde cheio. Se a queda for longa e houver abuso, reduza a exposição na borda (proxy) ou desligue o limite com `RADAR_RATE_LIMIT_ENABLED=false` para eliminar a espera de 250 ms.
+**Ação.** Suba o Redis (`$COMPOSE up -d redis`); o cliente reconecta sozinho. O estado dos baldes se perde sem prejuízo: balde ausente é balde cheio. Se a queda for longa e houver abuso, reduza a exposição na borda (proxy) ou desligue o limite com `RADAR_RATE_LIMIT_ENABLED=false`. Com o cache ligado, uma falha do Redis faz o cache pular o Redis por 10 s, então a espera de 250 ms com o Redis pendurado acontece uma vez por janela; se mesmo assim incomodar, desligue o cache com `RADAR_SEARCH_DETAIL_CACHE_ENABLED=false`. Se o Redis voltar com dados antigos e o detalhe estiver desatualizado, limpe o cache: `redis-cli --scan --pattern 'search:detail:v1:*' | xargs -r redis-cli unlink`.
 
-**Cuidados.** O Redis precisa de `maxmemory-policy volatile-ttl` (toda chave tem TTL); com `noeviction` e a memória cheia o limite passa a abrir para todos (`rate_limit_fail_open_total` sobe com `OOM` no log). Em produção o log DEBUG de requisição e resposta deve ficar desligado: a resposta de `POST /api/v1/api-keys` leva a chave em claro.
+**Cuidados.** O Redis precisa de `maxmemory-policy volatile-ttl` (toda chave tem TTL); com `noeviction` e a memória cheia o limite passa a abrir para todos (`rate_limit_fail_open_total` sobe com `OOM` no log). As chaves do cache do detalhe (`search:detail:v1:*`) também têm TTL. Em produção o log DEBUG de requisição e resposta deve ficar desligado: a resposta de `POST /api/v1/api-keys` leva a chave em claro.
 
 ### Trocar o modo do outbox
 

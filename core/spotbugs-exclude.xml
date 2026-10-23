@@ -26,6 +26,11 @@
     <Class name="br.dev.miguelsanzbr.radar.identity.adapter.out.redis.RedisRateLimiter"/>
     <Bug pattern="EI_EXPOSE_REP2"/>
   </Match>
+  <!-- O RedisDetailCache guarda o StringRedisTemplate injetado (colaborador compartilhado, nao estado mutavel). -->
+  <Match>
+    <Class name="br.dev.miguelsanzbr.radar.search.adapter.out.redis.RedisDetailCache"/>
+    <Bug pattern="EI_EXPOSE_REP2"/>
+  </Match>
   <Match>
     <Package name="br.dev.miguelsanzbr.radar.search.application"/>
     <Bug pattern="EI_EXPOSE_REP2"/>

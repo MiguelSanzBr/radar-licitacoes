@@ -21,8 +21,9 @@ Auditoria de `core/src/main/resources/application*.properties`, de `infra/compos
 | URL e usuário da fonte de dados da busca | `RADAR_SEARCH_DATASOURCE_URL`, `_USERNAME` | vazio (mesmo banco) e `radar_read_writer` | não |
 | Tempo máximo de uma consulta pública da busca | `RADAR_SEARCH_STATEMENT_TIMEOUT` | `3s` | não |
 | Kafka | `SPRING_KAFKA_BOOTSTRAP_SERVERS` | `localhost:9092` (padrão do Boot) | não |
-| Redis (limite de requisições) | `SPRING_DATA_REDIS_HOST`, `SPRING_DATA_REDIS_PORT` | `localhost`, `6379` | não |
+| Redis (limite de requisições e cache do detalhe) | `SPRING_DATA_REDIS_HOST`, `SPRING_DATA_REDIS_PORT` | `localhost`, `6379` | não |
 | Limite de requisições e chaves de API | `RADAR_RATE_LIMIT_ENABLED`, `RADAR_RATE_LIMIT_FREE_PER_MINUTE`, `_PRO_PER_MINUTE`, `_ANONYMOUS_PER_MINUTE`, `RADAR_API_KEYS_MAX_PER_SUBJECT`, `RADAR_HTTP_TRUST_FORWARDED` | ligado, 60, 600, 30 por minuto, 5 chaves, `false` | não |
+| Cache do detalhe no Redis (ADR-0027) | `RADAR_SEARCH_DETAIL_CACHE_ENABLED`, `RADAR_SEARCH_DETAIL_CACHE_TTL` | ligado, `1h` | não |
 | SMTP | `SPRING_MAIL_HOST`, `SPRING_MAIL_PORT` | nenhum | não |
 | Emissor OIDC | `RADAR_OIDC_ISSUER` | `http://localhost:8180/realms/radar` | não |
 | Segredo do cliente `radar-web` | `RADAR_WEB_CLIENT_SECRET` | vazio | sim |

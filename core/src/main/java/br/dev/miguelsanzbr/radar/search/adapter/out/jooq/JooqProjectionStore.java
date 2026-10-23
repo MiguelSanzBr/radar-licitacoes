@@ -3,6 +3,7 @@ package br.dev.miguelsanzbr.radar.search.adapter.out.jooq;
 import static br.dev.miguelsanzbr.radar.search.adapter.out.jooq.generated.Tables.PROCESSED_EVENT;
 import static br.dev.miguelsanzbr.radar.search.adapter.out.jooq.generated.Tables.PROJECTION_CHECKPOINT;
 
+import br.dev.miguelsanzbr.radar.search.application.DetailCacheInvalidation;
 import br.dev.miguelsanzbr.radar.search.application.OffsetEvent;
 import br.dev.miguelsanzbr.radar.search.application.ProcurementEvent;
 import br.dev.miguelsanzbr.radar.search.application.ProcurementView;
@@ -16,6 +17,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import org.jooq.DSLContext;
@@ -24,6 +26,8 @@ import org.jooq.impl.DSL;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -187,16 +191,24 @@ class JooqProjectionStore implements ProjectionStore {
 
   private final DSLContext dsl;
   private final TransactionTemplate transaction;
+  private final DetailCacheInvalidation cache;
 
   JooqProjectionStore(
       @Qualifier("searchDsl") DSLContext dsl,
-      @Qualifier("searchTransactionManager") PlatformTransactionManager transactionManager) {
+      @Qualifier("searchTransactionManager") PlatformTransactionManager transactionManager,
+      DetailCacheInvalidation cache) {
     this.dsl = dsl;
+    this.cache = cache;
     this.transaction = new TransactionTemplate(transactionManager);
   }
 
   @Override
   public ProjectionOutcome project(ProcurementEvent event, long offset) {
+    return project(event, offset, true);
+  }
+
+  /** {@code dropEach}: false inside a batch, which drops all its ids once after its own commit. */
+  private ProjectionOutcome project(ProcurementEvent event, long offset, boolean dropEach) {
     return transaction.execute(
         tx -> {
           var inserted =
@@ -252,6 +264,9 @@ class JooqProjectionStore implements ProjectionStore {
             return ProjectionOutcome.DEFERRED;
           }
           checkpoint(event, offset);
+          if (dropEach) {
+            afterCommit(() -> cache.invalidate(event.aggregateId()));
+          }
           return ProjectionOutcome.APPLIED;
         });
   }
@@ -259,7 +274,19 @@ class JooqProjectionStore implements ProjectionStore {
   @Override
   public List<ProjectionOutcome> projectAll(List<OffsetEvent> batch) {
     return transaction.execute(
-        tx -> batch.stream().map(e -> project(e.event(), e.offset())).toList());
+        tx -> {
+          var outcomes = new ArrayList<ProjectionOutcome>();
+          var applied = new LinkedHashSet<String>();
+          for (var e : batch) {
+            var outcome = project(e.event(), e.offset(), false);
+            outcomes.add(outcome);
+            if (outcome == ProjectionOutcome.APPLIED) {
+              applied.add(e.event().aggregateId());
+            }
+          }
+          afterCommit(() -> cache.invalidateAll(applied));
+          return outcomes;
+        });
   }
 
   /**
@@ -274,6 +301,22 @@ class JooqProjectionStore implements ProjectionStore {
               "TRUNCATE search.procurement_search_view, search.procurement_detail_view,"
                   + " search.procurement_stats_view, search.projection_checkpoint");
           dsl.deleteFrom(PROCESSED_EVENT).where(PROCESSED_EVENT.CONSUMER.eq(PROJECTOR)).execute();
+          afterCommit(cache::clear);
+        });
+  }
+
+  /**
+   * The cached detail goes only once the new row is visible: dropping it earlier would let a
+   * concurrent read re-cache the old row. A rolled-back transaction never runs it. In a batch the
+   * transaction is shared, so it runs once the whole batch committed.
+   */
+  private static void afterCommit(Runnable action) {
+    TransactionSynchronizationManager.registerSynchronization(
+        new TransactionSynchronization() {
+          @Override
+          public void afterCommit() {
+            action.run();
+          }
         });
   }
 
