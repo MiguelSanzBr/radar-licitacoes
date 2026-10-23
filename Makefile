@@ -1,4 +1,4 @@
-.PHONY: verify chaos cdc-test avro-test schemas-register compat mutation check-coverage-policy lint-openapi audit-repo tf-fmt tf-validate tf-lint tf-plan up down logs seed e2e replay bench slo synth probe deploy rollback test-scripts profile image image-size image-scan image-test lint-observability probe-report backfill helm-lint helm-smoke sbom sbom-scan secrets-scan
+.PHONY: verify chaos cdc-test avro-test schemas-register compat mutation check-coverage-policy lint-openapi audit-repo tf-fmt tf-validate tf-lint tf-plan up down logs seed e2e replay bench slo synth probe deploy rollback test-scripts profile image image-size image-scan image-test lint-observability probe-report backfill helm-lint helm-smoke sbom sbom-scan secrets-scan e2e-ui
 
 verify:
 	./mvnw verify
@@ -191,8 +191,14 @@ seed:
 	scripts/seed.sh $(SEED_DAY)
 
 # Sobe o compose e roda o fluxo ponta a ponta; precisa da imagem (make image) e das portas livres.
+# O perfil e2e roda tudo com @Tag("e2e"); o teste do navegador (SearchUiE2EIT) tem alvo próprio, make e2e-ui.
 e2e:
-	./mvnw -q -Pe2e verify -pl e2e -am
+	./mvnw -q -Pe2e verify -pl e2e -am -Dit.test=ComposeStackE2EIT -Dsurefire.failIfNoSpecifiedTests=false -Dfailsafe.failIfNoSpecifiedTests=false
+
+# A interface no Chromium (Playwright), com a aplicação em processo e Postgres de teste; baixa o navegador
+# para ~/.cache/ms-playwright na primeira vez. PLAYWRIGHT_SKIP=1 pula o teste.
+e2e-ui:
+	./mvnw -q -Pe2e verify -pl core -am -Dtest=NoSuch -Dit.test=SearchUiE2EIT -Dsurefire.failIfNoSpecifiedTests=false
 
 # Deploy por tag e volta ao anterior (ADR-0022, secao Deploy e rollback). O CI roda os mesmos comandos:
 # RADAR_REGISTRY (ghcr.io/<dono>/radar-licitacoes) faz o pull; sem ele, usa a imagem local radar-licitacoes:TAG.

@@ -18,6 +18,7 @@ import java.util.function.BooleanSupplier;
 import java.util.regex.Pattern;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.testcontainers.containers.ComposeContainer;
 
@@ -30,6 +31,7 @@ import org.testcontainers.containers.ComposeContainer;
  * <p>Quando a busca e os alertas existirem, trocar a conferência por SQL por uma busca na API (GET
  * /api/v1/procurements) e acrescentar o alerta que chega ao Mailpit (porta 8025).
  */
+@Tag("e2e")
 class ComposeStackE2EIT {
 
   private static final Path REPO = Path.of(System.getProperty("radar.repo"));

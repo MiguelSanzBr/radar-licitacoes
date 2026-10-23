@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: page(~{::title}, ~{::main})}">
+<head>
+  <title>Buscar licitações | Radar de Licitações</title>
+</head>
+<body>
+<main>
+  <h1>Buscar licitações</h1>
+  <form id="search-form" action="/" method="get" class="filters"
+        hx-get="/fragments/results"
+        hx-trigger="submit, change from:#uf, change from:#modality, change from:#open"
+        hx-target="#results"
+        hx-push-url="true"
+        hx-indicator="#results">
+    <p class="field wide">
+      <label for="q">Texto da busca</label>
+      <input id="q" name="q" type="search" maxlength="200" autocomplete="off"
+             hx-get="/fragments/results" hx-trigger="keyup changed delay:400ms"
+             hx-include="#search-form"
+             placeholder="Ex.: aquisição de computadores" th:value="${form.q}">
+    </p>
+    <p class="field">
+      <label for="uf">UF</label>
+      <select id="uf" name="uf">
+        <option value="">Todas</option>
+        <option th:each="u : ${ufs}" th:value="${u.name()}" th:text="${u.name()}"
+                th:selected="${u.name() == form.uf}">SP</option>
+      </select>
+    </p>
+    <p class="field">
+      <label for="modality">Modalidade</label>
+      <select id="modality" name="modality">
+        <option value="">Todas</option>
+        <option th:each="m : ${modalities}" th:value="${m.id}" th:text="${m.name}"
+                th:selected="${m.id == form.modality}">Pregão</option>
+      </select>
+    </p>
+    <p class="field check">
+      <input id="open" name="open" type="checkbox" value="true" th:checked="${form.open}">
+      <label for="open">Somente com propostas abertas</label>
+    </p>
+    <p class="field"><button type="submit">Buscar</button></p>
+  </form>
+  <section id="results" aria-live="polite" aria-label="Resultados">
+    <th:block th:replace="~{search/results :: results}"></th:block>
+  </section>
+</main>
+</body>
+</html>

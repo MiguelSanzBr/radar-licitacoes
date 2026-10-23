@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<th:block th:fragment="results">
+  <p class="empty" th:if="${rows.empty}">Nenhuma licitação encontrada. Ajuste a busca e tente de novo.</p>
+  <ul id="results-list" class="results" th:unless="${rows.empty}">
+    <th:block th:replace="~{search/results :: rows}"></th:block>
+  </ul>
+  <div id="more"><th:block th:replace="~{search/results :: more}"></th:block></div>
+</th:block>
+
+<th:block th:fragment="items">
+  <th:block th:replace="~{search/results :: rows}"></th:block>
+  <div id="more" hx-swap-oob="true"><th:block th:replace="~{search/results :: more}"></th:block></div>
+</th:block>
+
+<th:block th:fragment="rows">
+  <li th:each="row : ${rows}" class="result">
+    <h2><a th:href="@{/licitacoes/{id}(id=${row.path})}" th:text="${row.title}">Objeto</a></h2>
+    <p class="snippet" th:if="${!row.snippet.empty}"><th:block th:each="part : ${row.snippet}"><mark th:if="${part.marked}" th:text="${part.text}">termo</mark><th:block th:unless="${part.marked}" th:text="${part.text}">texto</th:block></th:block></p>
+    <p class="organ" th:text="${row.organ}">Órgão</p>
+    <ul class="facts">
+      <li th:text="${row.place}">Cidade/UF</li>
+      <li th:text="${row.modality}">Modalidade</li>
+      <li th:text="${row.status}">Situação</li>
+      <li th:text="${row.phase}">Fase</li>
+      <li th:text="${row.value ?: 'Valor não informado'}">Valor</li>
+      <li th:if="${row.closing != null}">Propostas até <time th:text="${row.closing}">data</time></li>
+    </ul>
+  </li>
+</th:block>
+
+<th:block th:fragment="more">
+  <!-- Link first: without scripts it opens the next page; htmx turns it into an append. -->
+  <a id="more-button" class="more" th:if="${moreUrl != null}" th:href="${moreHref}"
+     th:attr="hx-get=${moreUrl}" hx-target="#results-list" hx-swap="beforeend" hx-push-url="false">Carregar mais</a>
+  <p id="more-button" tabindex="-1" th:if="${moreUrl == null and !rows.empty}">Fim dos resultados.</p>
+</th:block>
+
+</body>
+</html>

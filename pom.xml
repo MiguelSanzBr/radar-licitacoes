@@ -52,10 +52,11 @@
     <openapi-request-validator.version>3.0.0</openapi-request-validator.version>
     <!-- why: a mesma linha 3.x do registry do compose (infra/compose/docker-compose.yml, perfil layer3) -->
     <apicurio.version>3.3.3</apicurio.version>
+    <playwright.version>1.64.0</playwright.version>
 
-    <!-- why: testes com @Tag("bench") medem tempo, @Tag("chaos") derruba infraestrutura, @Tag("cdc") sobe tres contêineres e uma imagem de 2,4 GB e @Tag("avro") sobe o Apicurio: ficam fora do verify; -Pbench, -Pchaos, -Pcdc e -Pavro trocam os dois filtros -->
+    <!-- why: testes com @Tag("bench") medem tempo, @Tag("chaos") derruba infraestrutura, @Tag("cdc") sobe tres contêineres e uma imagem de 2,4 GB @Tag("avro") sobe o Apicurio e @Tag("e2e") abre um navegador: ficam fora do verify; -Pbench, -Pchaos, -Pcdc e -Pavro trocam os dois filtros -->
     <test.groups></test.groups>
-    <test.excluded.groups>bench,chaos,compat,cdc,avro</test.excluded.groups>
+    <test.excluded.groups>bench,chaos,compat,cdc,avro,e2e</test.excluded.groups>
 
     <!-- why: o JaCoCo prepende o agente a este valor; o perfil jfr acrescenta flags via @{argLine} -->
     <argLine></argLine>
@@ -219,6 +220,7 @@
               <param>compat</param>
               <param>cdc</param>
               <param>avro</param>
+              <param>e2e</param>
             </excludedGroups>
           </configuration>
         </plugin>
@@ -306,11 +308,37 @@
 
   <profiles>
     <profile>
-      <!-- ./mvnw -Pe2e verify -pl e2e: sobe infra/compose (precisa da imagem, make image) e roda o fluxo ponta a ponta. -->
+      <!--
+        ./mvnw -Pe2e verify -pl core -am -Dit.test=SearchUiE2EIT: a interface no Chromium (Playwright), contra a
+        aplicação inteira em processo com Postgres de teste. ./mvnw -Pe2e verify -pl e2e: o compose de
+        infra/compose (precisa da imagem, make image). Os dois rodam só os testes com @Tag("e2e"), fora do
+        verify padrão e sem o gate de cobertura.
+      -->
       <id>e2e</id>
       <modules>
         <module>e2e</module>
       </modules>
+      <properties>
+        <test.groups>e2e</test.groups>
+        <test.excluded.groups></test.excluded.groups>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <!-- O agente continua ligado (o enforcer exige jacoco.exec); so o gate de 100% sai. -->
+            <groupId>org.jacoco</groupId>
+            <artifactId>jacoco-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>check</id>
+                <configuration>
+                  <skip>true</skip>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
     </profile>
     <profile>
       <!-- ./mvnw -Pimage verify: exige a imagem radar-licitacoes:local (make image); fora do build padrao. -->

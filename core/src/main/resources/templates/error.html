@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: page(~{::title}, ~{::main})}">
+<head>
+  <title th:text="${status == 404 ? 'Página não encontrada' : 'Erro inesperado'} + ' | Radar de Licitações'">Erro | Radar de Licitações</title>
+</head>
+<body>
+<main>
+  <!-- Container-level errors (an unknown address, a failure outside the controllers): only the status is used, never the message, path or trace. -->
+  <h1 th:text="${status == 404 ? 'Página não encontrada' : 'Erro inesperado'}">Erro</h1>
+  <p class="erro" role="alert" th:text="${status == 404 ? 'Não há página neste endereço.' : 'Erro inesperado. Tente novamente mais tarde.'}">Mensagem</p>
+  <p><a href="/">Voltar à busca</a></p>
+</main>
+</body>
+</html>

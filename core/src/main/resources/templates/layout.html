@@ -1,0 +1,32 @@
+<!--
+  htmx 2.0.11, pacote npm htmx.org, arquivo dist/htmx.min.js servido de /js/htmx-2.0.11.min.js
+  SHA-256 do arquivo: d6fdc75f204e6bdefa99b69bf1e6d4ac69b8a364f77929f45c13476b4000f717
+  Sem CDN em tempo de execução e sem script ou estilo inline: a política de segurança de
+  conteúdo não permite. A configuração do htmx vai na meta htmx-config abaixo.
+-->
+<!doctype html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org" th:fragment="page(title, content)">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="htmx-config" content='{"includeIndicatorStyles":false,"allowEval":false,"allowScriptTags":false,"responseHandling":[{"code":"204","swap":false},{"code":"[23]..","swap":true},{"code":"[45]..","swap":true,"error":true},{"code":"...","swap":false}]}'>
+  <title th:replace="${title}">Radar de Licitações</title>
+  <link rel="stylesheet" th:href="@{/css/app.css}" href="/css/app.css">
+  <script src="/js/htmx-2.0.11.min.js" defer></script>
+</head>
+<body>
+  <a class="skip" href="#conteudo">Ir para o conteúdo</a>
+  <header class="site-header">
+    <a class="brand" href="/">Radar de Licitações</a>
+    <nav aria-label="Principal">
+      <a href="/">Buscar</a>
+      <a href="/buscas/nova">Salvar busca</a>
+    </nav>
+  </header>
+  <main id="conteudo" th:replace="${content}">conteúdo</main>
+  <footer class="site-footer">
+    <p>Dados do Portal Nacional de Contratações Públicas (PNCP). Confira sempre o edital original.</p>
+    <p><a href="/privacidade">Privacidade</a></p>
+  </footer>
+</body>
+</html>

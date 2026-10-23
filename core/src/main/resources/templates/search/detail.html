@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: page(~{::title}, ~{::main})}">
+<head>
+  <title th:text="${d.title} + ' | Radar de Licitações'">Licitação | Radar de Licitações</title>
+</head>
+<body>
+<main class="detail">
+  <p><a href="/">Voltar à busca</a></p>
+  <h1 th:text="${d.title}">Objeto</h1>
+  <dl>
+    <dt>Órgão</dt><dd th:text="${d.organ}">Órgão</dd>
+    <dt>CNPJ do órgão</dt><dd th:text="${d.cnpj}">00000000000000</dd>
+    <dt>Unidade</dt><dd th:text="${d.unit ?: 'não informado'}">Unidade</dd>
+    <dt>Local</dt><dd th:text="${d.place}">Cidade/UF</dd>
+    <dt>Código IBGE</dt><dd th:text="${d.ibge ?: 'não informado'}">0000000</dd>
+    <dt>Modalidade</dt><dd th:text="${d.modality}">Modalidade</dd>
+    <dt>Modo de disputa</dt><dd th:text="${d.disputeMode ?: 'não informado'}">Aberto</dd>
+    <dt>Fundamento legal</dt><dd th:text="${d.legalBasis ?: 'não informado'}">Lei</dd>
+    <dt>Registro de preços</dt><dd th:text="${d.srp ? 'Sim' : 'Não'}">Não</dd>
+    <dt>Situação</dt><dd th:text="${d.status}">Publicada</dd>
+    <dt>Fase das propostas</dt><dd th:text="${d.phase}">Propostas abertas</dd>
+    <dt>Valor estimado</dt><dd th:text="${d.estimatedValue ?: 'não informado'}">R$ 0,00</dd>
+    <dt>Valor homologado</dt><dd th:text="${d.awardedValue ?: 'não informado'}">R$ 0,00</dd>
+    <dt>Abertura das propostas</dt><dd th:text="${d.opening ?: 'não informado'}">data</dd>
+    <dt>Encerramento das propostas</dt><dd th:text="${d.closing ?: 'não informado'}">data</dd>
+    <dt>Publicada em</dt><dd th:text="${d.published ?: 'não informado'}">data</dd>
+    <dt>Atualizada no PNCP em</dt><dd th:text="${d.updated ?: 'não informado'}">data</dd>
+  </dl>
+  <p th:if="${d.pncpUrl != null}">
+    <a th:href="${d.pncpUrl}" rel="noopener noreferrer">Ver o edital original no PNCP</a>
+  </p>
+  <h2>Histórico de situação</h2>
+  <p th:if="${d.history.empty}">Ainda sem mudanças de situação registradas.</p>
+  <table th:unless="${d.history.empty}">
+    <thead><tr><th scope="col">Quando</th><th scope="col">De</th><th scope="col">Para</th><th scope="col">Observação</th></tr></thead>
+    <tbody>
+      <tr th:each="change : ${d.history}">
+        <td th:text="${change.at}">data</td>
+        <td th:text="${change.from ?: 'Primeira observação'}">De</td>
+        <td th:text="${change.to}">Para</td>
+        <td><span class="unexpected" th:if="${change.unexpected}">Mudança inesperada</span></td>
+      </tr>
+    </tbody>
+  </table>
+</main>
+</body>
+</html>

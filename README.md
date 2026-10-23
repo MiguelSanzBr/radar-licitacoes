@@ -44,6 +44,14 @@ make probe          # constrói o jar e roda em segundo plano (log e PID em tool
 make probe-report   # gera docs/benchmarks/probe/<data>.md a partir do JSONL gravado
 ```
 
+## Interface
+
+Busca em `/` (texto, UF, modalidade e "somente com propostas abertas"), detalhe em `/licitacoes/{id}` com o histórico de situação e o link para o edital no PNCP. As páginas são renderizadas no servidor com Thymeleaf e atualizadas com htmx servido pela própria aplicação (ADR-0014).
+
+Captura gerada no PR 7.2.
+
+`make e2e-ui` roda o teste da interface num Chromium (Playwright) contra a aplicação em processo com Postgres de teste; baixa o navegador na primeira vez e `PLAYWRIGHT_SKIP=1` pula o teste.
+
 ## Observabilidade
 
 - Métricas: `GET /actuator/prometheus` (exige o papel `operator`). No compose a aplicação envia as métricas por OTLP ao `otel-lgtm`; os nomes usados nos dashboards e nas regras, e como chegam por OTLP, estão no ADR-0025.

@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: page(~{::title}, ~{::main})}">
+<head>
+  <title th:text="${heading} + ' | Radar de Licitações'">Erro | Radar de Licitações</title>
+</head>
+<body>
+<main>
+  <h1 th:text="${heading}">Erro</h1>
+  <th:block th:replace="~{search/error :: message}"></th:block>
+  <p><a href="/">Voltar à busca</a></p>
+</main>
+<div th:fragment="message" class="erro" role="alert">
+  <p th:text="${message}">Mensagem</p>
+</div>
+</body>
+</html>
