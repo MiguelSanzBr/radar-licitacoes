@@ -17,6 +17,9 @@ import org.springframework.kafka.support.Acknowledgment;
  */
 class ProcurementEventsListener {
 
+  /** Lets the replay find the container and stop it. */
+  static final String ID = "search-projector-listener";
+
   private static final Logger LOG = LoggerFactory.getLogger(ProcurementEventsListener.class);
 
   private final ProcurementProjector projector;
@@ -31,6 +34,7 @@ class ProcurementEventsListener {
   }
 
   @KafkaListener(
+      id = ID,
       topics = "${radar.outbox.topics.Procurement}",
       groupId = "${radar.search.projector.group:search-projector}",
       containerFactory = "searchKafkaListenerContainerFactory",

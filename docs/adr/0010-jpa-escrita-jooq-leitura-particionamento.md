@@ -85,3 +85,21 @@ Rollback: até o passo 3 a release anterior continua funcionando contra o schema
 ### Prova
 
 `EstimatedValueTriggerIT`, `JdbcEstimatedValueCentsStoreIT`, `EstimatedValueCentsBackfillTest`, `ReadValueCentsFlagIT`, `ProcurementEntityMapperTest`, `JpaProcurementRepositoryIT`, `ContractScriptIT`, `ExpandMigrationLockIT` e `PreviousReleaseCompatIT` (`make compat`). Medições e resultado do teste de compatibilidade: `docs/benchmarks/db/expand-contract.md` e `docs/benchmarks/db/vacuum-bloat.md`.
+
+## Replay
+
+O modelo de leitura se reconstrói do zero a partir do tópico `radar.procurement.v1`: `POST /ops/replay` (papel operator, `make replay`) responde 202 e roda em thread virtual; `GET /ops/replay/last` devolve o estado da última execução: `RUNNING`, `FAILED` (com `error`) ou `DONE` (com o `ReplayReport`: `events`, `duration`, `eventsPerSecond`, `startedAt`, `finishedAt`), e 404 se nenhuma rodou desde que a instância subiu. `make replay` espera até `DONE` (imprime o relatório) ou `FAILED` (sai com erro). O campo `projection` do `ReplayRequest` do contrato é aceito e ignorado: o replay sempre reconstrói todas as projeções (limite conhecido). Um replay por vez por instância: a trava é em memória, então 409 só vale dentro da instância que recebeu o pedido; com mais de uma instância o operador deve chamar uma só. O caso de uso é `search.application.ReplayUseCase`.
+
+Procedimento, nesta ordem:
+
+1. Para o container do `ProcurementEventsListener` (id `search-projector-listener`), para ele não disputar as tabelas. O registro em curso termina antes.
+2. Abre um `KafkaConsumer` do `ConsumerFactory` do Boot, em grupo novo `search-replay-<epoch ms>`, atribuído (sem rebalance) às 12 partições e posicionado no início, e fixa os `endOffsets` daquele instante. Isso vem antes de apagar qualquer coisa: se o broker não responde, as projeções ficam intactas.
+3. Numa transação: `TRUNCATE` de `procurement_search_view`, `procurement_detail_view`, `procurement_stats_view` e `projection_checkpoint`, e `DELETE` das linhas de `processed_event` do `search-projector` (outros consumidores do schema mantêm as suas).
+4. Lê até cada partição alcançar o offset final fixado, projetando em lotes de 500 eventos por transação com a mesma lógica do projetor (`ProcurementProjector.projectAll`, sem SQL duplicado). Mensagem venenosa é registrada e pulada, como no consumidor vivo. O lag não é registrado (eventos antigos não são atraso); `projection_deferred_total` continua contando.
+5. Religa o container vivo (se estava rodando antes do replay; um container que o operador tinha parado continua parado), que segue dos offsets que o grupo `search-projector` já tinha confirmados. O replay nunca confirma offset no grupo vivo. O que o vivo relê do que o replay já projetou é descartado pelo inbox (`processed_event` foi reconstruído), e o que chegou depois dos offsets fixados só o vivo processa. Se o replay falha, o vivo é religado do mesmo modo e as projeções ficam como estavam no ponto da falha: repita o replay.
+
+Durante o replay as consultas veem as tabelas vazias e depois parciais: é uma operação de manutenção, não de rotina.
+
+Por que o tópico e não o outbox: as linhas publicadas do outbox são apagadas depois de 7 dias (`OutboxCleanup`), então só o tópico guarda a história inteira. Exigência derivada: o tópico `radar.procurement.v1` tem `retention.ms=-1` (retenção infinita), configurado no `NewTopic` de `KafkaOutboxConfiguration`. Um tópico com retenção finita tornaria o replay uma reconstrução parcial sem aviso. A DLQ continua com a retenção padrão.
+
+Prova: `ProjectionReplayIT` (50 mil eventos sintéticos: projeta ao vivo, despeja as visões, roda o replay e despeja de novo; iguais, linha a linha por SHA-256, ignorando só as colunas de horário), `JooqProjectionReplayIT` (lote com evento adiado no meio, `reset` preserva outros consumidores) e `docs/benchmarks/replay/`.

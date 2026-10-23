@@ -3,6 +3,7 @@ package br.dev.miguelsanzbr.radar.search.adapter.out.jooq;
 import static br.dev.miguelsanzbr.radar.search.adapter.out.jooq.generated.Tables.PROCESSED_EVENT;
 import static br.dev.miguelsanzbr.radar.search.adapter.out.jooq.generated.Tables.PROJECTION_CHECKPOINT;
 
+import br.dev.miguelsanzbr.radar.search.application.OffsetEvent;
 import br.dev.miguelsanzbr.radar.search.application.ProcurementEvent;
 import br.dev.miguelsanzbr.radar.search.application.ProcurementView;
 import br.dev.miguelsanzbr.radar.search.application.ProjectionOutcome;
@@ -172,11 +173,40 @@ class JooqProjectionStore implements ProjectionStore {
               };
           if (!applied) {
             // why: nothing was written for this event, so it must stay unseen for a redelivery
-            tx.setRollbackOnly();
+            if (tx.isNewTransaction()) {
+              tx.setRollbackOnly();
+            } else {
+              // inside a batch the transaction is shared: only the inbox row of this event goes
+              dsl.deleteFrom(PROCESSED_EVENT)
+                  .where(PROCESSED_EVENT.CONSUMER.eq(PROJECTOR))
+                  .and(PROCESSED_EVENT.EVENT_ID.eq(event.eventId()))
+                  .execute();
+            }
             return ProjectionOutcome.DEFERRED;
           }
           checkpoint(event, offset);
           return ProjectionOutcome.APPLIED;
+        });
+  }
+
+  @Override
+  public List<ProjectionOutcome> projectAll(List<OffsetEvent> batch) {
+    return transaction.execute(
+        tx -> batch.stream().map(e -> project(e.event(), e.offset())).toList());
+  }
+
+  /**
+   * TRUNCATE of the views and the checkpoint, DELETE of the inbox rows of this projector only
+   * (other consumers of the schema keep theirs).
+   */
+  @Override
+  public void reset() {
+    transaction.executeWithoutResult(
+        tx -> {
+          dsl.execute(
+              "TRUNCATE search.procurement_search_view, search.procurement_detail_view,"
+                  + " search.procurement_stats_view, search.projection_checkpoint");
+          dsl.deleteFrom(PROCESSED_EVENT).where(PROCESSED_EVENT.CONSUMER.eq(PROJECTOR)).execute();
         });
   }
 

@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 
 import br.dev.miguelsanzbr.radar.alerts.Auth;
 import br.dev.miguelsanzbr.radar.alerts.adapter.PostgresIT;
+import br.dev.miguelsanzbr.radar.search.application.ReplayUseCase;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -28,6 +29,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.yaml.snakeyaml.Yaml;
 
@@ -120,6 +122,12 @@ class AuthorizationMatrixIT extends PostgresIT {
   private static final Map<Route, Map<Caller, String>> RESULTS = new LinkedHashMap<>();
 
   @Autowired MockMvc mvc;
+
+  /**
+   * The matrix calls POST /ops/replay as operator: the controller and security are real, the replay
+   * is not.
+   */
+  @MockitoBean ReplayUseCase replay;
 
   static Stream<Arguments> cases() {
     return ROUTES.stream()

@@ -153,7 +153,7 @@ synth:
 	RADAR_DB_PASSWORD="$$pw" $(PROBE_JAVA) -jar $(SYNTH_JAR) --mode=$(SYNTH_MODE) --count=$(SYNTH_COUNT) --seed=$(SYNTH_SEED) \
 	  --out=$(SYNTH_OUT) --jdbc-url=$(SYNTH_JDBC_URL) --user=$(SYNTH_USER)
 
-replay bench slo profile:
+bench slo profile:
 	@echo "$@: not implemented yet" >&2
 	@exit 1
 
@@ -201,6 +201,25 @@ BATS_IMAGE := bats/bats:1.12.0@sha256:0257e4f5326dd37046e94d4b8ce07c293447be80a9
 test-scripts:
 	docker run --rm -v "$(CURDIR):$(CURDIR)" -w "$(CURDIR)" $(SHELLCHECK_IMAGE) scripts/deploy-lib.sh scripts/deploy.sh scripts/rollback.sh scripts/smoke.sh
 	docker run --rm -v "$(CURDIR):$(CURDIR)" -w "$(CURDIR)" $(BATS_IMAGE) scripts/test
+
+# Reconstroi o modelo de leitura do offset 0 do topico (ADR-0010): dispara o replay do operador e
+# espera /ops/replay/last sair de RUNNING: imprime o relatorio em DONE, sai com erro em FAILED. Token do realm como em scripts/seed.sh.
+REPLAY_WAIT ?= 3600
+replay:
+	@issuer="$${RADAR_OIDC_ISSUER:-http://localhost:8180/realms/radar}"; app="$${RADAR_APP_URL:-http://localhost:8080}"; \
+	token() { curl -fsS -d grant_type=client_credentials -d client_id=radar-ops-cli \
+	  -d "client_secret=$${RADAR_OPS_CLIENT_SECRET:-radar-ops-dev-secret}" \
+	  "$$issuer/protocol/openid-connect/token" | jq -r .access_token; }; \
+	curl -fsS -X POST -H "Authorization: Bearer $$(token)" "$$app/ops/replay" && echo || exit 1; \
+	for i in $$(seq 1 $(REPLAY_WAIT)); do \
+	  if out="$$(curl -fsS -H "Authorization: Bearer $$(token)" "$$app/ops/replay/last" 2>/dev/null)"; then \
+	    case "$$(echo "$$out" | jq -r .status)" in \
+	      DONE) echo "$$out"; exit 0;; \
+	      FAILED) echo "replay: falhou: $$out" >&2; exit 1;; \
+	    esac; \
+	  fi; \
+	  sleep 1; done; \
+	echo "replay: ainda rodando apos $(REPLAY_WAIT)s; veja make logs SERVICE=app" >&2; exit 1
 
 # Uso: make backfill FROM=2026-10-01 TO=2026-10-31 [MODALITY=6]; force=true ignora a janela noturna.
 backfill:

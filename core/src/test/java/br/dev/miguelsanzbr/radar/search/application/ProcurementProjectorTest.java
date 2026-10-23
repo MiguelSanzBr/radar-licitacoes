@@ -31,17 +31,13 @@ class ProcurementProjectorTest {
           deferred++;
         }
       };
-  private final List<Long> offsets = new ArrayList<>();
   private final Clock clock = Clock.fixed(T0.plusSeconds(90), ZoneOffset.UTC);
 
+  private FakeProjectionStore store;
+
   private ProcurementProjector projector(ProjectionOutcome outcome) {
-    return new ProcurementProjector(
-        (event, offset) -> {
-          offsets.add(offset);
-          return outcome;
-        },
-        metrics,
-        clock);
+    store = new FakeProjectionStore(outcome);
+    return new ProcurementProjector(store, metrics, clock);
   }
 
   @Test
@@ -51,7 +47,7 @@ class ProcurementProjectorTest {
     var outcome = projector(ProjectionOutcome.APPLIED).project(event, 42);
 
     assertThat(outcome).isEqualTo(ProjectionOutcome.APPLIED);
-    assertThat(offsets).containsExactly(42L);
+    assertThat(store.offsets).containsExactly(42L);
     assertThat(lags).containsExactly(Duration.ofSeconds(90));
   }
 
@@ -81,7 +77,9 @@ class ProcurementProjectorTest {
   @Test
   void aClockBehindTheProducerNeverRecordsANegativeLag() {
     var early = Clock.fixed(T0.minusSeconds(5), ZoneOffset.UTC);
-    var projector = new ProcurementProjector((e, o) -> ProjectionOutcome.APPLIED, metrics, early);
+    var projector =
+        new ProcurementProjector(
+            new FakeProjectionStore(ProjectionOutcome.APPLIED), metrics, early);
 
     projector.project(discovered("a", view(id(1), "object", null, 1), 1), 1);
 
