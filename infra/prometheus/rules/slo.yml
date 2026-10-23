@@ -130,3 +130,11 @@ groups:
         annotations:
           summary: "Nenhuma requisição à busca registrada por 15 min"
           runbook_url: docs/runbook.md#sem-trafego
+      - alert: ParticaoFutura
+        expr: ingest_partitions_ahead < 1
+        for: 1h
+        labels:
+          severity: critical
+        annotations:
+          summary: "O mês seguinte não tem partição em ingest.procurement: a coleta vai falhar na virada do mês"
+          runbook_url: docs/runbook.md#particao-ausente

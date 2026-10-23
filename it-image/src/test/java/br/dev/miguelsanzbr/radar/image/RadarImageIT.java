@@ -32,6 +32,8 @@ class RadarImageIT {
           .withEnv("SPRING_DATASOURCE_URL", "jdbc:postgresql://db:5432/" + DB.getDatabaseName())
           .withEnv("SPRING_DATASOURCE_USERNAME", DB.getUsername())
           .withEnv("SPRING_DATASOURCE_PASSWORD", DB.getPassword())
+          // the json profile of the image has no default for the read side password
+          .withEnv("RADAR_READ_WRITER_PASSWORD", "image-it-read-writer")
           // the schedulers are on by default: keep them off and the PNCP client unroutable, so this
           // test can never reach the real PNCP
           .withEnv("RADAR_INGEST_INCREMENTAL_ENABLED", "false")

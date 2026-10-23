@@ -171,4 +171,4 @@ e2e:
 
 # Uso: make backfill FROM=2026-10-01 TO=2026-10-31 [MODALITY=6]; force=true ignora a janela noturna.
 backfill:
-	curl -fsS -X POST "http://localhost:8080/ops/backfill?from=$(FROM)&to=$(TO)&modality=$${MODALITY:-6}&force=true"
+	curl -fsS -X POST -H "Authorization: Bearer $$(scripts/ops-token.sh)" "http://localhost:8080/ops/backfill?from=$(FROM)&to=$(TO)&modality=$${MODALITY:-6}&force=true"

@@ -1,0 +1,1 @@
+org.springframework.boot.EnvironmentPostProcessor=br.dev.miguelsanzbr.radar.search.adapter.config.ReadWriterPasswordCheck

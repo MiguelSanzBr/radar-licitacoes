@@ -10,6 +10,8 @@ secret:
   values:
     SPRING_DATASOURCE_USERNAME: radar
     SPRING_DATASOURCE_PASSWORD: radar-smoke
+    # a imagem (perfil json) nao sobe sem esta senha
+    RADAR_READ_WRITER_PASSWORD: radar-smoke-rw
 resources:
   requests:
     cpu: 100m

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Valida dashboards Grafana (JSON, variavel de datasource, sem uid fixo), config e regras do Prometheus
-# e os testes unitarios das regras. promtool roda na imagem com tag fixada.
+# Valida dashboards Grafana (JSON, variavel de datasource, sem uid fixo), config e regras do Prometheus,
+# as ancoras do runbook citadas pelas regras e os testes unitarios das regras. promtool roda na imagem com tag fixada.
 # Uso: scripts/lint-observability.sh
 set -euo pipefail
 
@@ -84,6 +84,17 @@ run_promtool() {
 }
 
 python3 -I -c "$DASHBOARD_POLICY" "$DASH_DIR"
+
+# Todo runbook_url das regras precisa de uma ancora <a id="..."> em docs/runbook.md
+missing=0
+for anchor in $(sed -n 's|.*runbook_url: docs/runbook.md#||p' "$PROM_DIR/rules/slo.yml" | sort -u); do
+  if ! grep -q "<a id=\"$anchor\"></a>" "$ROOT/docs/runbook.md"; then
+    echo "runbook: ancora ausente em docs/runbook.md: $anchor" >&2
+    missing=1
+  fi
+done
+[ "$missing" -eq 0 ]
+echo "runbook: ok"
 run_promtool check config /etc/prometheus/prometheus.yml
 run_promtool check rules /etc/prometheus/rules/slo.yml
 run_promtool test rules /etc/prometheus/rules/slo_test.yml

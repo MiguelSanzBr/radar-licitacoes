@@ -17,6 +17,7 @@ Os alvos desta decisão vêm da seção 7.4 do plano. Nenhum deles foi medido ai
 - Regras de SLO em `infra/prometheus/rules/slo.yml`: burn rate com duas janelas. Alerta crítico com 14,4 vezes o ritmo aceito em 1 h e 5 min (consome cerca de 2% do orçamento de 30 dias em uma hora). Alerta de aviso com 6 vezes em 6 h e 30 min (cerca de 5% do orçamento). Alertas de limiar simples para outbox, projeção e entrega de alerta, com `for` de 10 min.
 - Os alertas têm `severity`, `summary` e `runbook_url` apontando para `docs/runbook.md`.
 - Dois alertas de saúde do próprio scrape: `RadarTargetDown` (`up{job="radar"} == 0` por 2 min, crítico) e `RadarSemTrafego` (nenhuma requisição à busca por 15 min, aviso, com `absent()`).
+- Alerta de limiar `ParticaoFutura` (`ingest_partitions_ahead < 1` por 1 h, crítico): o mês seguinte não tem partição em `ingest.procurement`. É o único alerta que vigia um erro silencioso, porque a falha de insert não move nenhuma outra métrica (`docs/post-mortem/2026-10-22-particao-ausente.md`).
 - Testes das regras com `promtool test rules` (`infra/prometheus/rules/slo_test.yml`): cada alerta dispara com séries sintéticas que violam o alvo, e nenhum dispara com tráfego saudável.
 
 Alvos propostos, não medidos:

@@ -218,6 +218,38 @@ tests:
               summary: "Nenhuma requisição à busca registrada por 15 min"
               runbook_url: docs/runbook.md#sem-trafego
 
+  - name: sem partição do mês seguinte por 1 h dispara partição ausente
+    interval: 1m
+    input_series:
+      - series: 'ingest_partitions_ahead{application="radar"}'
+        values: '3x30 0x90'
+    alert_rule_test:
+      - eval_time: 25m
+        alertname: ParticaoFutura
+        exp_alerts: []
+      - eval_time: 70m
+        alertname: ParticaoFutura
+        exp_alerts: []
+      - eval_time: 100m
+        alertname: ParticaoFutura
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              application: radar
+            exp_annotations:
+              summary: "O mês seguinte não tem partição em ingest.procurement: a coleta vai falhar na virada do mês"
+              runbook_url: docs/runbook.md#particao-ausente
+
+  - name: partição do mês seguinte presente não dispara partição ausente
+    interval: 1m
+    input_series:
+      - series: 'ingest_partitions_ahead{application="radar"}'
+        values: '3x120'
+    alert_rule_test:
+      - eval_time: 70m
+        alertname: ParticaoFutura
+        exp_alerts: []
+
   - name: tráfego saudável não dispara nenhum alerta
     interval: 1m
     input_series:
@@ -243,6 +275,8 @@ tests:
         values: '0+100x120'
       - series: 'alert_delivery_latency_seconds_bucket{le="+Inf"}'
         values: '0+100x120'
+      - series: 'ingest_partitions_ahead{application="radar"}'
+        values: '3x120'
     alert_rule_test:
       - eval_time: 70m
         alertname: SearchErrorBudgetFastBurn
@@ -270,4 +304,7 @@ tests:
         exp_alerts: []
       - eval_time: 70m
         alertname: RadarSemTrafego
+        exp_alerts: []
+      - eval_time: 70m
+        alertname: ParticaoFutura
         exp_alerts: []

@@ -29,7 +29,7 @@ O contexto `ingest` guarda o agregado `Procurement` com histórico de situaçõe
 
 - Não há unicidade global de `numero_controle_pncp` no banco: a chave composta só garante unicidade dentro da partição. A unicidade lógica depende de o `published_at` ser imutável e de o repositório sempre buscar por número antes de descobrir.
 - `findById` não conhece o `published_at`, então consulta o índice da chave primária de todas as partições (custo proporcional ao número de meses, hoje 48).
-- Esquecer de criar a partição do mês seguinte derruba a ingestão daquele mês; isso é intencional e será vigiado pelo job mensal.
+- Esquecer de criar a partição do mês seguinte derruba a ingestão daquele mês; isso é intencional e é vigiado pelo job `ScheduledPartitionMaintenance` (diário, cria o mês atual e os próximos 3), pela métrica `ingest_partitions_ahead` e pelo alerta `ParticaoFutura`. O incidente simulado que motivou isso está em `docs/post-mortem/2026-10-22-particao-ausente.md`.
 - O histórico se liga à licitação por número, sem chave estrangeira, e depende do repositório para manter a consistência.
 
 ## Prova

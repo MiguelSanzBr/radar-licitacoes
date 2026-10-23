@@ -5,12 +5,9 @@
 set -euo pipefail
 
 day="${1:?uso: $0 AAAA-MM-DD}"
-issuer="${RADAR_OIDC_ISSUER:-http://localhost:8180/realms/radar}"
 app="${RADAR_APP_URL:-http://localhost:8080}"
 
-token="$(curl -fsS -d grant_type=client_credentials -d client_id=radar-ops-cli \
-  -d "client_secret=${RADAR_OPS_CLIENT_SECRET:-radar-ops-dev-secret}" \
-  "$issuer/protocol/openid-connect/token" | jq -r .access_token)"
+token="$("$(dirname "$0")/ops-token.sh")"
 
 curl -fsS -X POST -H "Authorization: Bearer $token" \
   "$app/ops/backfill?from=$day&to=$day&modality=6&force=true"
