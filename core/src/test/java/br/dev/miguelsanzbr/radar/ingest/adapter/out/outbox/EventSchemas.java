@@ -9,7 +9,7 @@ import com.networknt.schema.SpecificationVersion;
 /**
  * Loads the event schemas shipped by the contracts module, resolving their ids on the classpath.
  */
-final class EventSchemas {
+public final class EventSchemas {
 
   private static final String ID_PREFIX = "https://radar.miguelsanzbr.dev/schemas/";
 
@@ -25,7 +25,7 @@ final class EventSchemas {
   private EventSchemas() {}
 
   /** For example {@code "procurement-discovered.v1"} or {@code "envelope"}. */
-  static Schema load(String name) {
+  public static Schema load(String name) {
     return REGISTRY.getSchema(SchemaLocation.of(ID_PREFIX + "events/" + name + ".schema.json"));
   }
 }

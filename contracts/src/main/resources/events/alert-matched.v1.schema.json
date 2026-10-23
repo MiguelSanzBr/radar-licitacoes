@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://radar.miguelsanzbr.dev/schemas/events/alert-matched.v1.schema.json",
+  "title": "AlertMatched v1",
+  "description": "A saved search matched a procurement for the first time. Carries what the e-mail shows. Key of the topic: subscriberId.",
+  "allOf": [
+    {
+      "$ref": "envelope.schema.json"
+    }
+  ],
+  "properties": {
+    "eventType": {
+      "const": "AlertMatched"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "aggregateType": {
+      "const": "Alert"
+    },
+    "aggregateId": {
+      "description": "The subscriber id, also the Kafka record key.",
+      "type": "string",
+      "format": "uuid"
+    },
+    "payload": {
+      "type": "object",
+      "required": [
+        "savedSearchId",
+        "subscriberId",
+        "procurementId",
+        "frequency",
+        "objectDescription",
+        "organName",
+        "uf",
+        "municipality",
+        "estimatedValue",
+        "proposalClosingAt",
+        "detailPath"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "savedSearchId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "subscriberId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "procurementId": {
+          "$ref": "procurement-snapshot.v1.schema.json#/$defs/procurementId"
+        },
+        "frequency": {
+          "enum": [
+            "INSTANT",
+            "DAILY"
+          ]
+        },
+        "objectDescription": {
+          "description": "First 300 characters of the object description.",
+          "type": "string",
+          "maxLength": 300
+        },
+        "organName": {
+          "type": "string"
+        },
+        "uf": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[A-Z]{2}$"
+        },
+        "municipality": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "estimatedValue": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^-?\\d+\\.\\d{2}$"
+        },
+        "proposalClosingAt": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "detailPath": {
+          "description": "Path of the procurement page; the control number with its slash written as a dash.",
+          "type": "string",
+          "pattern": "^/licitacoes/\\d{14}-\\d+-\\d{6}-\\d{4}$"
+        }
+      }
+    }
+  }
+}

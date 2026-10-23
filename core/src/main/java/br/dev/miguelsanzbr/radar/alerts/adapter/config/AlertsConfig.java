@@ -3,10 +3,16 @@ package br.dev.miguelsanzbr.radar.alerts.adapter.config;
 import br.dev.miguelsanzbr.radar.alerts.application.EraseSubscriberUseCase;
 import br.dev.miguelsanzbr.radar.alerts.application.IdempotencyGuard;
 import br.dev.miguelsanzbr.radar.alerts.application.ManageSavedSearchUseCase;
+import br.dev.miguelsanzbr.radar.alerts.application.MatchProcurementUseCase;
 import br.dev.miguelsanzbr.radar.alerts.application.PurgeExpiredUseCase;
 import br.dev.miguelsanzbr.radar.alerts.application.RegisterSubscriberUseCase;
 import br.dev.miguelsanzbr.radar.alerts.application.VerifySubscriberUseCase;
+import br.dev.miguelsanzbr.radar.alerts.application.port.AlertDeliveries;
+import br.dev.miguelsanzbr.radar.alerts.application.port.AlertEvents;
 import br.dev.miguelsanzbr.radar.alerts.application.port.IdempotencyStore;
+import br.dev.miguelsanzbr.radar.alerts.application.port.MatcherMetrics;
+import br.dev.miguelsanzbr.radar.alerts.application.port.ProcessedEvents;
+import br.dev.miguelsanzbr.radar.alerts.application.port.ReverseSearch;
 import br.dev.miguelsanzbr.radar.alerts.application.port.SavedSearchRepository;
 import br.dev.miguelsanzbr.radar.alerts.application.port.SubscriberRepository;
 import br.dev.miguelsanzbr.radar.alerts.application.port.UnitOfWork;
@@ -86,5 +92,18 @@ class AlertsConfig {
       UnitOfWork unitOfWork,
       Clock clock) {
     return new PurgeExpiredUseCase(subscribers, idempotency, unitOfWork, clock);
+  }
+
+  @Bean
+  MatchProcurementUseCase matchProcurementUseCase(
+      ReverseSearch search,
+      AlertDeliveries deliveries,
+      ProcessedEvents inbox,
+      AlertEvents events,
+      MatcherMetrics metrics,
+      UnitOfWork unitOfWork,
+      Clock clock) {
+    return new MatchProcurementUseCase(
+        search, deliveries, inbox, events, metrics, unitOfWork, clock);
   }
 }

@@ -15,7 +15,7 @@ class ModularityTest {
   }
 
   @Test
-  void alertsDependsOnlyOnTheSharedKernelAndTheApiContract() {
+  void alertsDependsOnlyOnTheSharedKernelTheApiContractTheOutboxAndTracing() {
     var alerts = MODULES.getModuleByName("alerts").orElseThrow();
 
     var targets =
@@ -24,7 +24,7 @@ class ModularityTest {
             .distinct()
             .toList();
 
-    assertThat(targets).containsExactlyInAnyOrder("shared", "api");
+    assertThat(targets).containsExactlyInAnyOrder("shared", "api", "outbox", "observability");
   }
 
   @Test

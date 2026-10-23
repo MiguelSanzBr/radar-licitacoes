@@ -12,6 +12,11 @@
     <Package name="br.dev.miguelsanzbr.radar.alerts.application"/>
     <Bug pattern="EI_EXPOSE_REP2"/>
   </Match>
+  <!-- O OutboxWriter guarda o JdbcTemplate injetado (colaborador compartilhado, nao estado mutavel); o construtor e publico para os testes de contrato montarem o caminho real. -->
+  <Match>
+    <Class name="br.dev.miguelsanzbr.radar.outbox.OutboxWriter"/>
+    <Bug pattern="EI_EXPOSE_REP2"/>
+  </Match>
   <!-- O valor devolvido no cabecalho so passa se casar com [A-Za-z0-9._-]{1,64}; o analisador nao enxerga o regex. -->
   <Match>
     <Class name="br.dev.miguelsanzbr.radar.observability.CorrelationIdFilter"/>

@@ -18,6 +18,7 @@ import br.dev.miguelsanzbr.radar.ingest.domain.ProcurementEvent;
 import br.dev.miguelsanzbr.radar.observability.TraceparentExtractor;
 import br.dev.miguelsanzbr.radar.observability.TraceparentInjector;
 import br.dev.miguelsanzbr.radar.outbox.OutboxMessage;
+import br.dev.miguelsanzbr.radar.outbox.OutboxWriter;
 import br.dev.miguelsanzbr.radar.outbox.adapter.kafka.KafkaEventPublisher;
 import br.dev.miguelsanzbr.radar.outbox.adapter.kafka.KafkaPublisherProperties;
 import br.dev.miguelsanzbr.radar.shared.UuidV7;
@@ -80,7 +81,8 @@ class EventContractTest {
       long aggregateVersion, List<ProcurementEvent> events, TraceparentInjector traces)
       throws Exception {
     var jdbc = new RecordingJdbc();
-    new JdbcOutboxAppender(jdbc, new UuidV7(clockAt(T0), new SecureRandom()), traces)
+    new JdbcOutboxAppender(
+            new OutboxWriter(jdbc, new UuidV7(clockAt(T0), new SecureRandom()), traces))
         .append("Procurement", aggregateVersion, events);
 
     KafkaTemplate<String, String> template = mock(KafkaTemplate.class);
