@@ -51,9 +51,9 @@
     <openapi-generator.version>7.26.0</openapi-generator.version>
     <openapi-request-validator.version>3.0.0</openapi-request-validator.version>
 
-    <!-- why: testes com @Tag("bench") medem tempo e @Tag("chaos") derruba infraestrutura: ficam fora do verify; -Pbench e -Pchaos trocam os dois filtros -->
+    <!-- why: testes com @Tag("bench") medem tempo e @Tag("chaos") derruba infraestrutura e @Tag("cdc") sobe tres contêineres e uma imagem de 2,4 GB: ficam fora do verify; -Pbench, -Pchaos e -Pcdc trocam os dois filtros -->
     <test.groups></test.groups>
-    <test.excluded.groups>bench,chaos,compat</test.excluded.groups>
+    <test.excluded.groups>bench,chaos,compat,cdc</test.excluded.groups>
 
     <!-- why: o JaCoCo prepende o agente a este valor; o perfil jfr acrescenta flags via @{argLine} -->
     <argLine></argLine>
@@ -215,6 +215,7 @@
               <param>bench</param>
               <param>chaos</param>
               <param>compat</param>
+              <param>cdc</param>
             </excludedGroups>
           </configuration>
         </plugin>
@@ -318,14 +319,32 @@
     <profile>
       <!--
         ./mvnw -Pbench test -pl core -am -Dtest=VirtualThreadsBenchTest: roda so os testes com
-        @Tag("bench") (ex.: docs/benchmarks/jvm/virtual-threads.md). Sem cobertura: nao e verify.
+        @Tag("bench") (ex.: docs/benchmarks/jvm/virtual-threads.md). Sem o gate de cobertura: nao e verify.
+        Os ITs com @Tag("bench") (docs/benchmarks/cdc) rodam no failsafe:
+        ./mvnw -Pbench verify -pl core -am -Dtest=NoSuch -Dit.test=PollingVsDebeziumBenchIT -Dsurefire.failIfNoSpecifiedTests=false
       -->
       <id>bench</id>
       <properties>
         <test.groups>bench</test.groups>
         <test.excluded.groups></test.excluded.groups>
-        <jacoco.skip>true</jacoco.skip>
       </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <!-- O agente continua ligado (o enforcer exige jacoco.exec ao fim do verify); so o gate de 100% sai. -->
+            <groupId>org.jacoco</groupId>
+            <artifactId>jacoco-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>check</id>
+                <configuration>
+                  <skip>true</skip>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
     </profile>
     <profile>
       <!--
@@ -365,6 +384,35 @@
       <id>compat</id>
       <properties>
         <test.groups>compat</test.groups>
+        <test.excluded.groups></test.excluded.groups>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <!-- O agente continua ligado (o enforcer exige jacoco.exec); so o gate de 100% sai. -->
+            <groupId>org.jacoco</groupId>
+            <artifactId>jacoco-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>check</id>
+                <configuration>
+                  <skip>true</skip>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <!--
+        ./mvnw -Pcdc verify -pl core -am -Dit.test=CdcEquivalenceIT (make cdc-test): roda so os testes com
+        @Tag("cdc"), que sobem Postgres (wal_level=logical), Kafka e o Debezium Connect do compose e passam
+        o relay e o CDC pelas mesmas asserções (ADR-0018). Fora do verify padrao e sem o gate de cobertura.
+      -->
+      <id>cdc</id>
+      <properties>
+        <test.groups>cdc</test.groups>
         <test.excluded.groups></test.excluded.groups>
       </properties>
       <build>

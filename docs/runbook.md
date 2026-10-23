@@ -24,6 +24,7 @@ curl -fsS -H "Authorization: Bearer $TOKEN" http://localhost:8080/actuator/prome
 | Alerta | Severidade | Seção |
 |---|---|---|
 | `OutboxOldestAgeHigh` | warning | [outbox-atrasado](#outbox-atrasado) |
+| `OutboxReplicationSlotLagHigh`, `OutboxReplicationSlotInactive` | warning | [slot-do-cdc-atrasado](#slot-do-cdc-atrasado) |
 | `ProjectionLagHigh` | warning | [projecao-atrasada](#projecao-atrasada) |
 | `SearchLatencyFastBurn`, `SearchLatencySlowBurn` | critical, warning | [busca-lenta](#busca-lenta) |
 | `SearchErrorBudgetFastBurn`, `SearchErrorBudgetSlowBurn` | critical, warning | [busca-indisponivel](#busca-indisponivel) |
@@ -38,7 +39,7 @@ curl -fsS -H "Authorization: Bearer $TOKEN" http://localhost:8080/actuator/prome
 
 **Sintoma.** `outbox_oldest_age_seconds` acima de 5 s por 10 minutos: eventos gravados pela coleta não chegam ao Kafka.
 
-**Impacto.** A busca e os alertas ficam defasados. Não há perda: as linhas continuam em `outbox.outbox_event` e o relay as publica quando o obstáculo some (ADR-0018).
+**Impacto.** A busca e os alertas ficam defasados. Não há perda: as linhas continuam em `outbox.outbox_event` e o relay as publica quando o obstáculo some (ADR-0018). Com `radar.outbox.mode=cdc` não há relay e estas métricas ficam em zero: veja [slot-do-cdc-atrasado](#slot-do-cdc-atrasado).
 
 **Diagnóstico.**
 
@@ -65,6 +66,39 @@ $PSQL -c "SELECT id, aggregate_id, attempts, left(last_error, 200) AS erro
 - Relay desligado por engano: religue e reinicie o app.
 
 **Escalonamento.** Idade acima de 30 minutos, `outbox_poison_pending` maior que 0 ou causa não identificada: time do outbox.
+
+<a id="slot-do-cdc-atrasado"></a>
+
+## Slot do CDC atrasado (`OutboxReplicationSlotLagHigh`, `OutboxReplicationSlotInactive`)
+
+Só vale com `radar.outbox.mode=cdc` (ADR-0018). No modo `polling` as métricas do slot nem existem.
+
+**Sintoma.** `outbox_replication_slot_lag_bytes` acima de 256 MiB por 10 minutos ou igual a `-1` (slot ausente), ou `outbox_replication_slot_active` igual a 0 por 5 minutos (ninguém lê o slot: conector parado). Nesse modo `outbox_pending` e `outbox_oldest_age_seconds` ficam em zero de propósito: o atraso é o do slot.
+
+**Impacto.** Os eventos esperam o Debezium, então a busca e os alertas ficam defasados. Não se perde evento enquanto o slot existe: ele segura o WAL do `INSERT` até o conector confirmar, e a limpeza do outbox (por `created_at`, 7 dias) não interfere nisso. O risco real é o slot ser invalidado: o Postgres do compose invalida o slot ao passar de 1 GB de WAL retido (`max_slot_wal_keep_size`), e o que foi gravado depois disso, ou ainda não lido na invalidação, não sai pelo CDC. Um slot parado também enche o disco do Postgres até esse limite.
+
+**Diagnóstico.**
+
+1. Estado do slot (`active = f` com `lag` crescendo é conector parado; `wal_status = lost` é slot invalidado):
+
+```
+$PSQL -c "SELECT slot_name, active, wal_status,
+  pg_size_pretty(pg_wal_lsn_diff(pg_current_wal_lsn(), confirmed_flush_lsn)) AS lag
+  FROM pg_replication_slots"
+```
+
+2. Conector: `$COMPOSE exec debezium curl -s localhost:8083/connectors/radar-outbox/status` (o `state` das tarefas deve ser `RUNNING`) e `$COMPOSE logs --no-log-prefix --tail=200 debezium`.
+3. Broker fora ou conector sem acesso ao Kafka: o log do conector traz timeouts do produtor.
+4. Com o outbox parado e outras tabelas recebendo escrita, o lag deve cair sozinho em até uns 20 segundos: o conector escreve um batimento a cada 10 s em `outbox.cdc_heartbeat` (publicada) e é isso que faz o slot avançar. Medido: 61 MB de WAL de outra tabela foram confirmados em cerca de 16 s; só com `heartbeat.interval.ms`, sem a escrita, o lag ficou em 64 MB por mais de 30 s. Se o lag não cai, veja se a tabela existe (`enable-cdc.sql` a cria) e o log do conector.
+
+**Ação.**
+
+- Conector parado ou caído: `$COMPOSE up -d debezium`. Ele retoma do ponto confirmado no slot e o lag cai sozinho. Eventos enviados e ainda não confirmados saem de novo (ao menos uma vez), e o Inbox dos consumidores absorve.
+- Slot ausente ou `wal_status = lost`: o conector não retoma, o log dele diz `Last recorded offset is no longer available on the server`. Entregue o que faltou voltando para `polling` pelo caminho de [trocar o modo do outbox](#trocar-o-modo-do-outbox), **pulando o passo 2 da volta** (não marque nada como publicado: o conector não está saudável e o que ele entregou não é confiável). Rode só parar o conector, `disable-cdc.sql`, apagar os offsets e reiniciar o app em `polling` (passos 3 e 4 da volta): o relay republica toda a tabela retida (7 dias) e os Inboxes dos consumidores absorvem a duplicata. Depois, se quiser o CDC de novo, siga os passos para `cdc`.
+- Slot de um conector aposentado: um slot sem conector retém WAL para sempre. Apague com `$PSQL -c "SELECT pg_drop_replication_slot('radar_outbox')"` só depois de parar o conector e de confirmar que nada depende dele.
+- Tópico `__debezium-heartbeat.radar`: é o batimento do conector, pequeno, e nenhum consumidor da aplicação o lê.
+
+**Escalonamento.** Slot invalidado, disco do Postgres acima de 80% ou lag que não cai com o conector `RUNNING`: time do outbox.
 
 <a id="projecao-atrasada"></a>
 
@@ -254,6 +288,42 @@ curl -fsS -X POST -H "Authorization: Bearer $TOKEN" \
 **Ação.** Suba o Redis (`$COMPOSE up -d redis`); o cliente reconecta sozinho. O estado dos baldes se perde sem prejuízo: balde ausente é balde cheio. Se a queda for longa e houver abuso, reduza a exposição na borda (proxy) ou desligue o limite com `RADAR_RATE_LIMIT_ENABLED=false` para eliminar a espera de 250 ms.
 
 **Cuidados.** O Redis precisa de `maxmemory-policy volatile-ttl` (toda chave tem TTL); com `noeviction` e a memória cheia o limite passa a abrir para todos (`rate_limit_fail_open_total` sobe com `OOM` no log). Em produção o log DEBUG de requisição e resposta deve ficar desligado: a resposta de `POST /api/v1/api-keys` leva a chave em claro.
+
+### Trocar o modo do outbox
+
+`radar.outbox.mode` (variável `RADAR_OUTBOX_MODE`) escolhe quem publica: `polling` (padrão, o relay do app) ou `cdc` (Debezium, ADR-0018). Nunca os dois ao mesmo tempo: um evento sairia duas vezes. A coluna `envelope` e a publicação do CDC não são do Flyway: `infra/cdc/enable-cdc.sql` as cria e `infra/cdc/disable-cdc.sql` as remove, os dois idempotentes. Exigem PostgreSQL 18 (o 17 recusa a publicação com coluna gerada; o script confere a versão antes de mexer em qualquer coisa) e `wal_level=logical`. `ADD COLUMN ... STORED` reescreve a tabela com `ACCESS EXCLUSIVE`, alguns segundos numa fila de 7 dias.
+
+No compose, `PROFILE=cdc make up` num ambiente novo faz tudo: o serviço `cdc-setup` aplica o `enable-cdc.sql` depois que o app ficou saudável e antes do Debezium. As linhas que o app gravar antes do `cdc-setup` terminar não saem (não há relay nem slot ainda); num ambiente com dados, use os passos abaixo.
+
+Para `cdc`:
+
+1. Cheque as linhas envenenadas: `$PSQL -c "SELECT count(*) FROM outbox.outbox_event WHERE published_at IS NULL AND attempts >= 10"` deve dar 0. Linhas envenenadas nunca esvaziam pelo relay e o CDC não as vê (são anteriores ao slot): trate-as antes, como em [outbox-atrasado](#outbox-atrasado), ou aceite que ficam fora.
+2. Aplique o script: `$PSQL -v ON_ERROR_STOP=1 -f - < infra/cdc/enable-cdc.sql` (no compose, o `cdc-setup` faz isto).
+3. Crie o slot, para o WAL ficar retido a partir daqui (o conector usa o slot que já existe), e guarde o instante em seguida: `$PSQL -c "SELECT pg_create_logical_replication_slot('radar_outbox', 'pgoutput')"` e `T=$($PSQL -tAc "SELECT clock_timestamp()")`.
+4. Antes de parar o relay, espere ele esvaziar as linhas anteriores a `T`, que o slot não vê: `$PSQL -tAc "SELECT count(*) FROM outbox.outbox_event WHERE created_at < '$T' AND published_at IS NULL AND attempts < 10"` deve dar 0. Uma linha com `created_at` anterior a `T` que só faz commit depois de `T` também está no slot e sai duas vezes (duplicata, absorvida pelo Inbox).
+5. Reinicie o app com `RADAR_OUTBOX_MODE=cdc` (o relay sai).
+6. Suba o conector: `$COMPOSE --profile cdc up -d debezium`.
+7. Confira: o `state` da tarefa em `$COMPOSE exec debezium curl -s localhost:8083/connectors/radar-outbox/status` é `RUNNING` e `outbox_replication_slot_lag_bytes` fica perto de zero.
+
+As linhas gravadas entre os passos 3 e 5 saem pelo relay e pelo conector (ao menos uma vez); o Inbox dos consumidores absorve a duplicata.
+
+Para voltar a `polling` com o conector saudável (a ordem importa: marcar antes de parar o conector evita perder evento). Com o slot perdido ou invalidado, pule o passo 2 e vá do 3 ao 4, como em [slot-do-cdc-atrasado](#slot-do-cdc-atrasado):
+
+1. Confira as pré-condições do passo 2: o slot está `active = t`, o lag está abaixo de 1 MiB (1 048 576 bytes) e nenhuma transação aberta é mais velha que o corte de 5 minutos. As três valem ao mesmo tempo, porque `created_at` é o início da transação: uma transação longa grava uma linha com `created_at` antigo só ao fazer commit, e marcá-la sem o conector ter lido a perderia.
+
+```
+$PSQL -tAc "SELECT active, pg_wal_lsn_diff(pg_current_wal_lsn(), confirmed_flush_lsn) AS lag_bytes FROM pg_replication_slots WHERE slot_name = 'radar_outbox'"
+$PSQL -tAc "SELECT count(*) FROM pg_stat_activity WHERE xact_start < now() - interval '5 minutes' AND pid <> pg_backend_pid()"
+```
+
+   O primeiro deve dar `t` e menos de 1 048 576; o segundo, 0. Se o lag estiver alto, espere ou siga [slot-do-cdc-atrasado](#slot-do-cdc-atrasado).
+2. Com o conector saudável e ainda rodando, marque como publicado só o que ele já entregou, isto é, as linhas mais velhas que o corte de 5 minutos: `$PSQL -c "UPDATE outbox.outbox_event SET published_at = now() WHERE published_at IS NULL AND created_at < now() - interval '5 minutes'"`. Este passo só vale com o conector saudável.
+3. Pare o conector, desligue o CDC e apague os offsets dele: `$COMPOSE stop debezium && $PSQL -v ON_ERROR_STOP=1 -f - < infra/cdc/disable-cdc.sql && $COMPOSE rm -f -v debezium && docker volume rm radar_cdcdata`. O script apaga o slot, a publicação, a tabela do batimento, a coluna e a função, e falha se o slot ainda estiver ativo. O volume `cdcdata` guarda o offset do conector: se ficar, uma nova ativação falha com `Last recorded offset is no longer available` (o nome do volume leva o nome do projeto do compose).
+4. Reinicie o app com `RADAR_OUTBOX_MODE=polling` (o padrão). O relay publica o que ficou sem `published_at`, as linhas dos últimos 5 minutos: algumas já saíram pelo conector, então saem de novo (duplicata, absorvida pelo Inbox).
+
+Validado no compose com a pilha inteira: ida e volta sem perda nem duplicata em massa (os 1 633 eventos do seed saíram pelo CDC e foram todos projetados; depois da volta o relay publicou só as linhas novas).
+
+No modo `cdc` a limpeza diária apaga por `created_at` (7 dias), porque ninguém grava `published_at`. Um `aggregate_type` que não seja `Procurement` nem `Alert` não tem regra no `RegexRouter` e vai para um tópico com o nome do tipo (por exemplo `Foo`), em vez de falhar como o relay (`PublishException`): ao criar um tipo novo, acrescente a regra em `infra/cdc/connector.properties` e o tópico em `radar.outbox.topics.*`.
 
 ### Backfill
 

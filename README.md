@@ -20,7 +20,7 @@ make seed    # dispara em segundo plano o carregamento de 1 dia de dados reais d
 make down    # para o ambiente (CLEAN=1 make down também apaga os volumes)
 ```
 
-`make logs` acompanha os logs (`SERVICE=app` para um só). `PROFILE=layer3 make up` sobe também o Apicurio.
+`make logs` acompanha os logs (`SERVICE=app` para um só). `PROFILE=layer3 make up` sobe também o Apicurio. `PROFILE=cdc make up` troca o relay por polling pelo Debezium (ADR-0018, `docs/benchmarks/cdc/polling-vs-debezium.md`).
 
 | O quê | URL | Acesso |
 | --- | --- | --- |

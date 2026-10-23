@@ -78,6 +78,61 @@ tests:
               summary: "Mensagens do outbox esperando mais de 5 s para sair"
               runbook_url: docs/runbook.md#outbox-atrasado
 
+  - name: slot do cdc com mais de 256 MiB ou ausente dispara alerta
+    interval: 1m
+    input_series:
+      - series: 'outbox_replication_slot_lag_bytes{application="radar",instance="atrasado"}'
+        values: '300000000x120'
+      - series: 'outbox_replication_slot_lag_bytes{application="radar",instance="ausente"}'
+        values: '-1x120'
+    alert_rule_test:
+      - eval_time: 70m
+        alertname: OutboxReplicationSlotLagHigh
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              slo: frescor-outbox
+            exp_annotations:
+              summary: "Slot de replicação do outbox com mais de 256 MiB de WAL pendente ou ausente"
+              runbook_url: docs/runbook.md#slot-do-cdc-atrasado
+
+  - name: slot do cdc ausente sozinho dispara o alerta de lag
+    interval: 1m
+    input_series:
+      - series: 'outbox_replication_slot_lag_bytes{application="radar"}'
+        values: '-1x120'
+    alert_rule_test:
+      - eval_time: 70m
+        alertname: OutboxReplicationSlotLagHigh
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              slo: frescor-outbox
+            exp_annotations:
+              summary: "Slot de replicação do outbox com mais de 256 MiB de WAL pendente ou ausente"
+              runbook_url: docs/runbook.md#slot-do-cdc-atrasado
+
+  - name: slot do cdc inativo por mais de 5 min dispara alerta e ativo nao
+    interval: 1m
+    input_series:
+      - series: 'outbox_replication_slot_active{application="radar",instance="parado"}'
+        values: '1x10 0x110'
+      - series: 'outbox_replication_slot_lag_bytes{application="radar",instance="parado"}'
+        values: '1000x120'
+    alert_rule_test:
+      - eval_time: 8m
+        alertname: OutboxReplicationSlotInactive
+        exp_alerts: []
+      - eval_time: 70m
+        alertname: OutboxReplicationSlotInactive
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              slo: frescor-outbox
+            exp_annotations:
+              summary: "Slot de replicação do outbox sem leitor há mais de 5 minutos (o conector parou e o slot retém WAL)"
+              runbook_url: docs/runbook.md#slot-do-cdc-atrasado
+
   - name: projeção com p95 acima de 30 s dispara alerta de atraso
     interval: 1m
     input_series:
@@ -292,6 +347,12 @@ tests:
         exp_alerts: []
       - eval_time: 70m
         alertname: OutboxOldestAgeHigh
+        exp_alerts: []
+      - eval_time: 70m
+        alertname: OutboxReplicationSlotLagHigh
+        exp_alerts: []
+      - eval_time: 70m
+        alertname: OutboxReplicationSlotInactive
         exp_alerts: []
       - eval_time: 70m
         alertname: ProjectionLagHigh

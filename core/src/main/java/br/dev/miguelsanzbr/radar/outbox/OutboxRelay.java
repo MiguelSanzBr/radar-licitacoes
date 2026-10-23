@@ -7,6 +7,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Map;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -23,6 +24,7 @@ import tools.jackson.databind.json.JsonMapper;
  * Error} aborts the batch.
  */
 @Component
+@ConditionalOnProperty(name = "radar.outbox.mode", havingValue = "polling", matchIfMissing = true)
 public class OutboxRelay {
 
   private static final JsonMapper JSON = JsonMapper.builder().build();

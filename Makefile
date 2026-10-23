@@ -1,4 +1,4 @@
-.PHONY: verify chaos compat mutation check-coverage-policy lint-openapi audit-repo tf-fmt tf-validate tf-lint tf-plan up down logs seed e2e replay bench slo synth probe deploy rollback test-scripts profile image image-size image-scan image-test lint-observability probe-report backfill helm-lint helm-smoke sbom sbom-scan secrets-scan
+.PHONY: verify chaos cdc-test compat mutation check-coverage-policy lint-openapi audit-repo tf-fmt tf-validate tf-lint tf-plan up down logs seed e2e replay bench slo synth probe deploy rollback test-scripts profile image image-size image-scan image-test lint-observability probe-report backfill helm-lint helm-smoke sbom sbom-scan secrets-scan
 
 verify:
 	./mvnw verify
@@ -13,6 +13,10 @@ chaos:
 compat:
 	@docker image inspect radar-licitacoes:prev >/dev/null 2>&1 || { echo "compat: falta radar-licitacoes:prev (make image RADAR_TAG=prev no commit anterior)" >&2; exit 1; }
 	./mvnw -Pcompat verify -pl core -am -Dit.test=PreviousReleaseCompatIT
+
+# Relay e Debezium pelas mesmas asserções (ADR-0018); sobe Postgres, Kafka e o Connect (imagem de 2,4 GB).
+cdc-test:
+	./mvnw -Pcdc verify -pl core -am -Dit.test=CdcEquivalenceIT
 
 TRIVY_IMAGE := aquasec/trivy:0.76.0@sha256:2416d1f74045b57274df1a340eee6b510cacd73c66a6ccb8da092b117eb7d222
 
@@ -155,8 +159,10 @@ replay bench slo profile:
 
 # Ambiente local completo (ADR-0022): cria .env e segredos se faltarem, constroi a imagem se nao
 # existir e sobe tudo esperando os healthchecks. Camada 3: PROFILE=layer3 make up.
+# CDC (ADR-0018): PROFILE=cdc make up sobe o Debezium e poe a aplicacao em modo cdc (o relay sai).
 # RADAR_TAG e a unica fonte da tag: o make exporta e o compose e o e2e leem do ambiente.
 export RADAR_TAG ?= local
+export RADAR_OUTBOX_MODE ?= $(if $(filter cdc,$(PROFILE)),cdc,polling)
 COMPOSE = docker compose -f infra/compose/docker-compose.yml
 
 up:

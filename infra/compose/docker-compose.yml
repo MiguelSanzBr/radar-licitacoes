@@ -5,7 +5,18 @@ name: radar
 services:
   postgres:
     image: postgres:18@sha256:edb0c08dc33befd0262ab3b5cf1c4f3f8cfd8b09e88c05b45adee29d6761ddb6
-    command: ["postgres", "-c", "shared_preload_libraries=pg_stat_statements", "-c", "max_connections=100"]
+    # wal_level=logical so e usado pelo Debezium (perfil cdc, ADR-0018); para o relay por polling nao tem custo relevante.
+    # max_slot_wal_keep_size: um slot parado invalida em vez de encher o disco com WAL retido.
+    command:
+      - postgres
+      - -c
+      - shared_preload_libraries=pg_stat_statements
+      - -c
+      - max_connections=100
+      - -c
+      - wal_level=logical
+      - -c
+      - max_slot_wal_keep_size=1GB
     environment:
       POSTGRES_USER: radar
       POSTGRES_DB: radar
@@ -164,6 +175,8 @@ services:
       SPRING_DATASOURCE_USERNAME: radar
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       SPRING_DATA_REDIS_HOST: redis
+      # polling (relay da aplicacao) ou cdc (Debezium, perfil cdc): nunca os dois (ADR-0018); make exporta cdc com PROFILE=cdc
+      RADAR_OUTBOX_MODE: ${RADAR_OUTBOX_MODE:-polling}
       SPRING_MAIL_HOST: mailpit
       SPRING_MAIL_PORT: "1025"
       # Emissor = URL do navegador; chaves e token pelo nome do servico (back-channel)
@@ -198,6 +211,49 @@ services:
     ports: ["127.0.0.1:8081:8080"]
     mem_limit: 512m
 
+  cdc-setup:
+    # Aplica infra/cdc/enable-cdc.sql (coluna envelope e publicacao) depois que a aplicacao subiu e o Flyway criou a tabela,
+    # e antes do Debezium. Linhas gravadas pela aplicacao antes deste passo terminar nao saem (nao ha relay nem slot ainda):
+    # num ambiente novo nada grava nesse intervalo; num ambiente com dados, siga o runbook (Trocar o modo do outbox).
+    image: postgres:18@sha256:edb0c08dc33befd0262ab3b5cf1c4f3f8cfd8b09e88c05b45adee29d6761ddb6
+    profiles: [cdc]
+    restart: "no"
+    depends_on:
+      app: {condition: service_healthy}
+    secrets: [db_password]
+    volumes:
+      - ../cdc:/cdc:ro
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - PGPASSWORD="$$(cat /run/secrets/db_password)" psql -h postgres -U radar -d radar -v ON_ERROR_STOP=1 -f /cdc/enable-cdc.sql
+    mem_limit: 64m
+
+  debezium:
+    # Alternativa ao relay (ADR-0018): sobe so com `PROFILE=cdc make up`, que tambem poe a aplicacao em modo cdc.
+    # Kafka Connect standalone com o conector Postgres; a senha vem do segredo, nao de variavel.
+    image: quay.io/debezium/connect:3.6.3.Final@sha256:ebce73ac34e4f688cdbbc46713020794fe876c260cbf5063c66e2b0f6a5b6ef5
+    profiles: [cdc]
+    entrypoint: ["/kafka/bin/connect-standalone.sh"]
+    command: ["/config/worker.properties", "/config/connector.properties"]
+    depends_on:
+      postgres: {condition: service_healthy}
+      kafka: {condition: service_healthy}
+      cdc-setup: {condition: service_completed_successfully}
+    secrets: [db_password]
+    environment:
+      KAFKA_HEAP_OPTS: -Xms64m -Xmx256m
+      KAFKA_LOG4J_OPTS: -Dlog4j2.configurationFile=/kafka/config.orig/connect-log4j2.yaml
+    volumes:
+      - ../cdc:/config:ro
+      - cdcdata:/kafka/data
+    mem_limit: 640m
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8083/connectors/radar-outbox/status | grep -q '\"tasks\":\\[{\"id\":0,\"state\":\"RUNNING\"'"]
+      interval: 5s
+      timeout: 3s
+      retries: 40
+      start_period: 20s
+
 secrets:
   db_password:
     file: ./secrets/db_password
@@ -206,3 +262,4 @@ secrets:
 
 volumes:
   pgdata:
+  cdcdata:

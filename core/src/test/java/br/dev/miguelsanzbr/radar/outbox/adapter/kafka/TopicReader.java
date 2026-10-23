@@ -20,12 +20,21 @@ public final class TopicReader {
   /** Polls until {@code done} accepts everything read so far, or the timeout passes. */
   public static List<ConsumerRecord<String, String>> readUntil(
       String topic, Predicate<List<ConsumerRecord<String, String>>> done, Duration timeout) {
+    return readUntil(SharedKafka.INSTANCE.getBootstrapServers(), topic, done, timeout);
+  }
+
+  /** The same, on the broker at {@code bootstrapServers}. */
+  public static List<ConsumerRecord<String, String>> readUntil(
+      String bootstrapServers,
+      String topic,
+      Predicate<List<ConsumerRecord<String, String>>> done,
+      Duration timeout) {
     var records = new ArrayList<ConsumerRecord<String, String>>();
     try (var consumer =
         new KafkaConsumer<String, String>(
             Map.of(
                 ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG,
-                SharedKafka.INSTANCE.getBootstrapServers(),
+                bootstrapServers,
                 ConsumerConfig.GROUP_ID_CONFIG,
                 UUID.randomUUID().toString(),
                 ConsumerConfig.AUTO_OFFSET_RESET_CONFIG,

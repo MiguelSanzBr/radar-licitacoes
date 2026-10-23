@@ -58,7 +58,11 @@ class OutboxCleanupIT {
 
   @Test
   void loopsInBatchesUntilABatchComesBackShort() {
-    var small = new OutboxCleanup(jdbc, new OutboxProperties(100, 10, properties.retention(), 3));
+    var small =
+        new OutboxCleanup(
+            jdbc,
+            new OutboxProperties(
+                100, 10, properties.retention(), 3, OutboxProperties.Mode.POLLING, "radar_outbox"));
     for (var i = 0; i < 10; i++) {
       insert("8 days", "9 days");
     }
@@ -69,11 +73,38 @@ class OutboxCleanupIT {
 
   @Test
   void stopsWhenTheLastBatchIsExactlyFull() {
-    var small = new OutboxCleanup(jdbc, new OutboxProperties(100, 10, properties.retention(), 3));
+    var small =
+        new OutboxCleanup(
+            jdbc,
+            new OutboxProperties(
+                100, 10, properties.retention(), 3, OutboxProperties.Mode.POLLING, "radar_outbox"));
     for (var i = 0; i < 6; i++) {
       insert("8 days", "9 days");
     }
 
     assertThat(small.cleanOnce()).isEqualTo(6);
+  }
+
+  @Test
+  void cdcModePurgesByAgeBecauseNobodyMarksRowsPublished() {
+    var cdc =
+        new OutboxCleanup(
+            jdbc,
+            new OutboxProperties(
+                100,
+                10,
+                properties.retention(),
+                10_000,
+                OutboxProperties.Mode.CDC,
+                "radar_outbox"));
+    var old = insert(null, "8 days");
+    var recent = insert(null, "1 day");
+    var oldPublished = insert("8 days", "9 days");
+
+    assertThat(cdc.cleanOnce()).isEqualTo(2);
+
+    assertThat(jdbc.queryForList("SELECT id FROM outbox.outbox_event", Long.class))
+        .containsExactly(recent)
+        .doesNotContain(old, oldPublished);
   }
 }

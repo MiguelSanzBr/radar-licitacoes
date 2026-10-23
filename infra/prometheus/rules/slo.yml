@@ -96,6 +96,26 @@ groups:
         annotations:
           summary: "Mensagens do outbox esperando mais de 5 s para sair"
           runbook_url: docs/runbook.md#outbox-atrasado
+      # Modo cdc (ADR-0018): o backlog do relay fica em zero e o atraso e o do slot do Debezium. Um slot
+      # parado retem WAL no disco; -1 e slot ausente (conector nunca subiu ou slot invalidado).
+      - alert: OutboxReplicationSlotLagHigh
+        expr: max(outbox_replication_slot_lag_bytes) > 268435456 or max(outbox_replication_slot_lag_bytes) < 0
+        for: 10m
+        labels:
+          severity: warning
+          slo: frescor-outbox
+        annotations:
+          summary: "Slot de replicação do outbox com mais de 256 MiB de WAL pendente ou ausente"
+          runbook_url: docs/runbook.md#slot-do-cdc-atrasado
+      - alert: OutboxReplicationSlotInactive
+        expr: max(outbox_replication_slot_active) == 0
+        for: 5m
+        labels:
+          severity: warning
+          slo: frescor-outbox
+        annotations:
+          summary: "Slot de replicação do outbox sem leitor há mais de 5 minutos (o conector parou e o slot retém WAL)"
+          runbook_url: docs/runbook.md#slot-do-cdc-atrasado
       - alert: ProjectionLagHigh
         expr: histogram_quantile(0.95, sum by (le) (rate(projection_lag_seconds_bucket[5m]))) > 30
         for: 10m
