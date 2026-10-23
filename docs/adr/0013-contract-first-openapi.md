@@ -36,3 +36,11 @@ O custo da decisão: não há testes de provedor gerados a partir de contratos Y
 - O módulo `core` depende do módulo `contracts` e lê o YAML por caminho relativo (`../contracts`) na geração; o jar de `contracts` leva a mesma cópia ao classpath dos testes.
 - O `id` de licitação na rota troca a barra do `numeroControlePNCP` por hífen, porque `%2F` em segmento de caminho é rejeitado por contêineres de servlet por padrão. O servidor precisa fazer a conversão inversa, e só o último hífen volta a ser `/` (os demais fazem parte do número, como em `CNPJ-1-SEQ`).
 - Toda rota nova exige respostas 4xx em `problem+json`, senão o lint falha.
+
+## Prova
+
+- `ProcurementsControllerTest` (`@WebMvcTest`): toda resposta e toda requisição válida passam por `OpenApiConformance.conforms()`; as requisições inválidas de propósito usam `answerConforms()`, que valida só a resposta. Cobre 304 com `If-None-Match` na lista (ETag fraco) e no detalhe (ETag forte), 200 com tag diferente, ETag estável para a mesma página, `Link` só com `nextCursor` e problem+json em 400 (cursor, `uf`, `limit`, `status`), 404 e 422.
+- `StatsControllerTest` e `OrganControllerTest`: as duas rotas contra o contrato, com 400 `validation` para `groupBy` ou `q` ausente, inválido ou em branco.
+- `DeprecationInterceptorTest`: as rotas marcadas com `@DeprecatedApi` enviam `Deprecation` e `Sunset`; as demais não. Nenhuma rota real usa a anotação (a API é v1).
+- `ProcurementsRestIT`: busca, paginação pelo cabeçalho `Link`, detalhe com ETag, 304, histórico, estatísticas e órgãos contra o Postgres real, com o limite de requisições ligado.
+- O ETag da lista é `W/"<sha256 do corpo serializado>"`; o do detalhe é o `etag` da `procurement_detail_view`, entre aspas.

@@ -68,7 +68,7 @@ class JooqSearchReadModel implements SearchReadModel {
 
   private final DSLContext dsl;
 
-  JooqSearchReadModel(@Qualifier("searchDsl") DSLContext dsl) {
+  JooqSearchReadModel(@Qualifier("searchReadDsl") DSLContext dsl) {
     this.dsl = dsl;
   }
 

@@ -19,6 +19,7 @@ Auditoria de `core/src/main/resources/application*.properties`, de `infra/compos
 | URL, usuário e senha do banco | `SPRING_DATASOURCE_URL`, `_USERNAME`, `_PASSWORD` | nenhum | senha: sim (compose: arquivo `db_password`; Helm: Secret) |
 | Senha do papel `radar_read_writer` (Flyway V6 e fonte de dados da busca) | `RADAR_READ_WRITER_PASSWORD` | `radar_rw_dev` fora da imagem; nenhum no perfil `json` | sim |
 | URL e usuário da fonte de dados da busca | `RADAR_SEARCH_DATASOURCE_URL`, `_USERNAME` | vazio (mesmo banco) e `radar_read_writer` | não |
+| Tempo máximo de uma consulta pública da busca | `RADAR_SEARCH_STATEMENT_TIMEOUT` | `3s` | não |
 | Kafka | `SPRING_KAFKA_BOOTSTRAP_SERVERS` | `localhost:9092` (padrão do Boot) | não |
 | Redis (limite de requisições) | `SPRING_DATA_REDIS_HOST`, `SPRING_DATA_REDIS_PORT` | `localhost`, `6379` | não |
 | Limite de requisições e chaves de API | `RADAR_RATE_LIMIT_ENABLED`, `RADAR_RATE_LIMIT_FREE_PER_MINUTE`, `_PRO_PER_MINUTE`, `_ANONYMOUS_PER_MINUTE`, `RADAR_API_KEYS_MAX_PER_SUBJECT`, `RADAR_HTTP_TRUST_FORWARDED` | ligado, 60, 600, 30 por minuto, 5 chaves, `false` | não |

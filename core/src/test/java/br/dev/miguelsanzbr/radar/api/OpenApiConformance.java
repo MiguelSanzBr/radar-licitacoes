@@ -38,6 +38,18 @@ public final class OpenApiConformance {
                           .build())
                   .build());
 
+  // Para os testes de requisicao invalida: a resposta (o problema 400) segue valida contra o
+  // contrato, mesmo que a requisicao, de proposito, nao siga.
+  private static final ResultMatcher ANSWER_CONFORMS =
+      openApi()
+          .isValid(
+              OpenApiInteractionValidator.createForInlineApiSpecification(readSpec())
+                  .withLevelResolver(
+                      LevelResolver.create()
+                          .withLevel("validation.request", ValidationReport.Level.IGNORE)
+                          .build())
+                  .build());
+
   private static String readSpec() {
     try (InputStream in = OpenApiConformance.class.getResourceAsStream(SPEC)) {
       return new String(Objects.requireNonNull(in).readAllBytes(), StandardCharsets.UTF_8);
@@ -50,5 +62,10 @@ public final class OpenApiConformance {
 
   public static ResultMatcher conforms() {
     return CONFORMS;
+  }
+
+  /** Valida so a resposta: para a requisicao propositalmente fora do contrato. */
+  public static ResultMatcher answerConforms() {
+    return ANSWER_CONFORMS;
   }
 }

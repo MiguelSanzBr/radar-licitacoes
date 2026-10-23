@@ -1,11 +1,16 @@
 package br.dev.miguelsanzbr.radar.search.adapter.out.jooq;
 
 import com.zaxxer.hikari.HikariDataSource;
+import java.time.Duration;
 import javax.sql.DataSource;
 import org.jooq.DSLContext;
 import org.jooq.SQLDialect;
+import org.jooq.conf.Settings;
 import org.jooq.impl.DSL;
+import org.jooq.impl.DefaultConfiguration;
+import org.jooq.impl.DefaultExecuteListenerProvider;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.jdbc.DataSourceBuilder;
 import org.springframework.context.annotation.Bean;
@@ -46,5 +51,25 @@ class SearchJooqConfiguration {
   @Bean
   DSLContext searchDsl(@Qualifier("searchDataSource") DataSource dataSource) {
     return DSL.using(new TransactionAwareDataSourceProxy(dataSource), SQLDialect.POSTGRES);
+  }
+
+  /**
+   * For the public reads: the same pool, but a query that runs past {@code timeout} is cancelled
+   * (rounded up to whole seconds, the JDBC unit) and surfaces as {@link
+   * br.dev.miguelsanzbr.radar.search.application.ReadTimeoutException}. The projector keeps {@code
+   * searchDsl}: a write must not be cut short by a limit meant for readers.
+   */
+  @Bean
+  DSLContext searchReadDsl(
+      @Qualifier("searchDataSource") DataSource dataSource,
+      @Value("${radar.search.statement-timeout:3s}") Duration timeout) {
+    var configuration =
+        new DefaultConfiguration()
+            .set(SQLDialect.POSTGRES)
+            .set(new TransactionAwareDataSourceProxy(dataSource))
+            .set(
+                new Settings().withQueryTimeout(Math.toIntExact((timeout.toMillis() + 999) / 1000)))
+            .set(new DefaultExecuteListenerProvider(new ReadTimeoutListener()));
+    return DSL.using(configuration);
   }
 }

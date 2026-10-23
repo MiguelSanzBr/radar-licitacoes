@@ -15,6 +15,11 @@ import java.util.Base64;
  */
 public sealed interface Cursor {
 
+  /** The column holds timestamptz: years 1 to 9999. */
+  Instant FIRST = Instant.parse("0001-01-01T00:00:00Z");
+
+  Instant LAST = Instant.parse("9999-12-31T23:59:59.999999Z");
+
   String id();
 
   /** Kind tag and sort key as they appear in the encoded form, for example {@code r|0.25}. */
@@ -31,9 +36,7 @@ public sealed interface Cursor {
       if (!Double.isFinite(rank)) {
         throw new InvalidCursorException("rank is not finite");
       }
-      if (id == null || id.isBlank()) {
-        throw new InvalidCursorException("id is blank");
-      }
+      CursorIds.requireUsable(id);
     }
 
     @Override
@@ -47,9 +50,10 @@ public sealed interface Cursor {
       if (publishedAt == null) {
         throw new InvalidCursorException("publication date is missing");
       }
-      if (id == null || id.isBlank()) {
-        throw new InvalidCursorException("id is blank");
+      if (publishedAt.isBefore(FIRST) || publishedAt.isAfter(LAST)) {
+        throw new InvalidCursorException("publication date is outside years 1 to 9999");
       }
+      CursorIds.requireUsable(id);
     }
 
     @Override

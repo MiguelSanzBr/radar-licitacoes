@@ -15,7 +15,7 @@ class JooqStatsReadModel implements StatsReadModel {
 
   private final DSLContext dsl;
 
-  JooqStatsReadModel(@Qualifier("searchDsl") DSLContext dsl) {
+  JooqStatsReadModel(@Qualifier("searchReadDsl") DSLContext dsl) {
     this.dsl = dsl;
   }
 

@@ -1,5 +1,6 @@
 package br.dev.miguelsanzbr.radar.api;
 
+import static br.dev.miguelsanzbr.radar.api.OpenApiConformance.answerConforms;
 import static br.dev.miguelsanzbr.radar.api.OpenApiConformance.conforms;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -102,6 +103,25 @@ class OpenApiConformanceTest {
                 mvc(validPage())
                     .perform(get("/api/v1/procurements").param("limit", "51"))
                     .andExpect(conforms()))
+        .hasMessageContaining("limit");
+  }
+
+  @Test
+  void answerOnlyIgnoresARequestOutsideTheContract() throws Exception {
+    mvc(validPage())
+        .perform(get("/api/v1/procurements").param("limit", "51"))
+        .andExpect(answerConforms());
+  }
+
+  @Test
+  void answerOnlyStillRejectsAResponseMissingARequiredField() {
+    ProcurementPage withoutLimit = new ProcurementPage().items(List.of(summary()));
+
+    assertThatThrownBy(
+            () ->
+                mvc(withoutLimit)
+                    .perform(get("/api/v1/procurements").param("limit", "51"))
+                    .andExpect(answerConforms()))
         .hasMessageContaining("limit");
   }
 }

@@ -87,4 +87,38 @@ class CursorTest {
     assertThatThrownBy(() -> new Cursor.ByPublished(Instant.EPOCH, ""))
         .isInstanceOf(InvalidCursorException.class);
   }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"a\u0000b", "a\nb", "\u007f", "a\tb"})
+  void anIdWithControlCharactersIsRejected(String id) {
+    assertThatThrownBy(() -> new Cursor.ByRank(1, id)).isInstanceOf(InvalidCursorException.class);
+    assertThatThrownBy(() -> new Cursor.ByPublished(Instant.EPOCH, id))
+        .isInstanceOf(InvalidCursorException.class);
+    assertThatThrownBy(() -> Cursor.decode(b64("v1|r|0.5|" + id)))
+        .isInstanceOf(InvalidCursorException.class);
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"+10000-01-01T00:00:00Z", "0000-12-31T23:59:59.999999Z"})
+  void aPublicationDateOutsideYears1To9999IsRejected(String instant) {
+    assertThatThrownBy(() -> new Cursor.ByPublished(Instant.parse(instant), "id"))
+        .isInstanceOf(InvalidCursorException.class);
+  }
+
+  @Test
+  void aHugeMicrosecondKeyIsRejectedWhenDecoded() {
+    assertThatThrownBy(() -> Cursor.decode(b64("v1|p|" + Long.MAX_VALUE + "|id")))
+        .isInstanceOf(InvalidCursorException.class);
+    assertThatThrownBy(() -> Cursor.decode(b64("v1|p|" + Long.MIN_VALUE + "|id")))
+        .isInstanceOf(InvalidCursorException.class);
+  }
+
+  @Test
+  void theFirstAndLastInstantOfTheRangeAreAccepted() {
+    var first = new Cursor.ByPublished(Instant.parse("0001-01-01T00:00:00Z"), "id");
+    var last = new Cursor.ByPublished(Instant.parse("9999-12-31T23:59:59.999999Z"), "id");
+
+    assertThat(Cursor.decode(first.encode())).isEqualTo(first);
+    assertThat(Cursor.decode(last.encode())).isEqualTo(last);
+  }
 }

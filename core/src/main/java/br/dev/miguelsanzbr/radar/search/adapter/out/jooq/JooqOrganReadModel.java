@@ -28,7 +28,7 @@ class JooqOrganReadModel implements OrganReadModel {
   private final double threshold;
 
   JooqOrganReadModel(
-      @Qualifier("searchDsl") DSLContext dsl,
+      @Qualifier("searchReadDsl") DSLContext dsl,
       @Qualifier("searchTransactionManager") PlatformTransactionManager transactionManager,
       @Value("${radar.search.organs.similarity-threshold:0.3}") double threshold) {
     this.dsl = dsl;
