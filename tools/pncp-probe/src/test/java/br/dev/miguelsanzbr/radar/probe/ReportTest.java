@@ -138,9 +138,16 @@ class ReportTest {
 
   @Test
   void rateDecisionKeepsTheBaseRateWhenTheFirstStepAlreadyErred() {
-    String md = Report.render(rows(s3(0, 0.5, 429)), DAY);
+    String md = Report.render(rows(s3(0, 0.5, 503)), DAY);
 
     assertThat(md).contains("Erro de taxa já no primeiro degrau: manter 0,5 req/s");
+  }
+
+  @Test
+  void aBlockAtTheFirstStepCapsTheRateAtHalfOfTheBaseRate() {
+    String md = Report.render(rows(s3(0, 0.5, 429)), DAY);
+
+    assertThat(md).contains("houve bloqueio (HTTP 429 ou 403) a 0,5 req/s; usar 0,2 req/s");
   }
 
   @Test
@@ -577,5 +584,93 @@ class ReportTest {
             "- Backfill: janela noturna (0h às 6h), páginas de 50, um dia por vez: cerca de 4 páginas"
                 + " por dia de modalidade 6, 8 s por dia a 0,5 req/s, 2700 dias por noite");
     assertThat(Report.render(List.of(), DAY)).contains("- Backfill: sem dados de S7");
+  }
+
+  @Test
+  void s7CountsAnOverlappingCellOnceWithItsMostRecentObservation(@TempDir Path dir)
+      throws IOException {
+    String cell =
+        "{\"ts\":\"%s\",\"job\":\"S7\",\"endpoint\":\"/p\",\"status\":200,\"latencyMs\":5,"
+            + "\"headers\":{},\"totalRegistros\":%d,\"day\":\"20260922\",\"modalidade\":6}\n";
+    // o arquivo que vem primeiro traz o registro mais recente: vale o horário, não o nome
+    Files.writeString(
+        dir.resolve("requests-20261022-1000.jsonl"),
+        cell.formatted("2026-10-22T11:01:00-03:00", 120));
+    Files.writeString(
+        dir.resolve("requests-20261022-1100.jsonl"),
+        cell.formatted("2026-10-22T10:01:00-03:00", 100));
+
+    String md = Report.render(Report.read(dir), DAY);
+
+    assertThat(md)
+        .contains("| 20260922 | 120 | 120 |")
+        .contains("Modalidade 6: 43800 linhas por ano (média diária de 120,0 vezes 365)");
+  }
+
+  @Test
+  void s4TakesTheTotalOfEachPassFromItsMostRecentRun() {
+    String line =
+        "{\"ts\":\"%s\",\"job\":\"S4\",\"endpoint\":\"/p\",\"status\":200,\"latencyMs\":5,"
+            + "\"headers\":{},\"pass\":%d,\"page\":1,\"totalRegistros\":%d,\"ids\":[\"a\"]}";
+
+    String md =
+        Report.render(
+            rows(
+                line.formatted("2026-10-22T10:00:00-03:00", 1, 1000),
+                line.formatted("2026-10-22T10:05:00-03:00", 2, 1000),
+                line.formatted("2026-10-22T11:00:00-03:00", 1, 1004)),
+            DAY);
+
+    assertThat(md).contains("totalRegistros: passada 1 = 1004, passada 2 = 1000 (variou em 4)");
+  }
+
+  @Test
+  void s4WithOnlyTheSecondPassSaysTheFirstHasNoAnswer() {
+    String md =
+        Report.render(
+            rows(
+                "{\"ts\":\"2026-10-22T10:00:00-03:00\",\"job\":\"S4\",\"endpoint\":\"/p\","
+                    + "\"status\":200,\"latencyMs\":5,\"headers\":{},\"pass\":2,\"page\":1,"
+                    + "\"totalRegistros\":7,\"ids\":[\"a\"]}"),
+            DAY);
+
+    assertThat(md).contains("Segunda passada não executada ou sem resposta válida");
+  }
+
+  @Test
+  void s8CountsEachPageOnceWithTheSizeOfItsMostRecentResponse() {
+    String page =
+        "{\"ts\":\"%s\",\"job\":\"S1\",\"endpoint\":\"/e\",\"url\":\"https://x/e?pagina=1\","
+            + "\"status\":200,\"latencyMs\":5,\"headers\":{},\"bytes\":%d,\"items\":50}";
+
+    String md =
+        Report.render(
+            rows(
+                page.formatted("2026-10-22T10:00:00-03:00", 1000),
+                page.formatted("2026-10-22T11:00:00-03:00", 1500)),
+            DAY);
+
+    assertThat(md).contains("| /e | 1 | 1500 | 1500 | 1500 | 1500 | 30,0 |");
+  }
+
+  @Test
+  void aBlockOutsideTheRampCapsTheSuggestionAtHalfTheBaseRate() {
+    String md =
+        Report.render(rows(line("S7", "/p", 429, ",\"day\":\"20260922\",\"modalidade\":6")), DAY);
+
+    assertThat(md)
+        .contains("houve bloqueio (HTTP 429 ou 403) a 0,5 req/s; usar 0,2 req/s")
+        .doesNotContain("1,0 req/s");
+  }
+
+  @Test
+  void aForbiddenAnswerInTheRampIsABlockAndCapsTheRateBelowTheLastOkStep() {
+    String md = Report.render(rows(s3(0, 0.5, 200), s3(1, 1.0, 403)), DAY);
+
+    assertThat(md)
+        .contains(
+            "houve bloqueio (HTTP 429 ou 403) a 1,0 req/s; maior taxa sem erro 0,5 req/s; usar 0,2"
+                + " req/s")
+        .doesNotContain("Nenhum erro de taxa");
   }
 }

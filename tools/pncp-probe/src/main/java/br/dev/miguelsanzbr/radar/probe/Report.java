@@ -8,6 +8,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.DateTimeException;
 import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
@@ -197,6 +198,18 @@ enum Report {
     return rows.stream().collect(Collectors.groupingBy(key, TreeMap::new, Collectors.toList()));
   }
 
+  /** One row per cell, the latest by the timestamp of the record: overlapping runs repeat cells. */
+  private static <K extends Comparable<K>> Map<K, JsonNode> latest(
+      Collection<JsonNode> rows, Function<JsonNode, K> cell) {
+    Map<K, JsonNode> out = new TreeMap<>();
+    rows.forEach(r -> out.merge(cell.apply(r), r, (a, b) -> at(b).isAfter(at(a)) ? b : a));
+    return out;
+  }
+
+  private static Instant at(JsonNode row) {
+    return OffsetDateTime.parse(text(row, "ts")).toInstant();
+  }
+
   private static List<Long> latencies(Collection<JsonNode> rows) {
     return rows.stream().map(r -> r.path("latencyMs").asLong()).toList();
   }
@@ -343,10 +356,35 @@ enum Report {
     return perStep.isEmpty() ? "nenhum" : String.join(", ", perStep);
   }
 
+  /** Taxa em vigor numa linha: a do degrau da rampa, ou a base da sonda fora dela. */
+  private static double rateInEffect(JsonNode row) {
+    return row.has("rate") ? row.path("rate").asDouble() : 1000.0 / Prober.BASE_INTERVAL.toMillis();
+  }
+
+  /** Um 429 ou 403 limita a sugestão a metade da taxa em vigor, arredondada para baixo a 0,1. */
+  private static String blockedText(double blocked, OptionalDouble highestOk) {
+    double cap = blocked / 2;
+    String ok = "";
+    if (highestOk.isPresent()) {
+      cap = Math.min(cap, highestOk.getAsDouble() / 2);
+      ok = "; maior taxa sem erro %s req/s".formatted(num(highestOk.getAsDouble()));
+    }
+    return "houve bloqueio (HTTP 429 ou 403) a %s req/s%s; usar %s req/s"
+            .formatted(num(blocked), ok, num(Math.floor(cap * 10) / 10))
+        + " (no máximo metade da taxa do bloqueio, arredondado para baixo)";
+  }
+
   private static String rateDecision(List<JsonNode> rows) {
     List<JsonNode> s3 = job(rows, "S3");
+    OptionalDouble blocked =
+        rows.stream()
+            .filter(r -> LIMIT_STATUS.contains(status(r)))
+            .mapToDouble(Report::rateInEffect)
+            .min();
     if (s3.isEmpty()) {
-      return "sem dados de S3: manter " + num(1.0) + " req/s (padrão do plano)";
+      return blocked.isPresent()
+          ? blockedText(blocked.getAsDouble(), OptionalDouble.empty())
+          : "sem dados de S3: manter " + num(1.0) + " req/s (padrão do plano)";
     }
     Map<Integer, List<JsonNode>> byStep = steps(s3);
     Collection<List<JsonNode>> steps = byStep.values();
@@ -356,6 +394,9 @@ enum Report {
             .mapToDouble(list -> list.get(0).path("rate").asDouble())
             .max();
     String timeouts = "; timeouts por degrau: " + timeoutsText(byStep);
+    if (blocked.isPresent()) {
+      return blockedText(blocked.getAsDouble(), highestOk) + timeouts;
+    }
     if (steps.stream().allMatch(list -> list.stream().noneMatch(Report::rateError))) {
       return "Nenhum erro de taxa até 4 req/s: usar "
           + num(1.0)
@@ -390,26 +431,32 @@ enum Report {
                           r.path("latencyMs").asLong(),
                           r.path("totalRegistros").asLong(),
                           r.path("ids").size())));
-          Map<Integer, Map<Integer, List<String>>> ids = new TreeMap<>();
+          List<JsonNode> answered = s4.stream().filter(Report::success).toList();
           Map<Integer, Long> totals = new TreeMap<>();
-          for (JsonNode r : s4) {
-            int pass = r.path("pass").asInt();
-            int page = r.path("page").asInt();
-            totals.putIfAbsent(pass, r.path("totalRegistros").asLong());
-            ids.computeIfAbsent(pass, k -> new TreeMap<>())
-                .put(page, r.path("ids").valueStream().map(JsonNode::asString).toList());
-          }
+          latest(answered, r -> r.path("pass").asInt())
+              .forEach((pass, r) -> totals.put(pass, r.path("totalRegistros").asLong()));
+          Map<Integer, Map<Integer, List<String>>> ids = new TreeMap<>();
+          latest(answered, r -> r.path("pass").asInt() + "/" + r.path("page").asInt())
+              .values()
+              .forEach(
+                  r ->
+                      ids.computeIfAbsent(r.path("pass").asInt(), k -> new TreeMap<>())
+                          .put(
+                              r.path("page").asInt(),
+                              r.path("ids").valueStream().map(JsonNode::asString).toList()));
           StringBuilder out =
               new StringBuilder(
-                  table(
-                      List.of(
-                          "Passada",
-                          "Página",
-                          "Status",
-                          "Latência (ms)",
-                          "totalRegistros",
-                          "Itens"),
-                      body));
+                  "Uma observação por passada e página, a mais recente com resposta 2xx; a tabela"
+                      + " lista cada requisição.\n\n"
+                      + table(
+                          List.of(
+                              "Passada",
+                              "Página",
+                              "Status",
+                              "Latência (ms)",
+                              "totalRegistros",
+                              "Itens"),
+                          body));
           ids.forEach(
               (pass, pages) -> {
                 List<String> all = pages.values().stream().flatMap(List::stream).toList();
@@ -418,7 +465,7 @@ enum Report {
                         .formatted(pass, all.size() - all.stream().distinct().count()));
               });
           out.append("\n");
-          if (ids.containsKey(2)) {
+          if (totals.containsKey(1) && totals.containsKey(2)) {
             long drift = Math.abs(totals.get(2) - totals.get(1));
             out.append(
                 "totalRegistros: passada 1 = %d, passada 2 = %d (%s)%n%n"
@@ -439,7 +486,7 @@ enum Report {
                     });
             return out.append("\n").toString();
           }
-          return out.append("Segunda passada não executada.\n\n").toString();
+          return out.append("Segunda passada não executada ou sem resposta válida.\n\n").toString();
         });
   }
 
@@ -705,8 +752,9 @@ enum Report {
 
   private static Volume volume(List<JsonNode> s7) {
     Map<String, long[]> days = new TreeMap<>();
-    s7.stream()
-        .filter(Report::covered)
+    List<JsonNode> answered = s7.stream().filter(Report::success).filter(Report::covered).toList();
+    latest(answered, r -> text(r, "day") + "/" + r.path("modalidade").asInt())
+        .values()
         .forEach(
             r -> {
               long total = r.path("totalRegistros").asLong();
@@ -730,7 +778,9 @@ enum Report {
           Volume volume = volume(s7);
           List<List<Object>> body = new ArrayList<>();
           volume.days().forEach((day, sums) -> body.add(List.of(day, sums[0], sums[1])));
-          return table(List.of("Dia", "Modalidade 6", "Todas as modalidades lidas"), body)
+          return "Uma observação por dia e modalidade, a mais recente com resposta 2xx entre as"
+              + " execuções lidas.\n\n"
+              + table(List.of("Dia", "Modalidade 6", "Todas as modalidades lidas"), body)
               + coverage(s7)
               + "Modalidade 6: %d linhas por ano (média diária de %s vezes 365)%n%n"
                   .formatted(Math.round(volume.meanSix() * 365), num(volume.meanSix()))
@@ -742,7 +792,8 @@ enum Report {
   // ---- S8 ----
 
   private static String s8(List<JsonNode> rows) {
-    List<JsonNode> ok = job(rows, "S1", "S4").stream().filter(r -> status(r) == 200).toList();
+    List<JsonNode> answered = job(rows, "S1", "S4").stream().filter(r -> status(r) == 200).toList();
+    Collection<JsonNode> ok = latest(answered, r -> text(r, "url")).values();
     return section(
         "S8 Tamanho da resposta",
         ok,
@@ -764,7 +815,8 @@ enum Report {
                             bytes.stream().mapToLong(Long::longValue).max().orElseThrow(),
                             num((double) total / Math.max(1, items))));
                   });
-          return "Respostas HTTP 200 de páginas de 50 itens (S1 e S4), em bytes.\n\n"
+          return "Respostas HTTP 200 de páginas de 50 itens (S1 e S4), em bytes; uma observação por"
+              + " URL, a mais recente.\n\n"
               + table(
                   List.of(
                       "Endpoint", "Respostas", "Média", "p50", "p95", "Máximo", "Bytes por item"),
