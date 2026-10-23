@@ -62,7 +62,7 @@ Nenhum número publicado ainda. Todo número desta seção vem de `make bench` o
 - Nuvem permanente.
 - Provedor de e-mail externo.
 - MFA e WebAuthn.
-- Contratos, atas e itens até a sonda provar viabilidade.
+- Contratos, atas e itens: a sonda não deu base para liberar (`niFornecedor` pode ser CPF, `atas` com timeout; ver `docs/benchmarks/probe/2026-10-22.md`, S6).
 - gRPC e GraphQL (camada 4), só se houver folga.
 
 ## Licença

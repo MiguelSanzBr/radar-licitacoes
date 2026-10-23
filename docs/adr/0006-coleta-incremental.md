@@ -1,9 +1,28 @@
 # ADR-0006: estratégia de coleta incremental
 
-- Status: proposta
-- Data: 2026-10-22
+- Status: aceita
+- Data: 2026-10-23
 
-Esta versão traz as seções sobre retomada e idempotência do backfill e sobre janela, sobreposição e cursor do incremental. O restante (redescoberta dos abertos) será completado com os números da sonda.
+A sonda mediu a semântica da listagem de atualização (S5) em 22/10/2026. O relatório está em `docs/benchmarks/probe/2026-10-22.md`. A sonda parou na primeira resposta 429 e não será retomada: S5 ficou com duas passadas de 1 h, na execução 2 (as execuções 1 e 3 só tiveram a primeira passada). A seção "O que a sonda confirmou" separa o que ficou provado do que segue como padrão do plano.
+
+## O que a sonda confirmou
+
+Todos os números são do relatório da sonda (execução 2, salvo indicação). As leituras marcadas com (jq) são contas sobre o JSONL, descritas no relatório.
+
+| Ponto | Resultado | Estado |
+|---|---|---|
+| Filtro de `/contratacoes/atualizacao` | Filtra por `dataAtualizacaoGlobal`: 5.900 de 5.900 itens (100%) têm essa data nos dias da janela, contra 3.854 (65,3%) para `dataAtualizacao`. O mesmo nas execuções 1 e 3. | confirmado |
+| Granularidade da janela | A API só aceita datas (`yyyyMMdd`): a menor janela é um dia. A janela de 1 h do plano não existe. | confirmado |
+| Fuso dos campos de data | Nenhum dos 11.800 timestamps traz offset. | confirmado que não há offset; `America/Sao_Paulo` segue como suposição (não houve como comparar com UTC) |
+| Ordem da lista | Crescente por `dataAtualizacaoGlobal` em 4 das 5 leituras de dia inteiro (jq). Item atualizado sai do meio e vai para o fim: nos 29 itens que mudaram de data entre as passadas, a data nova é maior. | confirmado nas amostras |
+| Item novo e item alterado | Entre as passadas de 1 h: 103 itens novos e 8 ausentes (movidos para o fim). Os novos têm data a partir do último segundo visto antes (10:36:54), então a borda da janela é inclusiva. | confirmado |
+| Atraso da listagem | Entre 17h e 19h o último item do dia tinha 10:36 a 10:44 (jq): a listagem ficou a mais de 6 h do relógio local, avançando menos de 1 h de dado por hora. Não se sabe se é atraso do PNCP ou fuso diferente. | observado só nesse intervalo |
+| Hash de conteúdo bruto | 1.824 dos 1.892 itens presentes nas duas passadas mudaram de hash cru sem mudar de `dataAtualizacaoGlobal` (jq). A sonda não gravou o corpo para dizer qual campo varia. | o hash cru **não** serve como sinal de mudança |
+| Tamanho do dia | Total de 22/10 na modalidade 6: 1.888 (17:02), 1.896, 2.003 e 2.076 (19:14) itens, em páginas de 50: de 38 a 42 páginas. | medido |
+| Paginação | Nenhum id repetido entre páginas nas passadas do S4 (janela de 30 dias). Na passada 2 do S5 (lista de atualização) houve 2.000 entradas e 1.995 ids distintos (jq): cinco repetidos, pelo deslocamento do fim da lista. A última página muda de número com a coleta (679 para 680 em 1 h). | confirmado |
+| Latência de página | S5 (196 páginas): p50 de 194 ms, p95 de 6.035 ms, máximo de 12.798 ms (jq). S4, página funda: de 4.979 ms a 10.807 ms na última página. | medido, só às 17h a 19h |
+
+O que segue como padrão do plano, sem medida: a madrugada (a latência e o atraso da listagem fora das 17h a 19h), o fuso real, a causa da variação do hash cru, e como o PNCP se comporta depois de um 429.
 
 ## Retomada e idempotência
 
@@ -21,27 +40,29 @@ Prova: `BackfillIT` (retomada na página 3, idempotência e paginação instáve
 
 ## Janela, sobreposição e cursor
 
-A sonda de 24 horas ainda não terminou, então os valores abaixo são os padrões do plano e **a sonda pode revisá-los**: intervalo, sobreposição e estratégia ficam em propriedades, sem mudança de código.
+A estratégia está confirmada pela S5 (tabela acima). Intervalo e sobreposição seguem como padrão do plano, porque a sonda não mediu a madrugada nem o ciclo completo, e ficam em propriedades, sem mudança de código. O que a sonda dá a favor deles: a modalidade 6 ganha de 1 a 2 itens por minuto na listagem do dia (107 em 1 h e 73 na hora seguinte), então um ciclo de 5 minutos vê no máximo uns dez itens novos, e os itens novos aparecem a partir do último segundo já lido, o que a sobreposição de 15 minutos cobre com folga.
 
 | Parâmetro | Valor usado | Propriedade |
 |---|---|---|
-| Estratégia | `/contratacoes/atualizacao` por janela de data de atualização (a confirmar pela S5) | n/a |
-| Intervalo do polling | 5 minutos (`fixedDelay`, o próximo ciclo só começa 5 min depois do fim do anterior) | `radar.ingest.incremental.interval` |
-| Sobreposição | 15 minutos para trás a partir do watermark | `radar.ingest.incremental.overlap` |
+| Estratégia | `/contratacoes/atualizacao` por janela de `dataAtualizacaoGlobal` (confirmada pela S5) | n/a |
+| Intervalo do polling | 5 minutos (`fixedDelay`, o próximo ciclo só começa 5 min depois do fim do anterior); padrão, não medido | `radar.ingest.incremental.interval` |
+| Sobreposição | 15 minutos para trás a partir do watermark; padrão (a borda inclusiva e o deslocamento ao fim foram vistos) | `radar.ingest.incremental.overlap` |
 | Olhar para trás sem cursor | 1 dia | `radar.ingest.incremental.initial-lookback` |
 | Modalidades | 6 | `radar.ingest.modalities` |
 | Fechamento de propostas vencidas | a cada 10 minutos, páginas de 500 | `radar.ingest.close-expired.interval` |
 
 - **Cursor.** `ingest.ingestion_cursor` guarda uma linha por modalidade: `watermark` (maior `dataAtualizacaoGlobal` já processado), `overlap` e `updated_at`. A janela de cada coleta é `[watermark - overlap, agora]`. O watermark nunca anda para trás (`IngestionCursor.advance` recusa um instante anterior) e nunca passa de `agora`: um relógio adiantado do lado do PNCP não pode pular o que ainda falta ler.
-- **Datas inteiras.** O endpoint de atualização só aceita datas (`yyyyMMdd`). A janela vira o intervalo de dias de São Paulo que ela toca e todos os itens desses dias são aplicados, inclusive os anteriores ao início da janela. Isso é inofensivo pela idempotência (hash igual conta como `unchanged` e não gera evento) e evita decidir descartar um item por causa de um fuso ainda não confirmado pela sonda. O custo é reler, a cada ciclo, o que o dia já tem. Se a sonda mostrar volume alto, a saída é descartar no cliente os itens anteriores ao início da janela.
-- **Decisão sobre reler o dia (aplicar tudo).** Reler o dia inteiro protege contra atraso da listagem maior que a sobreposição (um item que o PNCP só publica na listagem depois de mais de 15 minutos ainda é pego enquanto o dia estiver na janela). Por isso fica valendo aplicar tudo por ora. Descartar no cliente os itens anteriores ao início da janela menos uma margem de segurança será decidido depois das sondas S5 e S7, que medem o fuso e o volume.
-- **Janela vazia e crescimento do intervalo de datas.** Sem itens novos o watermark não anda, então o início da janela (`watermark - overlap`) fica parado enquanto o fim é sempre `agora`: o intervalo de datas cresce com os dias sem atualização e cada ciclo relê tudo desde o último item. A revisão desse comportamento (por exemplo, andar o watermark até `agora - overlap` quando a listagem responde vazia) fica para depois da sonda.
+- **Datas inteiras.** O endpoint de atualização só aceita datas (`yyyyMMdd`). A janela vira o intervalo de dias de São Paulo que ela toca e todos os itens desses dias são aplicados, inclusive os anteriores ao início da janela. Isso é inofensivo pela idempotência (hash igual conta como `unchanged` e não gera evento) e evita decidir descartar um item por causa de um fuso que a sonda não conseguiu confirmar. O custo é reler, a cada ciclo, o que o dia já tem: de 38 a 42 páginas na modalidade 6 entre 17h e 19h, ou de 190 s a 210 s de limitador a 0,2 req/s. Com o `fixedDelay` de 5 minutos o ciclo completo fica perto de 8 a 9 minutos e usa cerca de 40% da taxa, em média 0,08 req/s (conta sobre os números do relatório).
+- **Decisão sobre reler o dia (aplicar tudo).** Reler o dia inteiro protege contra atraso da listagem maior que a sobreposição (um item que o PNCP só publica na listagem depois de mais de 15 minutos ainda é pego enquanto o dia estiver na janela). Por isso fica valendo aplicar tudo. A sonda mostrou que descartar no cliente os itens anteriores ao início da janela **não reduz requisições**: a API não filtra por hora, então as páginas precisam ser lidas de qualquer jeito. O que reduz é ler a lista de trás para frente. Como a lista vem em ordem crescente de `dataAtualizacaoGlobal` e o item atualizado vai para o fim, bastaria ler a página 1 para saber `totalPaginas`, ler da última página para trás e parar na primeira página cujo item mais antigo seja anterior a `watermark - overlap`: de 2 a 4 requisições por ciclo em vez de 40. Isso não está implementado nem testado contra o servidor real (páginas fundas são lentas, p95 de 6 s, e a última página muda de número durante a leitura) e fica como melhoria futura, não como decisão desta ADR.
+- **Janela vazia e crescimento do intervalo de datas.** Sem itens novos o watermark não anda, então o início da janela (`watermark - overlap`) fica parado enquanto o fim é sempre `agora`: o intervalo de datas cresce com os dias sem atualização e cada ciclo relê tudo desde o último item. A sonda traz um segundo efeito parecido: como a listagem ficou a mais de 6 h do relógio entre 17h e 19h, o watermark tende a ficar no dia anterior nas primeiras horas de cada dia, e a janela cobre os dois dias (pode dobrar as páginas lidas por ciclo durante essas horas; é inferência do atraso observado, não medida de madrugada). Andar o watermark até `agora - overlap` com a lista vazia seria errado nesse cenário, porque o atraso da listagem faria perder itens. A saída certa é a leitura de trás para frente descrita acima.
 - **Relógio para trás.** O watermark gravado é `max(watermark atual, min(maior atualização vista, agora))`: um relógio que volta não recua o cursor nem faz o avanço falhar.
 - **Sucesso e falha.** Cada coleta é uma `IngestionRun` do tipo `INCREMENTAL`, com a janela em `window_start` e `window_end`, e cada página confirma numa transação (a mesma do backfill, num colaborador compartilhado). O watermark só avança depois da última página confirmada, para o maior `pncpUpdatedAt` visto (ou fica onde estava sem itens). Se qualquer página falha, a run vira `FAILED`, o cursor não anda e o próximo ciclo lê a mesma janela de novo, que a idempotência absorve. Uma queda entre a última página e a gravação do cursor tem o mesmo efeito.
 - **Sobreposição não duplica evento.** Um item que aparece em duas janelas seguidas chega com o mesmo conteúdo: o hash é igual e nenhum evento sai. Só um item cujo hash mudou emite `ProcurementUpdated` (e `ProcurementSituationChanged` se a situação mudou), uma vez, mesmo se a janela seguinte o trouxer de novo.
 - **Fechamento.** `CloseExpiredUseCase` lê, pelo índice parcial de `proposal_closing_at`, os avisos `PUBLISHED` sem `closed_emitted_at` e com encerramento vencido, em páginas de 500, e chama `closeIfExpired`. Salvar o aviso e registrar `ProcurementClosed` no outbox acontecem numa transação por página. Como o aviso fechado sai da consulta, rodar de novo (ou duas instâncias ao mesmo tempo) não emite nada a mais.
 - **Interruptores.** O liga/desliga são as flags `INCREMENTAL_SYNC` e `CLOSE_EXPIRED` (Togglz, ADR-0021). O estado inicial de cada uma é a propriedade `radar.ingest.incremental.enabled` e `radar.ingest.close-expired.enabled`: ligadas no perfil padrão da aplicação e desligadas nos testes. O agendador lê a flag a cada execução, então desligar em `/ops/togglz` vale a partir da próxima.
 - **Métrica.** O contador `ingest_items_total{kind, outcome}` (`kind` = `backfill` ou `incremental`; `outcome` = `discovered`, `updated` ou `unchanged`) é incrementado pelo colaborador de página depois da confirmação, então uma página desfeita não conta.
+- **Sinal de mudança.** O que decide se um item mudou é o hash do domínio (`ContentHash`, calculado sobre os campos mapeados do `PncpSnapshot`, que inclui `pncpUpdatedAt`), não o hash do corpo bruto da sonda. A sonda mostrou que o corpo bruto varia sem que `dataAtualizacaoGlobal` mude, então a primeira coleta real precisa conferir que `ingest_items_total{outcome="updated"}` fica perto de zero nos ciclos seguintes a uma leitura completa. Se quase todo item reaparecer como `updated`, algum campo mapeado varia por requisição e o hash do domínio precisa excluí-lo.
+- **Se o PNCP responder 429.** O cliente tenta de novo com recuo e, esgotadas as tentativas, a run vira `FAILED` e o ciclo seguinte lê a mesma janela (ADR-0017). A duração do bloqueio do 429 não foi medida.
 - **Limites conhecidos.** Não há trava entre instâncias: duas coletas da mesma modalidade ao mesmo tempo só gastam leitura, porque a idempotência e o `@Version` protegem os dados. Um advisory lock do Postgres resolveria e não foi implementado.
 
 Prova: `IngestionCursorTest`, `IncrementalSyncUseCaseTest`, `CloseExpiredUseCaseTest` e `IncrementalSyncIT` (sobreposição sem duplicar, item alterado, fechamento três vezes e contadores).
