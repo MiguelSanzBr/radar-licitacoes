@@ -27,6 +27,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.IntStream;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -360,14 +361,25 @@ class BackfillIT {
                       .withBody(pageJson(n, 8, 10 * n, 10 * n + 1))));
     }
 
-    var started = System.nanoTime();
     var run = backfill.run(D20, D20, 6).getFirst();
-    var elapsedMillis = Duration.ofNanos(System.nanoTime() - started).toMillis();
 
     assertThat(run.cursorPage()).isEqualTo(8);
     assertThat(run.discovered()).isEqualTo(16);
-    // one page, then two waves of four (the bulkhead): about 900 ms against 2400 ms in sequence
-    assertThat(elapsedMillis).isLessThan(1800);
+    // in sequence each request waits for the 300 ms answer of the one before; fetched ahead, some
+    // arrive while another is still being answered (a wall-clock bound fails on a loaded machine)
+    var arrivals =
+        PNCP.getAllServeEvents().stream()
+            .filter(
+                e -> "20261020".equals(e.getRequest().queryParameter("dataInicial").firstValue()))
+            .map(e -> e.getRequest().getLoggedDate().getTime())
+            .sorted()
+            .toList();
+    assertThat(arrivals).hasSize(8);
+    assertThat(
+            IntStream.range(1, arrivals.size())
+                .anyMatch(i -> arrivals.get(i) - arrivals.get(i - 1) < 150))
+        .as("at least two page requests overlapped")
+        .isTrue();
     assertThat(
             jdbc.queryForList(
                 "SELECT aggregate_id FROM outbox.outbox_event ORDER BY id", String.class))
