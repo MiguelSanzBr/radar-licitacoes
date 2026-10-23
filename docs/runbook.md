@@ -122,6 +122,7 @@ $PSQL -c "SELECT * FROM search.projection_checkpoint"
 3. Erros do projetor: `$COMPOSE logs --no-log-prefix --tail=1000 app | grep -E 'ProcurementEventsListener|search'`. Queda do banco (conexão, tempo esgotado, trava) é tentada a cada 5 s sem limite e nunca vai para a DLQ; registro que nunca valida, ou que o banco rejeita (valor grande demais, por exemplo), vai para `radar.procurement.v1.dlq` e aparece no painel (veja "Reprocessar a DLQ").
 4. Carga concorrente: um backfill histórico gera muitos eventos de uma vez e o lag sobe sem defeito. Confira: `$PSQL -c "SELECT id, kind, status, window_start::date FROM ingest.ingestion_run WHERE status = 'RUNNING'"`.
 5. Projetor desligado: `radar.search.projector.enabled=false`.
+6. Projetor pausado pelo backpressure (ADR-0026): o gauge `search_projector_paused` em 1 (uma pausa dura `radar.search.projector.backpressure.pause-for`, 10 s por padrão) significa que o tempo médio de projeção passou do limite; olhe o banco (`search_projector_record_seconds` mostra o tempo por registro) e trate a lentidão dele. Pausas repetidas com o banco saudável pedem ajuste do limite `slow-after`.
 
 **Ação.** Backfill em andamento: aguarde. Banco indisponível: restaure o Postgres, o projetor recupera sozinho. Registros na DLQ: corrija a causa e reprocesse pelo endpoint (veja "Reprocessar a DLQ").
 

@@ -54,9 +54,9 @@
     <apicurio.version>3.3.3</apicurio.version>
     <playwright.version>1.64.0</playwright.version>
 
-    <!-- why: testes com @Tag("bench") medem tempo, @Tag("chaos") derruba infraestrutura, @Tag("cdc") sobe tres contêineres e uma imagem de 2,4 GB @Tag("avro") sobe o Apicurio e @Tag("e2e") abre um navegador: ficam fora do verify; -Pbench, -Pchaos, -Pcdc e -Pavro trocam os dois filtros -->
+    <!-- why: testes com @Tag("bench") medem tempo, @Tag("chaos") derruba infraestrutura, @Tag("cdc") sobe tres contêineres e uma imagem de 2,4 GB @Tag("avro") sobe o Apicurio, @Tag("messaging") projeta 10 mil eventos entre consumidores que entram e saem e @Tag("e2e") abre um navegador: ficam fora do verify; -Pbench, -Pchaos, -Pcdc, -Pavro e -Pmessaging trocam os dois filtros -->
     <test.groups></test.groups>
-    <test.excluded.groups>bench,chaos,compat,cdc,avro,e2e</test.excluded.groups>
+    <test.excluded.groups>bench,chaos,compat,cdc,avro,messaging,e2e</test.excluded.groups>
 
     <!-- why: o JaCoCo prepende o agente a este valor; o perfil jfr acrescenta flags via @{argLine} -->
     <argLine></argLine>
@@ -220,6 +220,7 @@
               <param>compat</param>
               <param>cdc</param>
               <param>avro</param>
+              <param>messaging</param>
               <param>e2e</param>
             </excludedGroups>
           </configuration>
@@ -444,6 +445,36 @@
       <id>cdc</id>
       <properties>
         <test.groups>cdc</test.groups>
+        <test.excluded.groups></test.excluded.groups>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <!-- O agente continua ligado (o enforcer exige jacoco.exec); so o gate de 100% sai. -->
+            <groupId>org.jacoco</groupId>
+            <artifactId>jacoco-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>check</id>
+                <configuration>
+                  <skip>true</skip>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <!--
+        ./mvnw -Pmessaging verify -pl core -am -Dit.test='ProjectorRebalanceIT,ProjectorBackpressureIT,ProjectorOrderingIT' (make messaging-test):
+        roda so os testes com @Tag("messaging"): rebalance do grupo do projetor durante 10 mil eventos, pausa por
+        backpressure e ordem por chave (ADR-0026). Usam o Kafka e o Postgres compartilhados. Fora do verify padrao e
+        sem o gate de cobertura.
+      -->
+      <id>messaging</id>
+      <properties>
+        <test.groups>messaging</test.groups>
         <test.excluded.groups></test.excluded.groups>
       </properties>
       <build>

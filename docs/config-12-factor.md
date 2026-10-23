@@ -34,6 +34,7 @@ Auditoria de `core/src/main/resources/application*.properties`, de `infra/compos
 | Estado inicial das flags (Togglz) | `RADAR_INGEST_INCREMENTAL_ENABLED`, `RADAR_INGEST_CLOSE_EXPIRED_ENABLED`, `RADAR_INGEST_BACKFILL_SCHEDULED_ENABLED`, `RADAR_ALERTS_DIGEST_ENABLED` | ligadas só a coleta incremental, o fechamento e o resumo; `MAX_SAVED_SEARCHES_LIMIT` nasce ligada; `READ_VALUE_CENTS` nasce desligada (sem variável: só `/ops/togglz`) | não |
 | Preenchimento dos centavos do valor estimado (ADR-0010) | `RADAR_INGEST_VALUE_CENTS_BACKFILL_ENABLED`, `RADAR_INGEST_VALUE_CENTS_BACKFILL_INTERVAL`, `RADAR_INGEST_VALUE_CENTS_BACKFILL_BATCH_SIZE` | desligado, 10 min, 5 000 linhas por lote | não |
 | Painel de operação e DLQ | `RADAR_OPS_CONSUMER_GROUPS`, `RADAR_OPS_KAFKA_TIMEOUT`, `RADAR_OPS_REPUBLISH_TIMEOUT`, `RADAR_OPS_DLQ_RECORDER_ENABLED` | grupos `search-projector`, `alerts-matcher`, `alerts-notifier`, `ops-dlq-recorder`; 5 s; 10 s; ligado | não |
+| Backpressure do projetor (ADR-0026) | `RADAR_SEARCH_PROJECTOR_BACKPRESSURE_SLOW_AFTER`, `RADAR_SEARCH_PROJECTOR_BACKPRESSURE_WINDOW`, `RADAR_SEARCH_PROJECTOR_BACKPRESSURE_PAUSE_FOR`, `RADAR_SEARCH_PROJECTOR_BACKPRESSURE_CHECK_INTERVAL` | 250 ms, 20 registros, 10 s, 1 s (chutes, sem ajuste por medida; a projeção normal leva uns 3 ms por registro); janela menor que 1 ou duração não positiva impede a aplicação de subir | não |
 
 ## Achados
 

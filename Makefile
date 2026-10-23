@@ -1,4 +1,4 @@
-.PHONY: verify chaos cdc-test avro-test schemas-register compat mutation check-coverage-policy lint-openapi audit-repo tf-fmt tf-validate tf-lint tf-plan up down logs seed e2e replay bench slo synth probe deploy rollback test-scripts profile image image-size image-scan image-test lint-observability probe-report backfill helm-lint helm-smoke sbom sbom-scan secrets-scan e2e-ui
+.PHONY: verify chaos cdc-test avro-test messaging-test schemas-register compat mutation check-coverage-policy lint-openapi audit-repo tf-fmt tf-validate tf-lint tf-plan up down logs seed e2e replay bench slo synth probe deploy rollback test-scripts profile image image-size image-scan image-test lint-observability probe-report backfill helm-lint helm-smoke sbom sbom-scan secrets-scan e2e-ui
 
 verify:
 	./mvnw verify
@@ -21,6 +21,11 @@ cdc-test:
 # Avro e Apicurio (ADR-0024): evolucao do schema no registry e o fluxo ponta a ponta em modo avro; sobe o Apicurio.
 avro-test:
 	./mvnw -Pavro verify -pl core -am -Dit.test='SchemaEvolutionIT,AvroModeIT,AvroDlqIT'
+
+# Rebalance, backpressure e ordem por chave do projetor (ADR-0026); usa o Kafka e o Postgres compartilhados.
+# Rode sozinho (uns 4 GB livres): o rebalance projeta 10 mil eventos com um consumidor entrando e saindo.
+messaging-test:
+	./mvnw -Pmessaging verify -pl core -am -Dit.test='ProjectorRebalanceIT,ProjectorBackpressureIT,ProjectorOrderingIT'
 
 # Grupos do Apicurio por topico com a regra BACKWARD; rode depois de `PROFILE=layer3 make up` e antes de ligar RADAR_MESSAGING_FORMAT=avro.
 schemas-register:

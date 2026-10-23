@@ -34,8 +34,9 @@ class ProcurementEventsListenerTest {
   private final ProcurementProjector projector = mock(ProcurementProjector.class);
   private final Acknowledgment ack = mock(Acknowledgment.class);
   private final TraceparentExtractor traces = mock(TraceparentExtractor.class);
+  private final BackpressureController backpressure = mock(BackpressureController.class);
   private final ProcurementEventsListener listener =
-      new ProcurementEventsListener(projector, new EnvelopeParser(), traces);
+      new ProcurementEventsListener(projector, new EnvelopeParser(), traces, backpressure);
 
   private static ConsumerRecord<String, String> record(String value) {
     return new ConsumerRecord<>("radar.procurement.v1", 3, 17L, id(1), value);
@@ -51,6 +52,25 @@ class ProcurementEventsListenerTest {
     var order = inOrder(projector, ack);
     order.verify(projector).project(event, 17L);
     order.verify(ack).acknowledge();
+  }
+
+  @Test
+  void theTimeOfASuccessfulRecordFeedsTheBackpressureController() {
+    when(projector.project(any(), anyLong())).thenReturn(ProjectionOutcome.APPLIED);
+
+    listener.onMessage(record(envelope(closed("c", id(1), 3))), ack);
+
+    verify(backpressure).record(any());
+  }
+
+  @Test
+  void aFailedRecordIsNotTimed() {
+    when(projector.project(any(), anyLong())).thenThrow(new IllegalStateException("db down"));
+
+    assertThatThrownBy(() -> listener.onMessage(record(envelope(closed("c", id(1), 3))), ack))
+        .isInstanceOf(IllegalStateException.class);
+
+    verifyNoInteractions(backpressure);
   }
 
   @Test
@@ -82,6 +102,7 @@ class ProcurementEventsListenerTest {
 
     verify(projector, never()).project(any(ProcurementEvent.class), anyLong());
     verify(ack).acknowledge();
+    verifyNoInteractions(backpressure);
   }
 
   @Test

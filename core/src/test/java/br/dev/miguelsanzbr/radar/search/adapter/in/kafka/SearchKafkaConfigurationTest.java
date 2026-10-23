@@ -3,6 +3,7 @@ package br.dev.miguelsanzbr.radar.search.adapter.in.kafka;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
+import br.dev.miguelsanzbr.radar.ops.DeadLetters;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
@@ -15,6 +16,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.QueryTimeoutException;
+import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.listener.ListenerExecutionFailedException;
 import org.springframework.kafka.listener.MessageListenerContainer;
 import org.springframework.transaction.CannotCreateTransactionException;
@@ -63,6 +65,16 @@ class SearchKafkaConfigurationTest {
 
     assertThat(backOff.getInterval()).isEqualTo(1_000L);
     assertThat(backOff.getMaxAttempts()).isEqualTo(3L);
+  }
+
+  @Test
+  void thePausePropertiesStopTheBatchAfterTheCurrentRecord() {
+    var factory =
+        new SearchKafkaConfiguration()
+            .searchKafkaListenerContainerFactory(
+                mock(ConsumerFactory.class), mock(DeadLetters.class));
+
+    assertThat(factory.getContainerProperties().isPauseImmediate()).isTrue();
   }
 
   @Test

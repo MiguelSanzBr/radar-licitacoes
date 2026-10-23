@@ -5,6 +5,7 @@ import br.dev.miguelsanzbr.radar.search.application.ProcurementProjector;
 import br.dev.miguelsanzbr.radar.search.application.ProjectionOutcome;
 import br.dev.miguelsanzbr.radar.shared.RegistryUnavailableException;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,12 +27,17 @@ class ProcurementEventsListener {
   private final ProcurementProjector projector;
   private final EnvelopeParser parser;
   private final TraceparentExtractor traces;
+  private final BackpressureController backpressure;
 
   ProcurementEventsListener(
-      ProcurementProjector projector, EnvelopeParser parser, TraceparentExtractor traces) {
+      ProcurementProjector projector,
+      EnvelopeParser parser,
+      TraceparentExtractor traces,
+      BackpressureController backpressure) {
     this.projector = projector;
     this.parser = parser;
     this.traces = traces;
+    this.backpressure = backpressure;
   }
 
   @KafkaListener(
@@ -41,6 +47,7 @@ class ProcurementEventsListener {
       containerFactory = "searchKafkaListenerContainerFactory",
       properties = "auto.offset.reset=earliest")
   void onMessage(ConsumerRecord<String, String> record, Acknowledgment ack) {
+    var started = System.nanoTime();
     RegistryUnavailableException.rejectIfMarked(record.value());
     var parsed = parser.parse(record.value());
     if (parsed.isPresent()) {
@@ -55,6 +62,10 @@ class ProcurementEventsListener {
       }
     }
     ack.acknowledge();
+    if (parsed.isPresent()) {
+      // only records that were projected say anything about the speed of the projection
+      backpressure.record(Duration.ofNanos(System.nanoTime() - started));
+    }
   }
 
   /** The producer's Kafka header first, the envelope field when the record has none. */
