@@ -1,4 +1,4 @@
-.PHONY: verify mutation check-coverage-policy lint-openapi audit-repo tf-fmt tf-validate tf-lint tf-plan up down logs seed e2e replay bench slo synth probe deploy rollback profile image image-size image-scan image-test lint-observability probe-report backfill helm-lint helm-smoke sbom sbom-scan secrets-scan
+.PHONY: verify mutation check-coverage-policy lint-openapi audit-repo tf-fmt tf-validate tf-lint tf-plan up down logs seed e2e replay bench slo synth probe deploy rollback test-scripts profile image image-size image-scan image-test lint-observability probe-report backfill helm-lint helm-smoke sbom sbom-scan secrets-scan
 
 verify:
 	./mvnw verify
@@ -138,7 +138,7 @@ synth:
 	RADAR_DB_PASSWORD="$$pw" $(PROBE_JAVA) -jar $(SYNTH_JAR) --mode=$(SYNTH_MODE) --count=$(SYNTH_COUNT) --seed=$(SYNTH_SEED) \
 	  --out=$(SYNTH_OUT) --jdbc-url=$(SYNTH_JDBC_URL) --user=$(SYNTH_USER)
 
-replay bench slo deploy rollback profile:
+replay bench slo profile:
 	@echo "$@: not implemented yet" >&2
 	@exit 1
 
@@ -168,6 +168,22 @@ seed:
 # Sobe o compose e roda o fluxo ponta a ponta; precisa da imagem (make image) e das portas livres.
 e2e:
 	./mvnw -q -Pe2e verify -pl e2e -am
+
+# Deploy por tag e volta ao anterior (ADR-0022, secao Deploy e rollback). O CI roda os mesmos comandos:
+# RADAR_REGISTRY (ghcr.io/<dono>/radar-licitacoes) faz o pull; sem ele, usa a imagem local radar-licitacoes:TAG.
+deploy:
+	scripts/deploy.sh "$(TAG)"
+
+rollback:
+	scripts/rollback.sh
+
+# Shellcheck e bats pelas imagens fixadas (nada instalado no host). Os testes simulam docker e curl.
+SHELLCHECK_IMAGE := koalaman/shellcheck:v0.10.0@sha256:2097951f02e735b613f4a34de20c40f937a6c8f18ecb170612c88c34517221fb
+BATS_IMAGE := bats/bats:1.12.0@sha256:0257e4f5326dd37046e94d4b8ce07c293447be80a9db6d6dfff1d50d07617e2e
+
+test-scripts:
+	docker run --rm -v "$(CURDIR):$(CURDIR)" -w "$(CURDIR)" $(SHELLCHECK_IMAGE) scripts/deploy-lib.sh scripts/deploy.sh scripts/rollback.sh scripts/smoke.sh
+	docker run --rm -v "$(CURDIR):$(CURDIR)" -w "$(CURDIR)" $(BATS_IMAGE) scripts/test
 
 # Uso: make backfill FROM=2026-10-01 TO=2026-10-31 [MODALITY=6]; force=true ignora a janela noturna.
 backfill:

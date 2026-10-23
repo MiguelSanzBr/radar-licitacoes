@@ -1,0 +1,99 @@
+name: main
+
+# Publica a imagem da main (tag com o sha e, em tag v*, semver) e implanta esse sha pelo mesmo
+# scripts/deploy.sh do ambiente local. Compose no runner e escolha de demo (ver ADR-0022).
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-main
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      owner: ${{ steps.owner.outputs.owner }}
+    steps:
+      - name: Dono do repositorio em minusculas (nome da imagem no GHCR)
+        id: owner
+        run: echo "owner=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+      # O Dockerfile nao tem Docker para o codegen do jOOQ: o modelo e gerado aqui e vai no contexto.
+      - name: Gerar o modelo jOOQ
+        run: ./mvnw -q -B compile -pl core -am -DskipTests
+      - uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
+      - uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Tags da imagem
+        id: meta
+        uses: docker/metadata-action@902fa8ec7d6ecbf8d84d538b9b233a880e428804 # v5.7.0
+        with:
+          images: ghcr.io/${{ steps.owner.outputs.owner }}/radar-licitacoes
+          tags: |
+            type=raw,value=${{ github.sha }}
+            type=semver,pattern={{version}}
+      - name: Build e push
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      # As dependencias do compose sobem sem a aplicacao: o deploy troca so o servico app.
+      - name: Dependencias do compose
+        run: |
+          scripts/compose-init.sh
+          docker compose -f infra/compose/docker-compose.yml up -d --wait postgres kafka redis keycloak mailpit pncp-fixture otel-lgtm
+      # O deploy confere o readiness e uma leitura publica e volta ao anterior se falhar.
+      - name: Deploy com smoke e rollback
+        env:
+          RADAR_REGISTRY: ghcr.io/${{ needs.build.outputs.owner }}/radar-licitacoes
+        run: make deploy TAG="$GITHUB_SHA"
+      # O e2e sobe a propria pilha nas portas fixas do compose: a implantada sai antes.
+      - name: Derruba a pilha implantada
+        run: make down
+      - uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+      - name: E2E contra a imagem implantada
+        env:
+          RADAR_TAG: ${{ github.sha }}
+        run: make e2e

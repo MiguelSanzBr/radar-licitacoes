@@ -133,7 +133,7 @@ $PSQL -c "SELECT calls, round(mean_exec_time::numeric, 1) AS media_ms, left(quer
 3. A busca lê com o papel `radar_read_writer`. Erro `password authentication failed for user "radar_read_writer"` indica senha desalinhada (veja "Rotação de segredos").
 4. Postgres: `$COMPOSE ps postgres` e `$PSQL -c "SELECT count(*) FROM pg_stat_activity"` (o limite é 100 conexões).
 
-**Ação.** Postgres fora: suba e confirme a prontidão. Senha desalinhada: alinhe o papel e o segredo e reinicie o app. Erro após deploy: volte à imagem anterior (PR 7.5).
+**Ação.** Postgres fora: suba e confirme a prontidão. Senha desalinhada: alinhe o papel e o segredo e reinicie o app. Erro após deploy: volte à imagem anterior com o [rollback](#rollback).
 
 **Escalonamento.** Queima rápida sem causa em 15 minutos: time dono do serviço.
 
@@ -288,4 +288,52 @@ Roda sozinha na partida do app e todo dia às 03:15 UTC (`radar.ingest.partition
 
 ### Restaurar de backup
 
-Procedimento e ensaio de restauração chegam no PR 7.5.
+Ainda não há procedimento nem ensaio de restauração de backup. O rollback de imagem, que não restaura dados, está em [Rollback](#rollback).
+
+<a id="rollback"></a>
+
+## Rollback
+
+Volta a aplicação ao deploy anterior, pelo digest da imagem. Vale quando o deploy falha (readiness ou smoke) e, depois de um deploy que passou, quando um erro aparece e o `.deployed.previous` ainda existe.
+
+```
+make deploy TAG=<tag>   # troca o app; se o compose ou o smoke falharem, volta sozinho
+make rollback           # volta ao registro de infra/compose/.deployed.previous
+cat infra/compose/.deployed infra/compose/.deployed.previous
+```
+
+Cada rollback consome o `.deployed.previous`: uma segunda chamada falha com `rollback: sem deploy anterior registrado`. Sem deploy anterior, `make deploy` também falha, com a mesma mensagem.
+
+O que conferir:
+
+- `infra/compose/.deployed`: tag e digest do que está no ar (o digest é o `RepoDigests` quando existe, senão o id da imagem). Depois de um rollback, a tag é a anterior.
+- `docker compose -f infra/compose/docker-compose.yml ps app`: o `app` deve estar `healthy`.
+- `curl -fsS http://localhost:8080/actuator/health/readiness` e `curl -fsS http://localhost:8080/actuator/info`.
+- Logs: `make logs SERVICE=app`, ou só os erros: `docker compose -f infra/compose/docker-compose.yml logs --no-log-prefix --tail=1000 app | grep '"level":"ERROR"'`.
+
+Limite do escopo de demonstração: o rollback usa a imagem anterior que está no daemon Docker e o estado em `infra/compose/.deployed*`. Num runner novo do CI nenhum dos dois existe, então o rollback só vale no mesmo runner. Um deploy de verdade guardaria o estado e as imagens fora do runner (ver ADR-0022).
+
+Escalonamento: se o rollback falhar (`rollback: ... nao subiu limpo`), o app pode estar fora do ar. Escale para o time com a saída dos dois comandos acima e os logs do app; o `.deployed.previous` continua no lugar para nova tentativa.
+
+### Ensaio de 2026-10-23
+
+Imagens: `radar-licitacoes:good` (build local do código da main) e `radar-licitacoes:bad`, feita sobre `good` com `/app/config/application.properties` desligando `management.endpoint.health.probes.enabled`. Sem o readiness, o `--wait` do compose marca o app como não saudável e o deploy precisa voltar. Trecho real do log, com as linhas de progresso do compose omitidas (`...`). O `good` é o deploy anterior, feito antes no mesmo ensaio; as datas são o início e o fim de cada chamada, porque o compose não grava horário nas próprias linhas:
+
+```
+2026-10-23T01:17:01-03:00
+deploy: good no ar (radar-licitacoes@sha256:326e22ef8417187089b4c4c23de7989ceb7d8c73a7e427d46ae1ae7f83a04a54)
+2026-10-23T01:17:17-03:00
+scripts/deploy.sh "bad"
+...
+container radar-app-1 is unhealthy
+deploy: bad falhou
+deploy: voltando ao deploy anterior
+...
+smoke: ok em http://localhost:8080
+rollback: voltou para good (radar-licitacoes@sha256:326e22ef8417187089b4c4c23de7989ceb7d8c73a7e427d46ae1ae7f83a04a54)
+make: *** [Makefile:175: deploy] Error 1
+deploy bad exit 2
+2026-10-23T01:19:37-03:00
+```
+
+Resultado conferido depois do ensaio: `.deployed` com `tag=good` e o digest `326e22ef…`, `.deployed.previous` removido, o `app` no ar com a imagem de `good` (tag `rollback`), `healthy`, e readiness 200. Início do `bad` às 01:17:17 e fim às 01:19:37 (horário local, UTC-3). Este trecho é da repetição feita depois dos ajustes do script (mensagens de falha separadas); o primeiro ensaio, de 01:04 a 01:07, tinha as mesmas ações, com a falha numa linha só (`deploy: bad falhou, voltando ao deploy anterior`).

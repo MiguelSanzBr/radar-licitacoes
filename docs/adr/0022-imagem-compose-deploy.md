@@ -71,6 +71,15 @@ O host tinha outras cargas, por isso as rodadas variam. Nas duas, o cache reduzi
 
 **Imagem da aplicação e tag.** O compose usa `radar-licitacoes:${RADAR_TAG:-local}`. A tag tem uma só fonte: `RADAR_TAG` no ambiente (o `make` exporta com padrão `local`, e o compose e o `e2e` leem do ambiente; `make image` constrói a mesma tag). A tag é global no daemon: dois checkouts construindo ao mesmo tempo sobrescrevem a mesma tag, e `RADAR_TAG` permite separar.
 
+### Deploy e rollback
+
+- `scripts/deploy.sh TAG` troca o serviço `app` do compose pela imagem da tag e confere o smoke (`scripts/smoke.sh`): o readiness e `GET /actuator/info`, que é público (as rotas `/api/v1` do contrato ainda respondem 404 no main), com prazo de 5 s por chamada. O `--wait` do compose já espera o healthcheck de readiness; o smoke acrescenta uma leitura de rota pública.
+- O digest da imagem vai para `infra/compose/.deployed` (tag e digest do que está no ar). O deploy anterior é copiado para `.deployed.previous` antes de qualquer troca.
+- Digest, e não tag, é a referência do rollback: a tag `good` pode ser movida depois do deploy, e o digest identifica o conteúdo. O digest é o `RepoDigests` quando existe, senão o id da imagem.
+- Falhou o compose ou o smoke, `scripts/rollback.sh` põe no ar a imagem de `.deployed.previous`, marcada como `radar-licitacoes:rollback`, e confere o smoke de novo. Sem deploy anterior, o rollback falha com mensagem. Um rollback consome o registro anterior: não há volta em cascata.
+- Compose num runner, escopo de demo: o compose já é o ambiente oficial e roda o mesmo código do desenvolvedor, então o deploy do CI é o mesmo comando (`make deploy`). Mas o estado (`.deployed`) e a imagem anterior vivem no runner, que é descartável. Um deploy de verdade precisa desse estado num lugar que sobreviva ao runner, e isso fica fora deste PR.
+- Kubernetes: o mesmo contrato vira `helm upgrade --atomic`, que volta sozinho se o rollout falhar, e `helm rollback` com a revisão anterior, guardada no próprio cluster. O digest continua sendo a referência da imagem nos values.
+
 ## Alternativas rejeitadas (e por quê)
 
 - JRE `25-jre-alpine` sem `jlink`: 162 MB maiores com o app mínimo (418 contra 256 MB), sem ganho funcional.
@@ -97,3 +106,4 @@ O host tinha outras cargas, por isso as rodadas variam. Nas duas, o cache reduzi
 - `make image-size` imprime o tamanho; `make image-scan` roda o Trivy.
 - `e2e/src/test/java/br/dev/miguelsanzbr/radar/e2e/ComposeStackE2EIT.java`, executado por `make e2e` (precisa de `make image` antes).
 - `make up`, `make seed`, `make logs` e `make down` (`CLEAN=1` apaga os volumes); `scripts/compose-init.sh`, `scripts/seed.sh` e `scripts/collect-pncp-fixture.sh`.
+- `make test-scripts`: shellcheck sobre `scripts/deploy.sh`, `rollback.sh`, `smoke.sh` e `deploy-lib.sh`, e os testes bats de `scripts/test/deploy.bats` (docker e curl simulados). O ensaio de rollback forçado está no runbook, seção Rollback.

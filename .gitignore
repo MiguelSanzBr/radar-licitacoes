@@ -30,3 +30,7 @@ crash.log
 
 # Compose local: segredos gerados por scripts/compose-init.sh
 infra/compose/secrets/
+
+# Estado do deploy local (scripts/deploy.sh e scripts/rollback.sh)
+infra/compose/.deployed
+infra/compose/.deployed.previous

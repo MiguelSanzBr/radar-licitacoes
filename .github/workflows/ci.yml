@@ -146,3 +146,11 @@ jobs:
         run: make image-scan
       - name: Container test
         run: make image-test
+
+  scripts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Testes dos scripts (shellcheck e bats)
+        run: make test-scripts
