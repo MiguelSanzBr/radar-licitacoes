@@ -1,0 +1,252 @@
+{
+  "date": "2026-10-23",
+  "commit": "e086c21ef0dbd8b643c8729c8975d071911c0ff2",
+  "image": "7ef6b69b4a31",
+  "host": "AMD Ryzen 5 5600GT with Radeon Graphics, 12 threads, 11,6 GiB de RAM",
+  "postgres": "Postgres 18.6",
+  "label": "sintético: massa e tráfego de ingestão são sintéticos (rótulo obrigatório em todo número)",
+  "rows": {
+    "total": 200000,
+    "real": 1633,
+    "synthetic": 198367
+  },
+  "ingestion": {
+    "simulatedProcurements": 1370,
+    "pollIntervalSeconds": 30,
+    "perTick": "40 novos e 10 alterados",
+    "alertsSent": 272
+  },
+  "window": {
+    "start": 1792810568,
+    "end": 1792811468,
+    "measuredSeconds": 900,
+    "warmupSeconds": 60,
+    "runSeconds": 1198
+  },
+  "load": {
+    "users": {
+      "s1": 5,
+      "s2": 5,
+      "s5": 10,
+      "s6": 2
+    },
+    "thinkMs": 1000
+  },
+  "slos": [
+    {
+      "id": "freshness_internal_p95",
+      "name": "Frescor interno: coleta até a projeção",
+      "target": "p95 até 30 s",
+      "limit": 30,
+      "unit": "s",
+      "value": 1.41,
+      "source": "projection_lag_seconds (histograma, janela medida)",
+      "note": "p99 2.41 s, 1581 eventos projetados",
+      "met": true
+    },
+    {
+      "id": "freshness_e2e_p95",
+      "name": "Frescor ponta a ponta: dataAtualizacaoGlobal até visível na busca",
+      "target": "p95 até o intervalo de polling mais 1 min (90 s com polling de 30 s)",
+      "limit": 90,
+      "unit": "s",
+      "value": 28.17,
+      "source": "banco: projected_at menos pncp_updated_at dos editais do PNCP simulado",
+      "note": "1160 editais; o PNCP simulado carimba dataAtualizacaoGlobal entre 1 e 29 s antes da consulta (mudança em momento qualquer do intervalo)",
+      "met": true
+    },
+    {
+      "id": "alert_delivery_p95",
+      "name": "Alerta: match até o SMTP aceitar",
+      "target": "p95 até 60 s",
+      "limit": 60,
+      "unit": "s",
+      "value": 0.92,
+      "source": "alert_delivery_latency_seconds (histograma, janela medida)",
+      "note": "p99 1.05 s, 236 e-mails entregues ao Mailpit",
+      "met": true
+    },
+    {
+      "id": "s1_p95",
+      "name": "Busca S1 text search: p95",
+      "target": "p95 até 200 ms",
+      "limit": 200,
+      "unit": "ms",
+      "value": 18,
+      "source": "Gatling, fase medida",
+      "note": "4452 requisições, 0 erros",
+      "met": true
+    },
+    {
+      "id": "s1_p99",
+      "name": "Busca S1 text search: p99",
+      "target": "p99 até 500 ms",
+      "limit": 500,
+      "unit": "ms",
+      "value": 86,
+      "source": "Gatling, fase medida",
+      "note": "p50 8 ms",
+      "met": true
+    },
+    {
+      "id": "s2_p95",
+      "name": "Busca S2 filtered search: p95",
+      "target": "p95 até 200 ms",
+      "limit": 200,
+      "unit": "ms",
+      "value": 6,
+      "source": "Gatling, fase medida",
+      "note": "4475 requisições, 0 erros",
+      "met": true
+    },
+    {
+      "id": "s2_p99",
+      "name": "Busca S2 filtered search: p99",
+      "target": "p99 até 500 ms",
+      "limit": 500,
+      "unit": "ms",
+      "value": 18,
+      "source": "Gatling, fase medida",
+      "note": "p50 3 ms",
+      "met": true
+    },
+    {
+      "id": "s5_p95",
+      "name": "Detalhe S5 com cache: p95",
+      "target": "p95 até 50 ms",
+      "limit": 50,
+      "unit": "ms",
+      "value": 3,
+      "source": "Gatling, fase medida",
+      "note": "8960 requisições, 0 erros",
+      "met": true
+    },
+    {
+      "id": "outbox_p99",
+      "name": "Outbox: idade da mensagem mais antiga, p99",
+      "target": "p99 até 5 s",
+      "limit": 5,
+      "unit": "s",
+      "value": 0.00,
+      "source": "outbox_oldest_age_seconds (medidor, amostra de 15 s da janela medida)",
+      "note": "máximo 0.00 s",
+      "met": true
+    },
+    {
+      "id": "availability_chaos",
+      "name": "Disponibilidade da API durante caos com Toxiproxy",
+      "target": "99,5% em 1 h",
+      "limit": 99.5,
+      "unit": "%",
+      "value": null,
+      "source": "não medido: o compose não tem Toxiproxy; o caos está em docs/benchmarks/chaos/",
+      "note": "",
+      "met": null
+    },
+    {
+      "id": "availability_nominal",
+      "name": "Disponibilidade da busca sem caos (informativo)",
+      "target": "sem alvo próprio (o alvo do plano vale com caos)",
+      "limit": null,
+      "unit": "%",
+      "value": 100.000,
+      "source": "http_server_requests_seconds_count, janela medida",
+      "note": "8927 requisições, 0 com 5xx",
+      "met": null
+    },
+    {
+      "id": "search_server_p95",
+      "name": "Busca vista pelo servidor: p95 (informativo)",
+      "target": "sem alvo próprio",
+      "limit": null,
+      "unit": "ms",
+      "value": 14.8,
+      "source": "http_server_requests_seconds (histograma, janela medida)",
+      "note": "sem a rede e a fila do cliente",
+      "met": null
+    },
+    {
+      "id": "s6_p95",
+      "name": "Estatísticas S6: p95 (informativo)",
+      "target": "sem alvo no plano",
+      "limit": null,
+      "unit": "ms",
+      "value": 2,
+      "source": "Gatling, fase medida",
+      "note": "",
+      "met": null
+    }
+  ],
+  "gatling": [
+    {
+      "name": "S6 stats by uf",
+      "requests": 898,
+      "ok": 898,
+      "errors": 0,
+      "rps": 0.93,
+      "min": 0,
+      "p50": 2,
+      "p75": 2,
+      "p95": 2,
+      "p99": 3,
+      "max": 4,
+      "mean": 2
+    },
+    {
+      "name": "S1 text search",
+      "requests": 4452,
+      "ok": 4452,
+      "errors": 0,
+      "rps": 4.62,
+      "min": 1,
+      "p50": 8,
+      "p75": 11,
+      "p95": 18,
+      "p99": 86,
+      "max": 819,
+      "mean": 9
+    },
+    {
+      "name": "S5 detail",
+      "requests": 8960,
+      "ok": 8960,
+      "errors": 0,
+      "rps": 9.3,
+      "min": 0,
+      "p50": 1,
+      "p75": 2,
+      "p95": 3,
+      "p99": 35,
+      "max": 738,
+      "mean": 3
+    },
+    {
+      "name": "S2 filtered search",
+      "requests": 4475,
+      "ok": 4475,
+      "errors": 0,
+      "rps": 4.65,
+      "min": 1,
+      "p50": 3,
+      "p75": 4,
+      "p95": 6,
+      "p99": 18,
+      "max": 640,
+      "mean": 4
+    },
+    {
+      "name": "S6 stats by month",
+      "requests": 898,
+      "ok": 898,
+      "errors": 0,
+      "rps": 0.93,
+      "min": 0,
+      "p50": 1,
+      "p75": 2,
+      "p95": 2,
+      "p99": 3,
+      "max": 7,
+      "mean": 2
+    }
+  ]
+}

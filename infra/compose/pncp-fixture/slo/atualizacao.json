@@ -1,0 +1,18 @@
+{
+  "mappings": [
+    {
+      "name": "make slo: a listagem de atualizacoes traz sempre 40 editais novos e 10 que mudam de valor",
+      "priority": 2,
+      "request": {
+        "method": "GET",
+        "urlPath": "/api/consulta/v1/contratacoes/atualizacao"
+      },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/json" },
+        "body": "{\"data\":[{{#each (range 0 39)}}{{#if @index}},{{/if}}{\"numeroCompra\":\"{{@index}}\",\"processo\":\"SLO/{{@index}}\",\"objetoCompra\":\"Contratação de serviços de manutenção predial{{#if (eq (math @index '%' 5) 0)}} slocarga{{/if}}\",\"dataAberturaProposta\":\"{{now offset='1 days' timezone='America/Sao_Paulo' format=\"yyyy-MM-dd'T'HH:mm:ss\"}}\",\"dataEncerramentoProposta\":\"{{now offset='20 days' timezone='America/Sao_Paulo' format=\"yyyy-MM-dd'T'HH:mm:ss\"}}\",\"dataPublicacaoPncp\":\"{{now offset='-10 seconds' timezone='America/Sao_Paulo' format=\"yyyy-MM-dd'T'HH:mm:ss\"}}\",\"dataAtualizacaoGlobal\":\"{{now offset=(stringFormat '-%d seconds' (randomInt lower=1 upper=29)) timezone='America/Sao_Paulo' format=\"yyyy-MM-dd'T'HH:mm:ss\"}}\",\"unidadeOrgao\":{\"ufNome\":\"São Paulo\",\"ufSigla\":\"SP\",\"municipioNome\":\"São Paulo\",\"codigoUnidade\":\"1\",\"nomeUnidade\":\"PREFEITURA SLO\",\"codigoIbge\":\"3550308\"},\"amparoLegal\":{\"nome\":\"Lei 14.133/2021, Art. 28, I\",\"codigo\":1},\"orgaoEntidade\":{\"cnpj\":\"11222333000181\",\"razaoSocial\":\"MUNICIPIO SLO\"},\"srp\":false,\"numeroControlePNCP\":\"11222333000181-1-{{randomValue length=6 type='NUMERIC'}}/2026\",\"valorTotalEstimado\":{{randomInt lower=1000 upper=900000}}.00,\"modalidadeId\":6,\"modalidadeNome\":\"Pregão - Eletrônico\",\"modoDisputaId\":1,\"modoDisputaNome\":\"Aberto\",\"situacaoCompraId\":1,\"situacaoCompraNome\":\"Divulgada no PNCP\"}{{/each}}{{#each (range 0 9)}},{\"numeroCompra\":\"hot{{@index}}\",\"processo\":\"SLO/hot{{@index}}\",\"objetoCompra\":\"Contratação de serviços de limpeza urbana\",\"dataAberturaProposta\":\"{{now offset='1 days' timezone='America/Sao_Paulo' format=\"yyyy-MM-dd'T'HH:mm:ss\"}}\",\"dataEncerramentoProposta\":\"{{now offset='20 days' timezone='America/Sao_Paulo' format=\"yyyy-MM-dd'T'HH:mm:ss\"}}\",\"dataPublicacaoPncp\":\"{{now offset='-1 hours' timezone='America/Sao_Paulo' format=\"yyyy-MM-dd'T'HH:mm:ss\"}}\",\"dataAtualizacaoGlobal\":\"{{now offset=(stringFormat '-%d seconds' (randomInt lower=1 upper=29)) timezone='America/Sao_Paulo' format=\"yyyy-MM-dd'T'HH:mm:ss\"}}\",\"unidadeOrgao\":{\"ufNome\":\"São Paulo\",\"ufSigla\":\"SP\",\"municipioNome\":\"São Paulo\",\"codigoUnidade\":\"1\",\"nomeUnidade\":\"PREFEITURA SLO\",\"codigoIbge\":\"3550308\"},\"amparoLegal\":{\"nome\":\"Lei 14.133/2021, Art. 28, I\",\"codigo\":1},\"orgaoEntidade\":{\"cnpj\":\"11222333000181\",\"razaoSocial\":\"MUNICIPIO SLO\"},\"srp\":false,\"numeroControlePNCP\":\"11222333000181-1-90000{{@index}}/2026\",\"valorTotalEstimado\":{{randomInt lower=1000 upper=900000}}.00,\"modalidadeId\":6,\"modalidadeNome\":\"Pregão - Eletrônico\",\"modoDisputaId\":1,\"modoDisputaNome\":\"Aberto\",\"situacaoCompraId\":1,\"situacaoCompraNome\":\"Divulgada no PNCP\"}{{/each}}],\"totalRegistros\":50,\"totalPaginas\":1,\"numeroPagina\":1,\"paginasRestantes\":0,\"empty\":false}",
+        "transformers": ["response-template"]
+      }
+    }
+  ]
+}

@@ -7,7 +7,7 @@
 
 O radar coleta dados de uma API externa (PNCP), move eventos pelo outbox e pelo Kafka, projeta leituras para a busca e envia alertas por e-mail. Uma falha em qualquer etapa só aparece para quem usa a busca, muitas vezes horas depois. Precisamos medir o frescor dos dados, a latência e a disponibilidade da busca e a entrega dos alertas, e saber quando o orçamento de erro está sendo consumido rápido demais.
 
-Os alvos desta decisão vêm da seção 7.4 do plano. Nenhum deles foi medido ainda.
+Os alvos desta decisão vêm da seção 7.4 do plano. Foram medidos em `make slo` (seção "Medido em `make slo`" abaixo), exceto a disponibilidade durante caos.
 
 ## Decisão
 
@@ -21,17 +21,17 @@ Os alvos desta decisão vêm da seção 7.4 do plano. Nenhum deles foi medido ai
 - Alertas `PncpBloqueado` (`pncp_blocked_until_seconds > 0`, aviso) e `PncpBloqueadoPorMuito` (a mesma condição por 2 h, crítico): o PNCP bloqueou o cliente com 429 ou 403 e a coleta está em pausa (ADR-0017). O gauge vale o fim do bloqueio em segundos desde 1970 e volta a 0 sozinho quando ele acaba; o crítico só dispara se a pausa não bastar.
 - Testes das regras com `promtool test rules` (`infra/prometheus/rules/slo_test.yml`): cada alerta dispara com séries sintéticas que violam o alvo, e nenhum dispara com tráfego saudável.
 
-Alvos propostos, não medidos:
+Alvos da seção 7.4 e o que a medição mostrou (nenhum alvo foi alterado):
 
 | SLO | Alvo proposto | Situação |
 |---|---|---|
-| Frescor interno: `fetched_at` até `projected_at` | p95 até 30 s | proposto, não medido |
-| Frescor ponta a ponta: `dataAtualizacaoGlobal` até visível na busca | p95 até o intervalo de polling mais 1 min | proposto, não medido (medido em `make slo`) |
-| Alerta: `projected_at` até o SMTP aceitar | p95 até 60 s | proposto, não medido |
+| Frescor interno: `fetched_at` até `projected_at` | p95 até 30 s | medido em `make slo`: atende (p95 de 1,41 s, sintético) |
+| Frescor ponta a ponta: `dataAtualizacaoGlobal` até visível na busca | p95 até o intervalo de polling mais 1 min | medido em `make slo` com polling de 30 s: atende (p95 de 28,17 s contra 90 s, sintético); com o polling padrão de 5 min não medido |
+| Alerta: `projected_at` até o SMTP aceitar | p95 até 60 s | medido em `make slo`: atende (p95 de 0,92 s, do match ao SMTP aceitar, sintético) |
 | Busca S1 e S2 com 1,2 milhão de linhas | p95 até 200 ms, p99 até 500 ms | medido (ver abaixo): na PR 2.7 S2 atendia e S1 não; depois da PR 6.3 os dois atendem (S1 p95 83 ms, p99 122 ms) |
 | Detalhe S5 com cache | p95 até 50 ms | medido em 2026-10-23: atende (p95 de 2 ms) |
-| Outbox | `outbox_oldest_age_seconds` p99 até 5 s | proposto, não medido |
-| Disponibilidade da API durante caos com Toxiproxy | 99,5% em 1 h | proposto, não medido (Gatling em `make slo`) |
+| Outbox | `outbox_oldest_age_seconds` p99 até 5 s | medido em `make slo`: atende (p99 de 0 s em amostras de 15 s, sintético) |
+| Disponibilidade da API durante caos com Toxiproxy | 99,5% em 1 h | não medido: o compose não tem Toxiproxy (fora de escopo do `make slo`). A prova de caos é a `ChaosIT` (`docs/benchmarks/chaos/2026-10-23.md`), que mede perda e duplicata de eventos, não a disponibilidade da API. Sem caos, a busca respondeu 100% sem 5xx na janela do `make slo` |
 
 Duas conversões feitas nas regras:
 
@@ -90,7 +90,7 @@ Com o envio por OTLP, o Prometheus do `otel-lgtm` traduz os nomes. Consultado de
 - Os links de `runbook_url` apontam para âncoras de `docs/runbook.md` que só existem na tarefa 4.5. Até lá, os links estão quebrados de propósito.
 - O endpoint `/actuator/prometheus` depende das dependências de Micrometer e Actuator, que entram na tarefa 4.1. Enquanto isso, o scrape não tem alvo que responda.
 - Roteamento dos alertas (Alertmanager, destinos como e-mail ou chat) ainda não está configurado. Por enquanto os alertas aparecem só no Prometheus: `prometheus.yml` tem `rule_files` e não tem bloco `alerting`. Configurar o Alertmanager fica para tarefa posterior.
-- `make slo` (tarefa posterior) preenche os valores medidos e registra os ajustes neste ADR.
+- `make slo` roda de novo quando o código ou o hardware mudar; o ADR só registra a execução citada abaixo.
 
 ### Medido na PR 2.7 (`make bench`, 2026-10-23, 1,2 milhão de linhas, inclui dados sintéticos, 1.198.367 linhas)
 
@@ -102,7 +102,7 @@ Gatling com 1 min de aquecimento descartado e 3 min medidos, uma execução por 
 | S2 busca com UF, modalidade e `open=true` | 50 | 8 ms | 44 ms | 204 ms | 0 | atende |
 | S5 detalhe | 100 | 1 ms | 2 ms | 57 ms | 0 | atende (p95 50 ms) |
 
-O alvo do S1 **não foi alterado**: a medição não o confirma. A causa é a busca com termo comum, que precisa ordenar centenas de milhares de linhas por `ts_rank_cd` (ADR-0011, "Prova do benchmark"); com 10 usuários o S1 deu p50 de 108 ms e p95 de 1.888 ms, ainda acima. O ajuste é de implementação (limitar candidatos do ranking), a decidir fora desta PR, e o alvo só muda neste ADR com o valor medido depois dele. Os alvos de frescor, alerta, outbox e disponibilidade seguem não medidos.
+O alvo do S1 **não foi alterado**: a medição não o confirma. A causa é a busca com termo comum, que precisa ordenar centenas de milhares de linhas por `ts_rank_cd` (ADR-0011, "Prova do benchmark"); com 10 usuários o S1 deu p50 de 108 ms e p95 de 1.888 ms, ainda acima. O ajuste é de implementação (limitar candidatos do ranking), a decidir fora desta PR, e o alvo só muda neste ADR com o valor medido depois dele. Os alvos de frescor, alerta e outbox foram medidos depois, em `make slo` (seção abaixo); a disponibilidade durante caos segue não medida.
 
 ## Prova
 
@@ -120,3 +120,28 @@ Mesma massa, máquina e carga da PR 2.7, depois de limitar o ranking da busca te
 | S4 órgão com erro de digitação | 20 | 13 ms | 18 ms | 23 ms | 0 de 3.545 | sem alvo no plano (era 544 erros em 720) |
 
 O alvo do S1 continua o do plano: a medição passou a confirmá-lo, e ele não foi alterado em nenhum momento. O S1 melhorou de p95 3.402 ms para 83 ms. O custo é de relevância, não de latência: o ranking vale para os 2.000 candidatos mais recentes (ADR-0011 mede 6,4 de 20 resultados do top 20 exato mantidos nesta massa). Uma rodada não é série: a medição segue sendo uma execução na máquina do desenvolvedor, com ruído de ambiente.
+
+### Medido em `make slo` (2026-10-23, 200 mil linhas, sintético)
+
+Relatório completo: `docs/benchmarks/slo/2026-10-23.md` e `.json`. Rótulo de todo número: **sintético**. A massa tem 200.000 linhas de busca (1.633 reais do PNCP e 198.367 sintéticas), não as 1,2 milhão do alvo de busca; o tráfego de ingestão vem de um PNCP simulado (WireMock). Janela medida de 15 min depois de 60 s de aquecimento descartado (o plano pede 1 h: `SLO_DURATION=1h`), na máquina descrita no relatório (12 threads, 11,6 GiB de RAM, outras cargas possíveis no host), uma execução.
+
+Carga: Gatling S1, S2, S5 e S6 juntos com 5, 5, 10 e 2 usuários e 1 s de pausa (cerca de 20 req/s no total). Ao mesmo tempo, a coleta incremental roda a cada 30 s e o PNCP simulado devolve, a cada consulta, 40 editais novos e 10 que mudam de valor; um assinante verificado com uma busca salva que casa com 1 de cada 5 editais novos recebeu 272 e-mails pelo Mailpit.
+
+| SLO | Alvo | Medido | Atende |
+|---|---|---|---|
+| Frescor interno | p95 até 30 s | p95 1,41 s (p99 2,41 s, 1.581 eventos) | sim |
+| Frescor ponta a ponta | p95 até polling mais 1 min (90 s com polling de 30 s) | p95 28,17 s (1.160 editais) | sim, com a ressalva abaixo |
+| Alerta | p95 até 60 s | p95 0,92 s (p99 1,05 s, 236 e-mails) | sim |
+| Busca S1 | p95 até 200 ms, p99 até 500 ms | p95 18 ms, p99 86 ms, 0 erros em 4.452 | sim |
+| Busca S2 | p95 até 200 ms, p99 até 500 ms | p95 6 ms, p99 18 ms, 0 erros em 4.475 | sim |
+| Detalhe S5 | p95 até 50 ms | p95 3 ms, 0 erros em 8.960 | sim |
+| Outbox | p99 até 5 s | p99 0 s (amostras de 15 s) | sim |
+| Disponibilidade durante caos | 99,5% | não medido | não medido |
+
+Limites que mudam a leitura:
+
+- Frescor ponta a ponta: o PNCP simulado carimba `dataAtualizacaoGlobal` entre 1 e 29 s antes da consulta, o que representa uma mudança em momento qualquer entre duas coletas de 30 s. Por isso o p95 de 28 s é quase todo espera pelo próximo polling, e o resultado só vale para o intervalo de 30 s. Com o padrão de 5 min o p95 esperado fica perto de 4,75 min mais o processamento (abaixo dos 6 min do alvo), mas isso é conta, não medida.
+- Alerta: o histograma `alert_delivery_latency_seconds` conta do match até o SMTP aceitar, e o match ocorre depois da projeção do mesmo evento; a medida é por isso um pouco menor que `projected_at` até o SMTP.
+- Outbox: o medidor `outbox_oldest_age_seconds` sai em amostras de 15 s (OTLP). Um atraso que começa e acaba entre duas amostras não aparece; o relay publica em milissegundos nesta carga, então o p99 de 0 s diz que o backlog não se acumulou, não que o pior caso é zero.
+- Busca com 200 mil linhas não repete o alvo de 1,2 milhão. Os números de 1,2 milhão ficam em "Medido na PR 6.3" acima, com carga de 50 usuários.
+- Os alertas de burn rate não foram exercitados: o Prometheus do `otel-lgtm` não carrega `rules/slo.yml`. O assinante e a busca salva entram direto no banco, porque o realm de desenvolvimento não tem cliente que emita token de fornecedor.

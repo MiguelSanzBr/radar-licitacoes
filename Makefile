@@ -189,9 +189,13 @@ docs-check:
 	scripts/render-metrics.sh self-test
 	scripts/render-metrics.sh check
 
+# SLOs da secao 7.4 do plano com trafego misto sintetico (PR 4.2, ADR-0025, docs/benchmarks/slo/): sobe o compose, carrega
+# 200 mil linhas, roda o Gatling S1, S2, S5 e S6 em taxa baixa enquanto o PNCP simulado traz editais novos, le as metricas
+# no Prometheus do otel-lgtm e grava docs/benchmarks/slo/<data>.json e .md. Rode `make image` antes, com o volume vazio
+# (CLEAN=1 make down) e uns 4,5 GB de RAM livres; precisa de JDK 25 no PATH ou em JAVA_HOME e de MAVEN_ARGS como no mvnw.
+# SLO_DURATION=15m e o padrao (o plano pede 1h: SLO_DURATION=1h). Variaveis SLO_* em scripts/slo.sh.
 slo:
-	@echo "$@: not implemented yet" >&2
-	@exit 1
+	scripts/slo.sh
 
 # Mesma carga (200 mil linhas sinteticas mais o dia real, Gatling S1 e replay) sob cada coletor de lixo (PR 6.2,
 # docs/benchmarks/jvm/gc.md): `make profile GC=serial|g1|zgc|all`. A pilha fica no ar entre as execucoes (a massa leva
@@ -258,7 +262,7 @@ BATS_IMAGE := bats/bats:1.12.0@sha256:0257e4f5326dd37046e94d4b8ce07c293447be80a9
 
 test-scripts:
 	docker run --rm -v "$(CURDIR):$(CURDIR)" -w "$(CURDIR)" $(SHELLCHECK_IMAGE) scripts/deploy-lib.sh scripts/deploy.sh scripts/rollback.sh scripts/smoke.sh scripts/schemas-register.sh \
-	  scripts/bench.sh scripts/bench-terms.sh scripts/gatling-stats.sh scripts/profile.sh scripts/gc-pauses.sh scripts/render-metrics.sh scripts/explain/run.sh scripts/explain/summarize.sh
+	  scripts/bench.sh scripts/bench-terms.sh scripts/slo.sh scripts/gatling-stats.sh scripts/profile.sh scripts/gc-pauses.sh scripts/render-metrics.sh scripts/explain/run.sh scripts/explain/summarize.sh
 	docker run --rm -v "$(CURDIR):$(CURDIR)" -w "$(CURDIR)" $(BATS_IMAGE) scripts/test
 
 # Reconstroi o modelo de leitura do offset 0 do topico (ADR-0010): dispara o replay do operador e

@@ -1,4 +1,4 @@
-# SLOs do radar (ADR-0025). Os alvos sao propostos e ainda nao medidos: ajustar pelo valor medido em make slo.
+# SLOs do radar (ADR-0025). Os alvos sao os do plano (secao 7.4), medidos em make slo (docs/benchmarks/slo/); nenhum foi ajustado.
 # Latencia usa o bucket le="0.2" de http_server_requests_seconds. Ele so existe com
 # management.metrics.distribution.slo.http.server.requests=50ms,200ms,500ms (core/src/main/resources/application.properties).
 # Para p95 por histogram_quantile, o app tambem precisa de management.metrics.distribution.percentiles-histogram.http.server.requests=true.

@@ -4,6 +4,7 @@ import static io.gatling.javaapi.core.CoreDsl.scenario;
 import static io.gatling.javaapi.http.HttpDsl.http;
 import static io.gatling.javaapi.http.HttpDsl.status;
 
+import io.gatling.javaapi.core.PopulationBuilder;
 import io.gatling.javaapi.core.Simulation;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -43,20 +44,23 @@ public class S5Detail extends Simulation {
         .iterator();
   }
 
-  public S5Detail() {
+  /** The scenario with {@code users} in flight; {@link SloMix} runs it next to the others. */
+  static PopulationBuilder population(int users) {
     var feeder = ids();
-    setUp(
-            Bench.run(
-                "s5",
-                Bench.users("s5", 100),
-                phase ->
-                    scenario("S5" + phase)
-                        .feed(feeder)
-                        .exec(
-                            http("S5 detail" + phase)
-                                .get("/api/v1/procurements/#{id}")
-                                .check(status().is(200)))
-                        .pause(Bench.think())))
-        .protocols(Bench.protocol());
+    return Bench.run(
+        "s5",
+        users,
+        phase ->
+            scenario("S5" + phase)
+                .feed(feeder)
+                .exec(
+                    http("S5 detail" + phase)
+                        .get("/api/v1/procurements/#{id}")
+                        .check(status().is(200)))
+                .pause(Bench.think()));
+  }
+
+  public S5Detail() {
+    setUp(population(Bench.users("s5", 100))).protocols(Bench.protocol());
   }
 }

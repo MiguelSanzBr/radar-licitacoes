@@ -1,0 +1,19 @@
+{
+  "date": "2026-01-02",
+  "commit": "abcdef0123456789",
+  "image": "0123456789ab",
+  "host": "CPU de teste, 4 threads, 8,0 GiB de RAM",
+  "postgres": "Postgres 18.0",
+  "label": "sintético",
+  "rows": {"total": 1000, "real": 100, "synthetic": 900},
+  "ingestion": {"simulatedProcurements": 1200, "pollIntervalSeconds": 30, "perTick": "40 novos e 10 alterados", "alertsSent": 7},
+  "window": {"start": 1000, "end": 1900, "measuredSeconds": 900, "warmupSeconds": 60, "runSeconds": 1500},
+  "load": {"users": {"s1": 5, "s2": 5, "s5": 10, "s6": 2}, "thinkMs": 1000},
+  "slos": [
+    {"id": "freshness_internal_p95", "name": "Frescor interno", "target": "p95 até 30 s", "limit": 30, "unit": "s", "value": 12.5, "source": "x", "note": "1.000 eventos", "met": true},
+    {"id": "s1_p95", "name": "Busca S1: p95", "target": "p95 até 200 ms", "limit": 200, "unit": "ms", "value": 250, "source": "x", "note": "", "met": false},
+    {"id": "availability_chaos", "name": "Disponibilidade com caos", "target": "99,5% em 1 h", "limit": 99.5, "unit": "%", "value": null, "source": "x", "note": "", "met": null},
+    {"id": "s6_p95", "name": "S6: p95 (informativo)", "target": "sem alvo", "limit": null, "unit": "ms", "value": 3, "source": "x", "note": "", "met": null}
+  ],
+  "gatling": []
+}

@@ -87,6 +87,30 @@ Medido em 2026-10-23 (commit `a05da33`), AMD Ryzen 5 5600GT with Radeon Graphics
 - Planos, hardware e leitura completa: `docs/benchmarks/search/2026-10-23-pr63/README.md`.
 <!-- bench:end -->
 
+### SLOs medidos
+
+<!-- slo:start -->
+Medido em 2026-10-23 (commit `e086c21`), AMD Ryzen 5 5600GT with Radeon Graphics, 12 threads, 11,6 GiB de RAM, Postgres 18.6, 200.000 linhas de busca: 1.633 reais do PNCP e 198.367 sintéticas, mais 1.370 editais do PNCP simulado coletados durante a medição. Rótulo de todo número abaixo: **sintético** (massa e tráfego de ingestão). Janela medida de 15 min, depois de 60 s de aquecimento descartado; coleta incremental a cada 30 s (o padrão da aplicação é 5 min); carga mista S1, S2, S5 e S6 com 5, 5, 10 e 2 usuários.
+
+| SLO | Alvo | Medido | Atende |
+| --- | --- | ---: | --- |
+| Frescor interno: coleta até a projeção | p95 até 30 s | 1,41 s | sim |
+| Frescor ponta a ponta: dataAtualizacaoGlobal até visível na busca | p95 até o intervalo de polling mais 1 min (90 s com polling de 30 s) | 28,17 s | sim |
+| Alerta: match até o SMTP aceitar | p95 até 60 s | 0,92 s | sim |
+| Busca S1 text search: p95 | p95 até 200 ms | 18 ms | sim |
+| Busca S1 text search: p99 | p99 até 500 ms | 86 ms | sim |
+| Busca S2 filtered search: p95 | p95 até 200 ms | 6 ms | sim |
+| Busca S2 filtered search: p99 | p99 até 500 ms | 18 ms | sim |
+| Detalhe S5 com cache: p95 | p95 até 50 ms | 3 ms | sim |
+| Outbox: idade da mensagem mais antiga, p99 | p99 até 5 s | 0,00 s | sim |
+| Disponibilidade da API durante caos com Toxiproxy | 99,5% em 1 h | não medido | não medido |
+| Disponibilidade da busca sem caos (informativo) | sem alvo próprio (o alvo do plano vale com caos) | 100,000 % | sem alvo |
+| Busca vista pelo servidor: p95 (informativo) | sem alvo próprio | 14,8 ms | sem alvo |
+| Estatísticas S6: p95 (informativo) | sem alvo no plano | 2 ms | sem alvo |
+
+- Leitura completa e limites: `docs/benchmarks/slo/2026-10-23.md`.
+<!-- slo:end -->
+
 ## Fora do escopo
 
 - Nuvem permanente.
