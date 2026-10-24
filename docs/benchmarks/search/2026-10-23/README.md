@@ -1,6 +1,6 @@
 # Benchmark da busca com 1,2 milhão de linhas (2026-10-23)
 
-Medido por `make bench` (commit `c82905b`). **Inclui dados sintéticos (1.198.367 linhas).** Das 1.200.000 linhas da visão de busca, 1.633 são reais (publicações de 2026-10-21 da modalidade 6, coletadas em 2026-10-22 e versionadas em `infra/compose/seed`) e 1.198.367 saem de `tools/synth` (`source='synthetic'`, ids `SYN-`, texto por n-gramas do corpus real, ADR-0005). Isso vale para toda tabela e número deste documento. Os números vêm de uma execução por cenário, na máquina descrita abaixo, que ficou compartilhada com o ambiente gráfico do desenvolvedor durante a medição.
+Medido por `make bench` (commit `1496441`). **Inclui dados sintéticos (1.198.367 linhas).** Das 1.200.000 linhas da visão de busca, 1.633 são reais (publicações de 2026-10-21 da modalidade 6, coletadas em 2026-10-22 e versionadas em `infra/compose/seed`) e 1.198.367 saem de `tools/synth` (`source='synthetic'`, ids `SYN-`, texto por n-gramas do corpus real, ADR-0005). Isso vale para toda tabela e número deste documento. Os números vêm de uma execução por cenário, na máquina descrita abaixo, que ficou compartilhada com o ambiente gráfico do desenvolvedor durante a medição.
 
 Arquivos desta pasta: `env.md` (hardware, Postgres, limites), `explain/` (planos antes e depois dos índices), `gatling/` (estatísticas por requisição), `pg_stat_statements.md`, `run.json` e `synth.log`.
 

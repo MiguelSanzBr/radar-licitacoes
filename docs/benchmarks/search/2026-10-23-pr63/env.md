@@ -1,7 +1,7 @@
 # Ambiente do benchmark de busca
 
 - Data: 2026-10-23
-- Commit: `a05da33ba7c40fc5f0fa7d5781a9d99cec9a159c`
+- Commit: `2ce350f6dc4bc1fec24562866e66e7602aeab52e`
 - Postgres 18.6, imagem `postgres:18@sha256:edb0c08dc33befd0262ab3b5cf1c4f3f8cfd8b09e88c05b45adee29d6761ddb6`
 - Docker: 29.9.2, compose 5.6.1
 - Kernel: Linux 6.12.113+deb13-amd64

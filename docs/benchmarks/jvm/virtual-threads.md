@@ -1,6 +1,6 @@
 # Threads virtuais na coleta: plataforma × virtual
 
-Data: 2026-10-22. Commit: `9743642` (código de produção em `4a35a5b`). JDK 25.0.5+8. Máquina: AMD Ryzen 5 5600GT (12 threads), 11 GiB de RAM, Linux 6.12.
+Data: 2026-10-22. Commit: `fd0c21a` (squash do PR; medido nos commits do ramo antes do squash). JDK 25.0.5+8. Máquina: AMD Ryzen 5 5600GT (12 threads), 11 GiB de RAM, Linux 6.12.
 
 ## Como medir
 

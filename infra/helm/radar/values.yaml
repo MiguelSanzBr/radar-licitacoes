@@ -3,7 +3,11 @@ image:
   tag: local
   pullPolicy: IfNotPresent
 
+# Uma replica so: o monolito roda agendadores (coleta, resumo diario, limpeza do outbox) e o replay em memoria, que
+# assumem um unico processo. O chart recusa replicaCount > 1 e autoscaling.enabled ate haver um Deployment por app (ADR-0028).
 replicaCount: 1
+# So para renderizar o HPA e o PDB nos testes do chart (make helm-lint). Nao ligue em um cluster de verdade.
+allowMultipleReplicas: false
 
 serviceAccount:
   create: true
@@ -18,6 +22,20 @@ service:
 # O Redis e externo e precisa de maxmemory-policy volatile-ttl (toda chave tem TTL; ADR-0027): com noeviction o limite deixa de medir.
 config:
   SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/radar
+  # Atras de um Ingress (um proxy nosso na frente), o cliente do limite de taxa e a ultima entrada do X-Forwarded-For.
+  # Se o Service for exposto direto, sem proxy, ponha "false": senao o cabecalho vira forjavel (ADR-0027).
+  RADAR_HTTP_TRUST_FORWARDED: "true"
+  # Endereco publico, usado nos links dos e-mails; troque pelo host do Ingress.
+  RADAR_PUBLIC_BASE_URL: https://radar.example.com
+  RADAR_MAIL_FROM: radar@example.com
+  # Formato dos eventos: json ou avro (ADR-0024). O registry so e usado com avro.
+  RADAR_MESSAGING_FORMAT: json
+  RADAR_MESSAGING_REGISTRY_URL: http://apicurio:8080/apis/registry/v3
+  # Quem publica o outbox: polling (o relay do app) ou cdc (Debezium, ADR-0018). Nunca os dois.
+  RADAR_OUTBOX_MODE: polling
+  # Conexoes dos pools do Hikari (ADR-0010): busca e escrita.
+  RADAR_SEARCH_POOL_SIZE: "10"
+  RADAR_DB_POOL_SIZE: "10"
 
 # Kafka e externo: vira SPRING_KAFKA_BOOTSTRAP_SERVERS no ConfigMap.
 kafka:

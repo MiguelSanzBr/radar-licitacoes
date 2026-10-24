@@ -1,6 +1,6 @@
 # ADR-0023: Helm testado em kind e Terraform validado contra LocalStack
 
-- Status: proposta
+- Status: aceita
 - Data: 2026-10-15
 
 ## Contexto
@@ -13,10 +13,10 @@ Para Kubernetes o repositório traz um chart Helm. Ele é validado sem cluster p
 
 Helm e kind:
 
-- O chart fica em `infra/helm/radar/` e instala só a aplicação: Deployment, Service, ConfigMap, Secret (só com `secret.create=true`, senão referencia um Secret existente), ServiceAccount, HPA opcional (desligado por padrão, CPU 70%) e PDB com `minAvailable: 1` quando há mais de uma réplica. Postgres e Kafka são dependências externas, informadas por values.
+- O chart fica em `infra/helm/radar/` e instala só a aplicação: Deployment, Service, ConfigMap, Secret (só com `secret.create=true`, senão referencia um Secret existente), ServiceAccount, HPA e PDB (`minAvailable: 1`), que só renderizam com mais de uma réplica. O chart, porém, **recusa** `replicaCount > 1` e `autoscaling.enabled`: o monólito roda agendadores (coleta, resumo diário, limpeza do outbox) e o replay em memória, que assumem um processo só, até haver um Deployment por app (ADR-0028). O desvio `allowMultipleReplicas` existe só para o `make helm-lint` validar HPA e PDB no schema. Postgres e Kafka são dependências externas, informadas por values.
 - O Pod tem probes de startup (liveness, 30 tentativas a cada 2 s), liveness e readiness nos endpoints do actuator, todas com `timeoutSeconds: 3`, requests de 250m/512Mi e limites de 1 CPU/768Mi, usuário 10001 não root, sistema de arquivos raiz somente leitura com `emptyDir` em `/tmp`, `terminationGracePeriodSeconds: 30` e `preStop` nativo (`sleep`) de 5 s.
 - A aplicação usa `server.shutdown=graceful` com `spring.lifecycle.timeout-per-shutdown-phase=20s`; um teste de contexto confere os dois valores. Os 5 s do `preStop` mais os 20 s cabem nos 30 s do Pod, e o template falha se `preStopSleepSeconds + shutdownPhaseSeconds` não for menor que `terminationGracePeriodSeconds`.
-- `make helm-lint` roda `helm lint` e `kubeconform -strict` sobre o `helm template`, com os valores padrão e com todos os opcionais ligados.
+- `make helm-lint` roda `helm lint` e `kubeconform -strict` sobre o `helm template`, com os valores padrão e com todos os opcionais ligados (HPA e PDB, pelo desvio de teste), e confere que o render falha sem Secret, com grace period curto, com autoscaling ligado e com `replicaCount: 2`.
 - `make helm-smoke` cria o cluster `radar-smoke` (imagem do nó fixada por digest), carrega `radar-licitacoes:local`, aplica um Postgres descartável (`infra/helm/smoke/postgres.yaml`), instala o chart com `--wait`, consulta `/actuator/health/readiness` por `port-forward` e apaga o cluster ao sair. Helm, kind, kubectl e kubeconform têm versão e checksum fixados em `scripts/helm-tools.sh`, que reinstala em `~/.local/bin` qualquer binário ausente ou em versão diferente da fixada (o `PATH` não é confiado).
 - Em produção o Secret deve vir de fora do chart (`secret.existingName`, por exemplo de um gerenciador de segredos); `secret.create` existe só para o smoke e para demos.
 - No CI o job `helm` roda os dois alvos, com a imagem construída antes e `helm/kind-action` fixada por commit.
@@ -27,7 +27,8 @@ Terraform:
 - A validação roda com `fmt`, `validate`, `tflint` com o ruleset AWS e `plan` contra LocalStack (`localstack/localstack:4.14`).
 - O `plan` usa um override de provider que aponta todos os endpoints para o LocalStack e usa as credenciais literais `test`. O override vive em `infra/terraform/localstack/localstack.tfoverride`, com extensão que o Terraform não carrega, e é copiado para um diretório temporário só durante o plan. O ambiente versionado nunca recebe o override.
 - O `apply` nunca é executado. Está documentado, mas não existe job que o rode nem credencial AWS no repositório.
-- Compute escolhido: uma EC2 `t4g.medium` (arm64, Amazon Linux 2023) com Docker instalado pelo `user_data`, que sobe o compose do projeto. Kafka roda em container nessa mesma máquina. O IMDSv2 é obrigatório com hop limit 2, para que containers alcancem o role da instância.
+- Compute escolhido: uma EC2 `t3.medium` (x86_64, Amazon Linux 2023) com Docker instalado pelo `user_data`, que sobe o compose do projeto. A arquitetura é x86_64 porque o `main.yml` publica no GHCR uma imagem só `linux/amd64` (runner `ubuntu-latest`); a primeira versão do módulo usava `t4g` (arm64), e a imagem publicada não rodaria nela. A alternativa, manter arm64 e publicar a imagem multi-arch, exigiria QEMU ou runner arm64 no CI e foi preterida pelo custo de build. Kafka roda em container nessa mesma máquina. O IMDSv2 é obrigatório com hop limit 2, para que containers alcancem o role da instância.
+- O `user_data` roda `scripts/compose-init.sh` antes do `docker compose up` (sem ele o compose não tem `.env` nem os segredos), puxa a imagem do GHCR (`image_registry` e `image_tag`, variáveis obrigatórias: o `main.yml` publica só o sha do commit e as tags semver, não há `latest`) e a marca com o nome local `radar-licitacoes:<tag>`, que o compose lê por `RADAR_TAG`. O pacote no GHCR precisa ser público, porque o `user_data` não faz login. O plan versionado em `docs/infra/plan-2026-10-22.txt` é anterior a essa mudança; `make tf-plan` o refaz.
 - Banco: RDS PostgreSQL 17 `db.t4g.micro`, 20 GB gp3, Single-AZ, sem acesso público, retenção de backup de 1 dia. O ambiente de desenvolvimento local usa `postgres:18`, mas não está verificado se a RDS oferece a 18 nessa classe; por isso o RDS fica em 17 e a troca depende dessa confirmação.
 - Armazenamento de backups: bucket S3 com versionamento, SSE-S3, bloqueio de acesso público, política que nega acesso sem TLS (`aws:SecureTransport = false`), expiração de objetos e versões antigas em 30 dias e cancelamento de uploads multipart incompletos em 7 dias.
 - Sem MSK: Kafka em container na EC2 para reduzir custo.
@@ -71,7 +72,7 @@ O que a validação do Terraform não prova:
 
 - Que o `apply` funciona: colisão de nome de bucket S3 (nome global), erros de API na criação dos recursos, timeouts da RDS e ordem real de criação.
 - Permissões IAM: a policy do bucket e da role da EC2 não é avaliada contra uma conta real.
-- Disponibilidade real da AMI: no LocalStack o `aws_ami` retorna um ID falso (`ami-0bb7267a511c0a8e8`). A busca por Amazon Linux 2023 arm64 é validada só na sintaxe do filtro.
+- Disponibilidade real da AMI: no LocalStack o `aws_ami` retorna um ID falso (`ami-0bb7267a511c0a8e8`). A busca por Amazon Linux 2023 x86_64 é validada só na sintaxe do filtro.
 - Quotas de conta (vCPU, EIPs, instâncias RDS) e disponibilidade de classes ou versões de RDS na região, incluindo a versão 18 no `db.t4g.micro`.
 - Custos reais. A estimativa está em `docs/infra/cost.md`, com preços ainda não verificados.
 - Comportamento do `user_data` (instalação do Docker, download do Compose, subida do stack): roda só numa EC2 de verdade.

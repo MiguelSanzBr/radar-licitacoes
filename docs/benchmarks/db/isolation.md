@@ -1,6 +1,6 @@
 # Prova: anomalias de isolamento no Postgres
 
-Data: 2026-10-23. Código das medições: `core/src/test/java/br/dev/miguelsanzbr/radar/ingest/adapter/out/jpa/LostUpdateIT.java`, `core/src/test/java/br/dev/miguelsanzbr/radar/db/NonRepeatableReadIT.java` e `core/src/test/java/br/dev/miguelsanzbr/radar/db/SerializableDeliveryIT.java`, no commit `f119473`.
+Data: 2026-10-23. Código das medições: `core/src/test/java/br/dev/miguelsanzbr/radar/ingest/adapter/out/jpa/LostUpdateIT.java`, `core/src/test/java/br/dev/miguelsanzbr/radar/db/NonRepeatableReadIT.java` e `core/src/test/java/br/dev/miguelsanzbr/radar/db/SerializableDeliveryIT.java`, no commit `6b1a370`.
 
 ## Ambiente
 

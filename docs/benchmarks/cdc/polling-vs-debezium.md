@@ -1,8 +1,10 @@
 # Comparação: relay por polling e Debezium (CDC)
 
+Rótulo: **dados de teste sintéticos**. Os eventos do outbox são gerados pelo benchmark, nenhum dado real do PNCP entra na medição.
+
 Data: 2026-10-23
 
-Commit: `feat(outbox): heartbeat table keeps the cdc slot moving` (HEAD do PR 8.3 na hora da medição; o benchmark roda o `PollingVsDebeziumBenchIT` desse commit).
+Commit: `cfa440e` (squash do PR 8.3; o benchmark roda o `PollingVsDebeziumBenchIT` desse commit).
 
 Máquina: AMD Ryzen 5 5600GT, 12 threads, 11,5 GiB de RAM, Linux 6.12, Docker 29.9.2. Postgres `postgres:18` (18.6, `wal_level=logical`, `shared_buffers` padrão), Kafka `apache/kafka:4.1.0` (um nó, KRaft) e `quay.io/debezium/connect:3.6.3.Final` (Kafka Connect 4.3 em modo standalone), um contêiner de cada, no mesmo host da JVM do teste. A máquina não estava ociosa: outros builds e o ambiente gráfico rodavam em paralelo (carga média entre 5,8 e 10 em 12 threads na execução abaixo). Rodei duas vezes: a primeira, com a coluna `envelope` presente também no polling, deu p50 de 709 ms (polling) e 492 ms (cdc) a 100 eventos/s e o mesmo WAL do polling (25,9 MB); a segunda, a que está nas tabelas, mede o polling sem a coluna (ela é opt-in) e o cdc com ela. As duas concordam dentro de cerca de 40 ms no p50, então a diferença entre os modos não vem do ruído nem da coluna. Dentro de uma execução há um só ponto por cenário.
 

@@ -1,6 +1,6 @@
 # ADR-0020: concorrência na coleta
 
-- Status: proposta (virtual threads na coleta no PR 6.1, perfil da JVM no PR 6.3 e coletor de lixo no PR 6.2, todos implementados)
+- Status: aceita (virtual threads na coleta no PR 6.1, perfil da JVM no PR 6.3 e coletor de lixo no PR 6.2, todos implementados)
 - Data: 2026-10-17
 
 Esta ADR cobre a concorrência da coleta: `StructuredTaskScope` (decidido) e virtual threads com bulkhead (PR 6.1, abaixo). As partes de GC (Serial, G1 ou ZGC) e de otimização guiada por profile foram acrescentadas na M6 (PR 6.2 e 6.3), com dados.

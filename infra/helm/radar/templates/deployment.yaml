@@ -1,3 +1,4 @@
+{{- include "radar.assertSingleReplica" . }}
 {{- if ge (add (int .Values.preStopSleepSeconds) (int .Values.shutdownPhaseSeconds)) (int .Values.terminationGracePeriodSeconds) }}
 {{- fail "preStopSleepSeconds + shutdownPhaseSeconds deve ser menor que terminationGracePeriodSeconds" }}
 {{- end }}

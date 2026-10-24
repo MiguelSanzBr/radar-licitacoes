@@ -9,6 +9,8 @@
 # O segundo bloco do README (<!-- slo:start --> ... <!-- slo:end -->) vem do JSON mais recente de docs/benchmarks/slo (make slo).
 # collect mantem as linhas do latest.json anterior que a execucao nova nao mediu (por nome), com a data e o commit de
 # onde vieram (campo "from"): rodar so S1, S2 e S4 nao apaga o S3 e o S6 publicados antes.
+# O commit gravado e o HEAD da execucao (run.json). Citacao no README e nos docs usa o commit da main: depois do squash do PR,
+# BENCH_COMMIT=<hash na main> render-metrics.sh collect DIR grava esse hash no lugar do HEAD do ramo, que a main nao tem.
 # Sem latest.json, o bloco e o aviso de que nenhum numero foi publicado.
 set -euo pipefail
 
@@ -26,9 +28,9 @@ collect() {
   # DIR/gatling/sN.stats.json sai de scripts/gatling-stats.sh; o aquecimento tem o sufixo "(warmup)" no nome e fica de fora; a taxa e requisicoes por segundo da fase medida, nao da simulacao inteira (que inclui o aquecimento)
   local old="[]"
   [ -f "$latest" ] && old="$(jq -c '[.requests[] | . + {from: (.from // {date: $d, commit: $c})}]' --arg d "$(jq -r .date "$latest")" --arg c "$(jq -r .commit "$latest")" "$latest")"
-  jq -n --argjson old "$old" --slurpfile run "$dir/run.json" --slurpfile stats <(jq -c '.[]' "$dir"/gatling/*.stats.json) '
+  jq -n --argjson old "$old" --arg commit "${BENCH_COMMIT:-}" --slurpfile run "$dir/run.json" --slurpfile stats <(jq -c '.[]' "$dir"/gatling/*.stats.json) '
     $run[0] as $r
-    | {date: $r.date, commit: $r.commit, host: $r.host, postgres: $r.postgres, rows: $r.rows,
+    | {date: $r.date, commit: (if $commit == "" then $r.commit else $commit end), host: $r.host, postgres: $r.postgres, rows: $r.rows,
        thinkMs: $r.thinkMs, warmupSeconds: $r.warmupSeconds, measuredSeconds: $r.measuredSeconds,
        directory: $r.directory,
        requests: ([ $stats[] | select(.name | endswith(" (warmup)") | not)
@@ -161,6 +163,8 @@ self_test() {
   grep -q '^| S2 filtered search (medido em 2026-01-02, commit `abcdef0`) |' "$tmp/README.md" || { echo "self-test: o S2 anterior nao foi mantido" >&2; return 1; }
   grep -q '^| S1 text search | 50 |' "$tmp/README.md" || { echo "self-test: o S1 novo ficou com origem" >&2; return 1; }
   "$0" check >/dev/null
+  BENCH_COMMIT=0123456789abcdef "$0" collect "$tmp/novo" >/dev/null
+  [ "$(jq -r .commit "$RENDER_LATEST")" = 0123456789abcdef ] || { echo "self-test: BENCH_COMMIT nao foi gravado" >&2; return 1; }
   echo x >>"$tmp/README.md"
   sed -i "s/^$start\$/$start\nmexido/" "$tmp/README.md"
   if "$0" check >/dev/null 2>&1; then echo "self-test: check nao viu a divergencia" >&2; return 1; fi

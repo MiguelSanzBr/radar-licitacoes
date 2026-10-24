@@ -30,7 +30,7 @@ variable "ssh_cidr" {
 variable "instance_type" {
   description = "Tipo da EC2."
   type        = string
-  default     = "t4g.medium"
+  default     = "t3.medium"
 }
 
 variable "db_engine_version" {
@@ -46,5 +46,15 @@ variable "backup_bucket_name" {
 
 variable "app_repo_url" {
   description = "URL do repositório clonado na EC2 para subir o compose."
+  type        = string
+}
+
+variable "image_registry" {
+  description = "Repositório da imagem no GHCR, sem a tag (ex.: ghcr.io/dono/radar-licitacoes). O pacote precisa ser público."
+  type        = string
+}
+
+variable "image_tag" {
+  description = "Tag da imagem publicada pelo main.yml (sha do commit ou versão semver)."
   type        = string
 }

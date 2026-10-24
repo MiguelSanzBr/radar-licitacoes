@@ -37,6 +37,8 @@ module "compute" {
   instance_type      = var.instance_type
   backup_bucket_arn  = module.backup_bucket.bucket_arn
   app_repo_url       = var.app_repo_url
+  image_registry     = var.image_registry
+  image_tag          = var.image_tag
 }
 
 module "database" {

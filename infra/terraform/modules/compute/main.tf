@@ -1,15 +1,15 @@
-data "aws_ami" "al2023_arm64" {
+data "aws_ami" "al2023_x86_64" {
   most_recent = true
   owners      = ["amazon"]
 
   filter {
     name   = "name"
-    values = ["al2023-ami-2023.*-arm64"]
+    values = ["al2023-ami-2023.*-x86_64"]
   }
 
   filter {
     name   = "architecture"
-    values = ["arm64"]
+    values = ["x86_64"]
   }
 
   filter {
@@ -58,7 +58,7 @@ resource "aws_iam_instance_profile" "app" {
 }
 
 resource "aws_instance" "app" {
-  ami                    = data.aws_ami.al2023_arm64.id
+  ami                    = data.aws_ami.al2023_x86_64.id
   instance_type          = var.instance_type
   subnet_id              = var.subnet_id
   vpc_security_group_ids = var.security_group_ids
@@ -79,6 +79,8 @@ resource "aws_instance" "app" {
   user_data = templatefile("${path.module}/user_data.sh.tftpl", {
     compose_version = var.compose_version
     app_repo_url    = var.app_repo_url
+    image_registry  = var.image_registry
+    image_tag       = var.image_tag
   })
 
   tags = { Name = "${var.name}-app" }

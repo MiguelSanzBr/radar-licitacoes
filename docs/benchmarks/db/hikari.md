@@ -1,6 +1,6 @@
 # Prova: tamanho do pool do Hikari por medida
 
-Data: 2026-10-23. Commit: `e19a55d`. Código: `scripts/bench.sh` no modo `make bench-pool` (variável `BENCH_POOL_SIZES`) e os cenários Gatling S1, S2 e S5 de `perf/`. Dados brutos em `docs/benchmarks/db/hikari/`.
+Data: 2026-10-23. Commit: `e1b9992`. Código: `scripts/bench.sh` no modo `make bench-pool` (variável `BENCH_POOL_SIZES`) e os cenários Gatling S1, S2 e S5 de `perf/`. Dados brutos em `docs/benchmarks/db/hikari/`.
 
 **Dados sintéticos.** A massa é a mesma dos benchmarks de busca (`docs/benchmarks/search/`): 1.200.000 linhas na visão de busca, das quais 1.633 reais (PNCP, 2026-10-21) e 1.198.367 sintéticas (`tools/synth`, ADR-0005). Os números valem para esta massa e esta máquina, não para produção.
 

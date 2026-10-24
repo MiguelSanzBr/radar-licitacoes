@@ -14,9 +14,9 @@ variable "security_group_ids" {
 }
 
 variable "instance_type" {
-  description = "Tipo da EC2 (arm64, porque a AMI é AL2023 arm64)."
+  description = "Tipo da EC2 (x86_64, porque a AMI é AL2023 x86_64 e o main.yml publica uma imagem só amd64)."
   type        = string
-  default     = "t4g.medium"
+  default     = "t3.medium"
 }
 
 variable "root_volume_size" {
@@ -39,4 +39,14 @@ variable "compose_version" {
   description = "Versão do plugin Docker Compose instalado no user_data."
   type        = string
   default     = "v5.6.1"
+}
+
+variable "image_registry" {
+  description = "Repositório da imagem no GHCR, sem a tag (ex.: ghcr.io/dono/radar-licitacoes). O pacote precisa ser público, porque o user_data não faz login."
+  type        = string
+}
+
+variable "image_tag" {
+  description = "Tag da imagem publicada pelo main.yml: o sha do commit ou a versão semver. Não existe a tag latest."
+  type        = string
 }

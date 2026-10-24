@@ -1,6 +1,6 @@
 # Prova: bloat de `ingest.procurement` e `outbox.outbox_event`
 
-Data: 2026-10-23. Código da medição: `core/src/test/java/br/dev/miguelsanzbr/radar/ingest/adapter/out/jdbc/DbBloatBenchTest.java`, na versão do commit `f6c22c3` (a última que o alterou), medido no HEAD `4830623` do ramo `feat/m2-expand-contract`, com a V14 entregue (lock timeout e índice parcial dos pendentes).
+Data: 2026-10-23. Código da medição: `core/src/test/java/br/dev/miguelsanzbr/radar/ingest/adapter/out/jdbc/DbBloatBenchTest.java`, no commit `64a6aa3` (squash do PR), com a V14 entregue (lock timeout e índice parcial dos pendentes).
 
 ## Ambiente
 

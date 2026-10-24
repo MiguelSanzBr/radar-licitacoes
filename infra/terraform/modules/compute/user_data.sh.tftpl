@@ -7,9 +7,14 @@ systemctl enable --now docker
 
 mkdir -p /usr/local/lib/docker/cli-plugins
 curl -fsSL -o /usr/local/lib/docker/cli-plugins/docker-compose \
-  "https://github.com/docker/compose/releases/download/${compose_version}/docker-compose-linux-aarch64"
+  "https://github.com/docker/compose/releases/download/${compose_version}/docker-compose-linux-x86_64"
 chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
 
 git clone --depth 1 "${app_repo_url}" /opt/radar
 cd /opt/radar
-docker compose -f infra/compose/docker-compose.yml up -d
+# Gera o .env e os segredos (db_password, read_writer_password) que o compose monta.
+scripts/compose-init.sh
+# A imagem vem do GHCR (publicada pelo main.yml) e recebe o nome local que o compose usa.
+docker pull "${image_registry}:${image_tag}"
+docker tag "${image_registry}:${image_tag}" "radar-licitacoes:${image_tag}"
+RADAR_TAG="${image_tag}" docker compose -f infra/compose/docker-compose.yml up -d --wait

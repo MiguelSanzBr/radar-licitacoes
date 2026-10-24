@@ -1,6 +1,6 @@
 # ADR-0025: Observabilidade com Micrometer e LGTM, e SLOs com burn rate
 
-- Status: proposta
+- Status: aceita
 - Data: 2026-10-20
 
 ## Contexto
@@ -60,9 +60,9 @@ Métricas por tarefa (nomes fixos, os mesmos dos dashboards):
 | `outbox_pending`, `outbox_oldest_age_seconds`, `outbox_poison_pending`, `outbox_poison_total` | 1.6 | existe |
 | `dlq_messages_total{topic}` | 4.1 registra em zero para os tópicos `.dlq`; 4.3 incrementa a cada registro enviado à DLQ | existe |
 | `http_server_requests_seconds_*` (buckets 50 ms, 200 ms, 500 ms) | 4.1 | existe |
-| `projection_lag_seconds` | 1.9 | pendente |
-| `kafka_consumer_lag` | 1.9 | pendente |
-| `alert_delivery_latency_seconds` | 3.2 | pendente |
+| `projection_lag_seconds` | 1.9 | existe |
+| `kafka_consumer_fetch_manager_records_lag_max` | 1.9 | existe (métrica do cliente Kafka; substituiu o `kafka_consumer_lag` previsto, que nunca foi criado) |
+| `alert_delivery_latency_seconds` | 3.2 | existe |
 
 Prova: `TracePropagationIT` faz uma requisição HTTP que grava um edital e seus eventos no outbox, roda o relay e lê o Kafka: o `traceId` do span de servidor é o mesmo na linha do outbox, no header do registro Kafka e no MDC do handler. `PrometheusEndpointIT` faz o scrape e confere os nomes. As tarefas 1.9 e 3.2 estendem esse teste até a projeção e o alerta e devem mantê-lo verde.
 

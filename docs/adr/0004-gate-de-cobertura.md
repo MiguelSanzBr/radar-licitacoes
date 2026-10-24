@@ -9,7 +9,7 @@ Um número de cobertura só tem valor se não puder ser contornado. Exclusões a
 
 ## Decisão
 
-- JaCoCo em modo agregado (`report-aggregate` e `check`): 100% de linha e de ramo no agregado do projeto.
+- JaCoCo com `report` e `check` em cada módulo: 100% de linha e de ramo por módulo (elemento `BUNDLE`). A ideia inicial era um `report-aggregate` do projeto todo; o gate ficou por módulo, que é mais exigente, porque o código de um módulo não compensa o de outro.
 - Unidade e integração contam juntas. Código de adapter é coberto pelos testes de integração com Testcontainers, não excluído.
 - Exclusões só para código gerado (openapi-generator, jOOQ codegen e Avro). Quando a anotação `@Generated` do gerador sobrevive à compilação, o JaCoCo a respeita sozinho; quando não sobrevive (retenção `SOURCE`, caso do openapi-generator), a exclusão é por caminho do pacote gerado. Não há exclusão de pacote escrito à mão.
 - `scripts/check-coverage-policy.sh` falha se o `pom.xml` tiver um `<exclude>` que não esteja listado em `docs/coverage-exclusions.md` com justificativa. Toda exclusão exige entrada com justificativa em `docs/coverage-exclusions.md`, e `scripts/check-coverage-policy.sh` falha sem ela; a mudança passa pelo PR como qualquer outra.

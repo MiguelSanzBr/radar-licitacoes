@@ -1,6 +1,8 @@
 # Cache do detalhe: taxa de acerto e latência
 
-Data: 2026-10-23. Commit: `e774b53`. JDK 25.0.5+8. Máquina: AMD Ryzen 5 5600GT (12 threads), 11 GiB de RAM, Linux 6.12. Postgres 18 e Redis 8.8 em contêineres locais (Testcontainers), cliente na mesma máquina.
+Rótulo: **dados de teste sintéticos**. Os editais e a distribuição de acessos são gerados pelo próprio teste (`DetailCacheBenchIT`), nenhum dado real do PNCP entra na medição.
+
+Data: 2026-10-23. Commit: `ee01215`. JDK 25.0.5+8. Máquina: AMD Ryzen 5 5600GT (12 threads), 11 GiB de RAM, Linux 6.12. Postgres 18 e Redis 8.8 em contêineres locais (Testcontainers), cliente na mesma máquina.
 
 ## Como medir
 

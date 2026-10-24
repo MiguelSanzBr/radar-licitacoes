@@ -4,7 +4,28 @@ Plataforma que coleta as licitações publicadas no PNCP (Portal Nacional de Con
 
 ## Estado
 
-Em construção. O projeto está no marco M0 (sonda de coleta e fundação do repositório). Nenhuma funcionalidade para usuário está pronta ainda.
+Os marcos M0 a M8 estão entregues e o M9 (camada 4) não foi feito. Cada capacidade tem código, teste ou benchmark e ADR; os números vêm de `make bench` e `make slo`, com data, hardware e rótulo real ou sintético.
+
+- M0: sonda do PNCP e fundação do repositório.
+- M1: coleta incremental e backfill, outbox transacional, Kafka e projeção.
+- M2: busca textual em português, API REST e interface Thymeleaf com htmx, benchmark com 1,2 milhão de linhas.
+- M3: alertas por e-mail para buscas salvas e resumo diário.
+- M4: observabilidade, SLOs, caos com Toxiproxy, painel de operação e DLQ.
+- M5: segurança (OIDC, papéis, chaves de API, checklist OWASP) e Redis (limite de requisições e cache do detalhe).
+- M6: virtual threads na coleta, escolha do coletor de lixo e otimização guiada por profile.
+- M7: imagem, compose como ambiente oficial, deploy com rollback, Helm e Terraform.
+- M8: Avro com Apicurio, extração em `ingestor` e `search-api`, Debezium como alternativa ao relay e mensageria avançada (rebalance, backpressure, ordem).
+
+O que foi cortado, e por quê, está nas notas de escopo da [ADR-0001](docs/adr/0001-registro-de-decisoes.md). Em resumo:
+
+- M9 (gRPC ou GraphQL): não feito.
+- Spring Cloud Contract: adiado, sem linha compatível com o Boot 4.1; o contrato OpenAPI é verificado por teste.
+- Sem `release.yml` (não há GitHub Release com jar, SBOM e checksums) e sem OpenAPI no GitHub Pages.
+- Disponibilidade da API sob caos: não medida no compose; o caos prova perda e duplicata zero em teste.
+- A sonda do PNCP terminou no 429, sem as 24 h, sem a rampa de taxa e sem a madrugada.
+- Sem JMH: o ponto quente era SQL, não código da JVM.
+- O Helm não tem a forma dividida e recusa mais de uma réplica; o nightly é só a fumaça da busca (sem PIT completo, sem backfill real de 1 dia, sem dependency-check).
+- Sem captura de tela de trace e sem snapshot do PNCP como asset de release; badges não se aplicam, porque o repositório é local.
 
 ## Arquitetura
 
@@ -33,18 +54,30 @@ Os dados do seed são públicos, do PNCP, coletados em 2026-10-22 (editais da mo
 
 Outros alvos: `make verify` (build completo: exige JDK 25 e Docker, porque os testes de integração sobem containers com Testcontainers e o build gera o modelo jOOQ a partir das migrations num Postgres descartável) e `make e2e` (sobe o compose e roda o fluxo ponta a ponta; exige as portas livres e a imagem, `make image`).
 
-`make bench` mede a busca com 1,2 milhão de linhas (carrega o dia real e completa com massa sintética rotulada, compara planos sem e com índices e roda o Gatling S1 a S6); o resultado alimenta a seção Números e `docs/benchmarks/search/`. `make docs-check` confere que o bloco de números é o que `docs/benchmarks/latest.json` gera.
+O resultado de `make bench` alimenta a seção Números e `docs/benchmarks/search/`; `make docs-check` confere que o bloco de números é o que `docs/benchmarks/latest.json` gera. O commit citado em cada medição é o commit do PR na `main` (`BENCH_COMMIT`, ver `scripts/render-metrics.sh`).
 
-Imagem: 393 MB (medido por scripts/image-size.sh em 2026-10-20).
+Imagem do monólito: 617 MB (medido por `scripts/image-size.sh` em 2026-10-24, sobre a imagem construída em 2026-10-23, depois do PR 6.2, com o G1 fixado). A medição anterior, 393 MB em 2026-10-22, era do M0 e não tem a busca, os alertas, o Redis nem o Avro.
 
-### Sonda do PNCP
+### Reproduzir as medições
 
-A sonda (`tools/pncp-probe`) mede por 24 h o comportamento real da API pública antes de congelar taxa, intervalo de polling e recorte de dados. Ela se identifica com `User-Agent` próprio e mantém 0,5 req/s (1 requisição a cada 2 s). Só a rampa única S3, às 3h, sobe até 4 req/s por cerca de 60 s, e nada passa de 4 req/s. Para na primeira resposta 429 ou 403 da API de dados (o `robots.txt` só é registrado).
+Cada alvo gera o artefato versionado ao lado do relatório. Com exceção de `make chaos` (Testcontainers) e `make replay` (usa a pilha já no ar), todos pedem a imagem (`make image`, ou `make image-split` para o perfil dividido). Rode um por vez, sem outra pilha nas portas fixas.
 
-```
-make probe          # constrói o jar e roda em segundo plano (log e PID em tools/pncp-probe/out)
-make probe-report   # gera docs/benchmarks/probe/<data>.md a partir do JSONL gravado
-```
+| Alvo | O que faz | Relatório |
+| --- | --- | --- |
+| `make bench` | busca com 1,2 milhão de linhas (dia real mais massa sintética), planos sem e com índices, Gatling S1 a S6 (cerca de 1 h, uns 6 GB livres) | `docs/benchmarks/search/` |
+| `make bench-pool` | repete S1, S2 e S5 com o pool de busca em 10, 20 e 40 conexões | `docs/benchmarks/db/hikari.md` |
+| `make slo` | SLOs com tráfego misto sintético sobre 200 mil linhas (15 min por padrão; `SLO_DURATION=1h` para o plano) | `docs/benchmarks/slo/` |
+| `make profile GC=serial\|g1\|zgc\|all` | a mesma carga sob cada coletor de lixo, com JFR | `docs/benchmarks/jvm/` |
+| `make replay` | com a pilha no ar, reconstrói o read model do offset 0 do tópico e imprime o relatório | `docs/benchmarks/replay/` |
+| `make chaos` | 10 mil eventos com Toxiproxy; as perdas e as duplicatas impressas no fim devem ser 0 | `docs/benchmarks/chaos/` |
+| `make deploy TAG=<tag>` e `make rollback` | troca a imagem do `app` com smoke e volta ao deploy anterior (ADR-0022) | `docs/runbook.md`, seção Rollback |
+| `make e2e-split` | o fluxo ponta a ponta com `ingestor` e `search-api` (depois de `make image-split`) | ADR-0028 |
+
+### Sonda do PNCP (histórico)
+
+A sonda (`tools/pncp-probe`) rodou em 2026-10-22, das 17:02 às 19:44, em três execuções, a 0,5 req/s com `User-Agent` próprio. A API pública respondeu 429 a essa taxa e a sonda parou ali, como estava previsto: 2.646 requisições, sem as 24 h, sem a rampa de taxa e sem a madrugada. Ela não foi retomada. O que se mediu decidiu o recorte (ADR-0005), a estratégia incremental (ADR-0006) e a taxa de coleta, 0,2 req/s ([ADR-0017](docs/adr/0017-resiliencia-cliente-pncp.md)). O relatório está em [`docs/benchmarks/probe/2026-10-22.md`](docs/benchmarks/probe/2026-10-22.md).
+
+`make probe` continua no repositório como evidência e agora exige `PROBE_CONFIRM=1`, porque rodá-la de novo volta a pressionar a API real. `make probe-report` gera o relatório a partir do JSONL gravado (`tools/pncp-probe/out`, fora do git).
 
 ## Interface
 
@@ -66,22 +99,22 @@ A captura mostra dados reais do PNCP, os editais da modalidade 6 publicados em 2
 ## Números
 
 <!-- bench:start -->
-Medido em 2026-10-23 (commit `a05da33`), AMD Ryzen 5 5600GT with Radeon Graphics, 12 threads, 11,6 GiB de RAM, Postgres 18.6, 1.200.000 linhas de busca: 1.633 reais do PNCP (dia versionado em `infra/compose/seed`) e 1.198.367 sintéticas. Rótulo de todo número abaixo: **inclui dados sintéticos (1.198.367 linhas)**. Uma execução por cenário, 1 min de aquecimento descartado e 3 min medidos; cada usuário espera 1 s entre requisições.
+Medido em 2026-10-23 (commit `2ce350f`), AMD Ryzen 5 5600GT with Radeon Graphics, 12 threads, 11,6 GiB de RAM, Postgres 18.6, 1.200.000 linhas de busca: 1.633 reais do PNCP (dia versionado em `infra/compose/seed`) e 1.198.367 sintéticas. Rótulo de todo número abaixo: **inclui dados sintéticos (1.198.367 linhas)**. Uma execução por cenário, 1 min de aquecimento descartado e 3 min medidos; cada usuário espera 1 s entre requisições.
 
 | Cenário | Usuários | Requisições | Erros | p50 (ms) | p95 (ms) | p99 (ms) | req/s |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | S1 text search | 50 | 8.662 | 0 | 34 | 83 | 122 | 48,1 |
 | S2 filtered search | 50 | 8.925 | 0 | 6 | 22 | 46 | 49,6 |
-| S3 keyset p1 (medido em 2026-10-23, commit `c82905b`) | 10 | 300 | 0 | 2 | 3 | 5 | 1,7 |
-| S3 offset p1 (medido em 2026-10-23, commit `c82905b`) | 10 | 300 | 0 | 2 | 4 | 6 | 1,7 |
-| S3 keyset p100 (medido em 2026-10-23, commit `c82905b`) | 10 | 300 | 0 | 2 | 3 | 6 | 1,7 |
-| S3 offset p100 (medido em 2026-10-23, commit `c82905b`) | 10 | 300 | 0 | 5 | 7 | 8 | 1,7 |
-| S3 keyset p1000 (medido em 2026-10-23, commit `c82905b`) | 10 | 300 | 0 | 2 | 3 | 7 | 1,7 |
-| S3 offset p1000 (medido em 2026-10-23, commit `c82905b`) | 10 | 300 | 0 | 31 | 38 | 48 | 1,7 |
+| S3 keyset p1 (medido em 2026-10-23, commit `1496441`) | 10 | 300 | 0 | 2 | 3 | 5 | 1,7 |
+| S3 offset p1 (medido em 2026-10-23, commit `1496441`) | 10 | 300 | 0 | 2 | 4 | 6 | 1,7 |
+| S3 keyset p100 (medido em 2026-10-23, commit `1496441`) | 10 | 300 | 0 | 2 | 3 | 6 | 1,7 |
+| S3 offset p100 (medido em 2026-10-23, commit `1496441`) | 10 | 300 | 0 | 5 | 7 | 8 | 1,7 |
+| S3 keyset p1000 (medido em 2026-10-23, commit `1496441`) | 10 | 300 | 0 | 2 | 3 | 7 | 1,7 |
+| S3 offset p1000 (medido em 2026-10-23, commit `1496441`) | 10 | 300 | 0 | 31 | 38 | 48 | 1,7 |
 | S4 organ typo | 20 | 3.545 | 0 | 13 | 18 | 23 | 19,7 |
 | S5 detail | 100 | 17.975 | 0 | 1 | 2 | 5 | 99,9 |
-| S6 stats by uf (medido em 2026-10-23, commit `c82905b`) | 10 | 900 | 0 | 2 | 2 | 3 | 5 |
-| S6 stats by month (medido em 2026-10-23, commit `c82905b`) | 10 | 900 | 0 | 2 | 2 | 3 | 5 |
+| S6 stats by uf (medido em 2026-10-23, commit `1496441`) | 10 | 900 | 0 | 2 | 2 | 3 | 5 |
+| S6 stats by month (medido em 2026-10-23, commit `1496441`) | 10 | 900 | 0 | 2 | 2 | 3 | 5 |
 
 - Cache do detalhe (S5): 19.518 acertos e 4.444 faltas, taxa de acerto de 81,5%.
 - SLO de busca (S1 e S2, p95 até 200 ms e p99 até 500 ms): S1 atende, S2 atende.
@@ -92,7 +125,7 @@ Medido em 2026-10-23 (commit `a05da33`), AMD Ryzen 5 5600GT with Radeon Graphics
 ### SLOs medidos
 
 <!-- slo:start -->
-Medido em 2026-10-23 (commit `e086c21`), AMD Ryzen 5 5600GT with Radeon Graphics, 12 threads, 11,6 GiB de RAM, Postgres 18.6, 200.000 linhas de busca: 1.633 reais do PNCP e 198.367 sintéticas, mais 1.370 editais do PNCP simulado coletados durante a medição. Rótulo de todo número abaixo: **sintético** (massa e tráfego de ingestão). Janela medida de 15 min, depois de 60 s de aquecimento descartado; coleta incremental a cada 30 s (o padrão da aplicação é 5 min); carga mista S1, S2, S5 e S6 com 5, 5, 10 e 2 usuários.
+Medido em 2026-10-23 (commit `441ba19`), AMD Ryzen 5 5600GT with Radeon Graphics, 12 threads, 11,6 GiB de RAM, Postgres 18.6, 200.000 linhas de busca: 1.633 reais do PNCP e 198.367 sintéticas, mais 1.370 editais do PNCP simulado coletados durante a medição. Rótulo de todo número abaixo: **sintético** (massa e tráfego de ingestão). Janela medida de 15 min, depois de 60 s de aquecimento descartado; coleta incremental a cada 30 s (o padrão da aplicação é 5 min); carga mista S1, S2, S5 e S6 com 5, 5, 10 e 2 usuários.
 
 | SLO | Alvo | Medido | Atende |
 | --- | --- | ---: | --- |
@@ -113,13 +146,15 @@ Medido em 2026-10-23 (commit `e086c21`), AMD Ryzen 5 5600GT with Radeon Graphics
 - Leitura completa e limites: `docs/benchmarks/slo/2026-10-23.md`.
 <!-- slo:end -->
 
+A latência de S1 e S2 da tabela acima vem de `make slo`, com 200 mil linhas de busca; por isso é bem menor que a da seção Números, que vem de `make bench` com 1,2 milhão de linhas (S1: p95 de 83 ms contra 18 ms). O SLO de busca (p95 até 200 ms) vale nos dois volumes; o número de referência para o volume cheio é o do `make bench`.
+
 ## Fora do escopo
 
 - Nuvem permanente.
 - Provedor de e-mail externo.
 - MFA e WebAuthn.
 - Contratos, atas e itens: a sonda não deu base para liberar (`niFornecedor` pode ser CPF, `atas` com timeout; ver `docs/benchmarks/probe/2026-10-22.md`, S6).
-- gRPC e GraphQL (camada 4), só se houver folga.
+- gRPC e GraphQL (camada 4, M9): não feito.
 
 ## Licença
 

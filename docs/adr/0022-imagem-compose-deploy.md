@@ -1,6 +1,6 @@
 # ADR-0022: Imagem multi-stage, compose como ambiente oficial e deploy por digest
 
-- Status: proposta
+- Status: aceita
 - Data: 2026-10-19
 
 ## Contexto
@@ -50,7 +50,7 @@ O host tinha outras cargas, por isso as rodadas variam. Nas duas, o cache reduzi
 | --- | --- | --- | --- |
 | `postgres` | `postgres:18` | 256 MB | `shared_preload_libraries=pg_stat_statements`; `infra/postgres/init/01-extensions.sql` cria `pg_stat_statements` e `pgstattuple`; volume `pgdata` em `/var/lib/postgresql` (layout do 18); `pg_isready` |
 | `kafka` | `apache/kafka:4.1.0` | 512 MB | KRaft com um nó, heap de 256 MB, listener interno `kafka:9092` e externo `localhost:9094`; saúde por `nc -z` (o `kafka-broker-api-versions.sh` sobe uma JVM a cada 5 s) |
-| `redis` | `redis:8.8-alpine` | 96 MB | sem persistência; a aplicação ainda não o usa (marco M5), mas ele faz parte da pilha de um comando |
+| `redis` | `redis:8.8-alpine` | 96 MB | sem persistência; a aplicação o usa para o limite de taxa por chave de API e para o cache do detalhe (ADR-0027) |
 | `keycloak` | `quay.io/keycloak/keycloak:26.8` | 896 MB | `start-dev --import-realm` com `infra/keycloak/realm-radar.json` somente leitura; saúde pela porta de gerenciamento 9000 via `/dev/tcp` (a imagem não tem `curl`) |
 | `mailpit` | `axllent/mailpit:v1.31.6` | 64 MB | SMTP 1025, interface 8025 (`SPRING_MAIL_HOST=mailpit`; o envio real chega com os alertas) |
 | `otel-lgtm` | `grafana/otel-lgtm:0.36.0` | 1792 MB | saúde pelo `/api/health` do Grafana (a `app` espera por ele); Grafana 3000; recebe OTLP em 4318; dashboards de `infra/grafana/dashboards` provisionados por um provider extra (`radar.yml`) sobre o datasource Prometheus da imagem (uid `prometheus`) |
@@ -74,7 +74,7 @@ O host tinha outras cargas, por isso as rodadas variam. Nas duas, o cache reduzi
 
 ### Deploy e rollback
 
-- `scripts/deploy.sh TAG` troca o serviço `app` do compose pela imagem da tag e confere o smoke (`scripts/smoke.sh`): o readiness e `GET /actuator/info`, que é público (as rotas `/api/v1` do contrato ainda respondem 404 no main), com prazo de 5 s por chamada. O `--wait` do compose já espera o healthcheck de readiness; o smoke acrescenta uma leitura de rota pública.
+- `scripts/deploy.sh TAG` troca o serviço `app` do compose pela imagem da tag e confere o smoke (`scripts/smoke.sh`): o readiness, `GET /actuator/info` e `GET /api/v1/procurements?limit=1` (busca pública, que passa pelo banco de leitura), com prazo de 5 s por chamada. O `--wait` do compose já espera o healthcheck de readiness; o smoke acrescenta a leitura de rota pública da API.
 - O digest da imagem vai para `infra/compose/.deployed` (tag e digest do que está no ar). O deploy anterior é copiado para `.deployed.previous` antes de qualquer troca.
 - Digest, e não tag, é a referência do rollback: a tag `good` pode ser movida depois do deploy, e o digest identifica o conteúdo. O digest é o `RepoDigests` quando existe, senão o id da imagem.
 - Falhou o compose ou o smoke, `scripts/rollback.sh` põe no ar a imagem de `.deployed.previous`, marcada como `radar-licitacoes:rollback`, e confere o smoke de novo. Sem deploy anterior, o rollback falha com mensagem. Um rollback consome o registro anterior: não há volta em cascata.

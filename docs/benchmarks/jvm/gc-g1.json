@@ -3,7 +3,7 @@
   "flag": "-XX:+UseG1GC",
   "appMemLimit": "640m",
   "date": "2026-10-23",
-  "commit": "4f9274269482ed17d149309cc63c7a8189bcfa13",
+  "commit": "4221dbf0d1ba749a2cad4c17adbefb84cf71cf04",
   "jvm": "openjdk version \"25.0.4.1\" 2026-08-18 LTS",
   "gcInit": [
     "CardTable entry size: 512",

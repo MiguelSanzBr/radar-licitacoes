@@ -1,6 +1,6 @@
 # Coletor de lixo: Serial × G1 × ZGC (PR 6.2)
 
-Data: 2026-10-23. Imagem `radar-licitacoes:local` construída do commit `0f83eb4` da `main` (JRE Temurin 25.0.4.1 gerado pelo `jlink` da imagem, AOT cache treinado no build). Scripts na versão do commit `439441b` (`scripts/profile.sh`, `scripts/gc-pauses.sh`). Máquina: AMD Ryzen 5 5600GT (12 threads), 11,6 GiB de RAM, Linux 6.12, Docker 29.9.2, Postgres 18.6. Os números brutos estão em `gc-serial.json`, `gc-g1.json`, `gc-zgc.json` e `gc-zgc-1g.json`.
+Data: 2026-10-23. Imagem `radar-licitacoes:local` construída do commit `0f83eb4` da `main` (JRE Temurin 25.0.4.1 gerado pelo `jlink` da imagem, AOT cache treinado no build). Scripts na versão do commit `4221dbf` (`scripts/profile.sh`, `scripts/gc-pauses.sh`). Máquina: AMD Ryzen 5 5600GT (12 threads), 11,6 GiB de RAM, Linux 6.12, Docker 29.9.2, Postgres 18.6. Os números brutos estão em `gc-serial.json`, `gc-g1.json`, `gc-zgc.json` e `gc-zgc-1g.json`.
 
 ## Método
 

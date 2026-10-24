@@ -18,7 +18,8 @@ check() { # nome, args do helm...
 }
 
 check defaults --set secret.existingName=radar-db
-check all-optionals --set autoscaling.enabled=true --set autoscaling.minReplicas=2 --set secret.create=true \
+# allowMultipleReplicas so existe para o HPA e o PDB serem validados no schema.
+check all-optionals --set allowMultipleReplicas=true --set autoscaling.enabled=true --set autoscaling.minReplicas=2 --set secret.create=true \
   --set secret.values.SPRING_DATASOURCE_PASSWORD=x
 
 # Sem Secret criado nem existente o chart tem de se recusar a renderizar.
@@ -29,4 +30,16 @@ if helm template radar "$CHART" >/dev/null 2>&1; then echo "chart renderizou sem
 echo "== grace period curto"
 if helm template radar "$CHART" --set secret.existingName=x --set terminationGracePeriodSeconds=25 >/dev/null 2>&1; then
   echo "chart renderizou com grace period menor que preStop + desligamento" >&2; exit 1
+fi
+
+# O monolito assume uma replica (ADR-0028): autoscaling e replicaCount > 1 barram o render, e so o desvio de teste os libera.
+echo "== mais de uma replica"
+if helm template radar "$CHART" --set secret.existingName=x --set autoscaling.enabled=true >/dev/null 2>&1; then
+  echo "chart renderizou com autoscaling ligado" >&2; exit 1
+fi
+if helm template radar "$CHART" --set secret.existingName=x --set replicaCount=2 >/dev/null 2>&1; then
+  echo "chart renderizou com replicaCount 2" >&2; exit 1
+fi
+if ! helm template radar "$CHART" --set secret.existingName=x --set replicaCount=2 --set allowMultipleReplicas=true >/dev/null 2>&1; then
+  echo "allowMultipleReplicas deveria liberar replicaCount 2" >&2; exit 1
 fi

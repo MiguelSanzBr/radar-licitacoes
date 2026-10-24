@@ -39,7 +39,7 @@ A regra mora em `DeadLetters.isOutage`, usada pelos quatro tratadores de erro, e
 | Fila de saída | gauges Micrometer `outbox_pending`, `outbox_oldest_age_seconds` e `outbox_poison_pending`, que o `outbox` já publica | o painel e os alertas leem o mesmo número, e `ops` não consulta tabela do `outbox` |
 | Última coleta e marcas d'água | SQL somente leitura em `ingest.ingestion_run` e `ingest.ingestion_cursor` (`JdbcPipelineStats`) | é uma visão de operação entre contextos; uma porta pública em `ingest` só para isto criaria uma dependência `ops` para `ingest` e mais código sem regra de negócio |
 | Ponto de retomada da projeção | SQL somente leitura em `search.projection_checkpoint` | idem, com `search` |
-| Atraso dos consumidores | `Admin` do Kafka: offsets confirmados dos grupos contra o fim de cada partição, em duas chamadas | o broker é a fonte; `kafka_consumer_lag` ainda não existe como métrica |
+| Atraso dos consumidores | `Admin` do Kafka: offsets confirmados dos grupos contra o fim de cada partição, em duas chamadas | o broker é a fonte; o dashboard do Grafana lê a métrica do cliente Kafka `kafka_consumer_fetch_manager_records_lag_max`, que substituiu a `kafka_consumer_lag` prevista |
 
 Uma tabela não é uma dependência Java, então o Modulith não vê essas consultas; `JdbcPipelineStatsIT` fixa as colunas lidas, e renomear uma delas quebra o teste em vez do painel.
 

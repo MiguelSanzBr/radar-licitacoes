@@ -13,7 +13,7 @@ Este guia vale para qualquer PR, inclusive os de documentação.
 
 - Conventional Commits, em inglês: `feat:`, `fix:`, `test:`, `refactor:`, `docs:`, `chore:`, `perf:`.
 - Autoria única, a configurada no git local. Não usar trailers de coautoria.
-- Não pular hooks do git (`--no-verify`). Se você tiver hooks locais de validação, não os pule (`--no-verify` é proibido).
+- Não pular hooks do git: `--no-verify` é proibido, inclusive com hooks locais de validação.
 
 ## TDD visível
 
@@ -29,7 +29,7 @@ Até 400 linhas de diff de produção. Se passar disso, divida o trabalho em PRs
 
 ## Definição de pronto
 
-- CI verde: cobertura de 100% de linha e de ramo (agregada), PIT acima do limiar, ArchUnit, Modulith verify, SpotBugs e Spotless.
+- CI verde: cobertura de 100% de linha e de ramo em cada módulo (o gate é por módulo, não agregado), PIT acima do limiar, ArchUnit, Modulith verify, SpotBugs e Spotless.
 - ADR do PR mergeada no mesmo PR ou no anterior (ver `docs/adr/0001-registro-de-decisoes.md`).
 - Artefato de prova em `docs/benchmarks/` quando o PR traz número.
 - README atualizado quando o PR expõe capacidade nova.

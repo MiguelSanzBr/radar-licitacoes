@@ -35,4 +35,17 @@ O projeto é desenvolvido por uma pessoa só. Sem registro, o motivo de cada esc
 
 ## Notas de escopo
 
-Nenhuma até a data desta ADR.
+Estado em 2026-10-24, ao fim do M8. O M0 ao M8 foram entregues. O que ficou de fora, com o motivo e onde está registrado:
+
+- **M9 (camada 4) não foi feito.** Nenhum gRPC nem GraphQL: era o primeiro corte da ordem de corte e o prazo não deixou folga. A extração em dois serviços (ADR-0028) segue sem canal interno entre eles, porque `search-api` lê o próprio read model. Ver [ADR-0028](0028-extracao-ingestor-e-search-api.md) e a seção "Fora do escopo" do [README](../../README.md).
+- **Spring Cloud Contract adiado.** Não há linha de lançamento compatível com o Boot 4.1; o provedor é validado por conformidade com o OpenAPI em todo teste MockMvc. Ver [ADR-0013](0013-contract-first-openapi.md) e [docs/compat-matrix.md](../compat-matrix.md).
+- **Sem `release.yml`.** O `main.yml` publica a imagem no GHCR por sha e por tag `v*`, mas não há GitHub Release com jar, SBOM, checksums nem `latest.json` anexado. Ver [ADR-0022](0022-imagem-compose-deploy.md), seção "Deploy e rollback".
+- **OpenAPI não publicado no GitHub Pages.** O contrato fica em `contracts/src/main/resources/openapi/radar-api.v1.yaml` e é verificado no CI (spectral e testes de conformidade). Ver [ADR-0013](0013-contract-first-openapi.md).
+- **Disponibilidade da API sob caos não medida no compose.** O caos com Toxiproxy prova zero perda e zero efeito duplicado em teste, mas o SLO de 99,5% em 1 h com falhas injetadas não foi medido (a linha do README diz "não medido"). Ver [ADR-0025](0025-observabilidade-e-slos.md), [docs/benchmarks/slo/2026-10-23.md](../benchmarks/slo/2026-10-23.md) e [docs/benchmarks/chaos/2026-10-23.md](../benchmarks/chaos/2026-10-23.md).
+- **A sonda do PNCP terminou no 429, sem as 24 h, sem a rampa S3 e sem as horas da madrugada.** Rodou 2 h 42 em 2026-10-22, a 0,5 req/s, e foi encerrada. A taxa final de 0,2 req/s e o recorte são padrões declarados, não medidos. Ver [docs/benchmarks/probe/2026-10-22.md](../benchmarks/probe/2026-10-22.md), [ADR-0005](0005-recorte-e-etiqueta-de-coleta.md) e [ADR-0017](0017-resiliencia-cliente-pncp.md).
+- **Sem microbenchmark JMH.** O ponto quente medido era SQL, não código da JVM, e o profile mostrou 99,8% do tempo em espera do JDBC. Ver [ADR-0020](0020-concorrencia-na-coleta.md) e [docs/benchmarks/jvm/profile-before-after.md](../benchmarks/jvm/profile-before-after.md).
+- **O chart Helm não tem a forma dividida.** Há um só Deployment (o monólito), e o chart recusa mais de uma réplica enquanto não houver um Deployment por app. Ver [ADR-0023](0023-helm-kind-terraform-localstack.md) e [ADR-0028](0028-extracao-ingestor-e-search-api.md), seção "Fora desta extração".
+- **O nightly é só a fumaça da busca.** Roda o S1 por 1 minuto sobre 50 mil linhas: não há PIT completo, backfill real de 1 dia contra o PNCP nem dependency-check (a análise de dependências vem do SBOM com Grype no `ci.yml`). Ver `.github/workflows/nightly.yml` e [ADR-0004](0004-gate-de-cobertura.md).
+- **Sem captura de tela de trace no README.** A propagação do `traceId` é provada por teste (`TracePropagationIT`) e descrita na seção Observabilidade; o que o README mostra é o GIF da interface. Ver [ADR-0025](0025-observabilidade-e-slos.md).
+- **Sem snapshot do PNCP como asset de release.** O único dado real versionado é o dia de 2026-10-21 da modalidade 6 (1.633 editais, `infra/compose/seed`), e o benchmark completa o volume com massa sintética rotulada. Ver [ADR-0005](0005-recorte-e-etiqueta-de-coleta.md) e [ADR-0022](0022-imagem-compose-deploy.md).
+- **Badges não se aplicam.** O repositório é local, sem remoto, então não há CI hospedado nem badge de build, cobertura ou licença para mostrar.

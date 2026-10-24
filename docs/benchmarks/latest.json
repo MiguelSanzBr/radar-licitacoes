@@ -1,6 +1,6 @@
 {
   "date": "2026-10-23",
-  "commit": "a05da33ba7c40fc5f0fa7d5781a9d99cec9a159c",
+  "commit": "2ce350f6dc4bc1fec24562866e66e7602aeab52e",
   "host": "AMD Ryzen 5 5600GT with Radeon Graphics, 12 threads, 11,6 GiB de RAM",
   "postgres": "Postgres 18.6",
   "rows": {
@@ -50,7 +50,7 @@
       "rps": 1.7,
       "from": {
         "date": "2026-10-23",
-        "commit": "c82905bdaa626f537c3b95c5cbde11d26b520164"
+        "commit": "1496441ec857dc0a57d25be6a6a30fbaf62dc99c"
       }
     },
     {
@@ -66,7 +66,7 @@
       "rps": 1.7,
       "from": {
         "date": "2026-10-23",
-        "commit": "c82905bdaa626f537c3b95c5cbde11d26b520164"
+        "commit": "1496441ec857dc0a57d25be6a6a30fbaf62dc99c"
       }
     },
     {
@@ -82,7 +82,7 @@
       "rps": 1.7,
       "from": {
         "date": "2026-10-23",
-        "commit": "c82905bdaa626f537c3b95c5cbde11d26b520164"
+        "commit": "1496441ec857dc0a57d25be6a6a30fbaf62dc99c"
       }
     },
     {
@@ -98,7 +98,7 @@
       "rps": 1.7,
       "from": {
         "date": "2026-10-23",
-        "commit": "c82905bdaa626f537c3b95c5cbde11d26b520164"
+        "commit": "1496441ec857dc0a57d25be6a6a30fbaf62dc99c"
       }
     },
     {
@@ -114,7 +114,7 @@
       "rps": 1.7,
       "from": {
         "date": "2026-10-23",
-        "commit": "c82905bdaa626f537c3b95c5cbde11d26b520164"
+        "commit": "1496441ec857dc0a57d25be6a6a30fbaf62dc99c"
       }
     },
     {
@@ -130,7 +130,7 @@
       "rps": 1.7,
       "from": {
         "date": "2026-10-23",
-        "commit": "c82905bdaa626f537c3b95c5cbde11d26b520164"
+        "commit": "1496441ec857dc0a57d25be6a6a30fbaf62dc99c"
       }
     },
     {
@@ -170,7 +170,7 @@
       "rps": 5,
       "from": {
         "date": "2026-10-23",
-        "commit": "c82905bdaa626f537c3b95c5cbde11d26b520164"
+        "commit": "1496441ec857dc0a57d25be6a6a30fbaf62dc99c"
       }
     },
     {
@@ -186,7 +186,7 @@
       "rps": 5,
       "from": {
         "date": "2026-10-23",
-        "commit": "c82905bdaa626f537c3b95c5cbde11d26b520164"
+        "commit": "1496441ec857dc0a57d25be6a6a30fbaf62dc99c"
       }
     }
   ],

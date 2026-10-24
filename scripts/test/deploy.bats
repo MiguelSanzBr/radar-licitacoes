@@ -159,6 +159,7 @@ EOF
   [ "$status" -eq 0 ]
   grep -q 'actuator/health/readiness' "$CALLS_LOG"
   grep -q 'actuator/info' "$CALLS_LOG"
+  grep -qF '/api/v1/procurements?limit=1' "$CALLS_LOG"
 }
 
 @test "smoke falho sai com erro e nomeia a rota" {
@@ -169,6 +170,18 @@ EOF
 
   [ "$status" -ne 0 ]
   [[ "$output" == *"smoke: /actuator/health/readiness falhou"* ]]
+}
+
+@test "smoke falha quando a leitura publica da API falha" {
+  cat >"$BIN/curl" <<'EOF2'
+#!/usr/bin/env bash
+case "$*" in *api/v1/procurements*) exit 22 ;; esac
+EOF2
+
+  run "$ROOT/scripts/smoke.sh"
+
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"smoke: /api/v1/procurements?limit=1 falhou"* ]]
 }
 
 @test "deploy nao deixa arquivo temporario do registro" {
