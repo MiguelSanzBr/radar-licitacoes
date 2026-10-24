@@ -1,0 +1,90 @@
+{
+  "gc": "zgc",
+  "flag": "-XX:+UseZGC",
+  "appMemLimit": "640m",
+  "date": "2026-10-23",
+  "commit": "4f9274269482ed17d149309cc63c7a8189bcfa13",
+  "jvm": "openjdk version \"25.0.4.1\" 2026-08-18 LTS",
+  "gcInit": [
+    "Initializing The Z Garbage Collector",
+    "Version: 25.0.4.1+1-LTS (release)",
+    "NUMA Support: Disabled",
+    "CPUs: 12 total, 12 available",
+    "Memory: 640M",
+    "Large Page Support: Disabled",
+    "Address Space Size: unlimited",
+    "Reserved Space Type: Contiguous/Unrestricted/Complete",
+    "Reserved Space Size: 7680M",
+    "Heap Backing File: /memfd:java_heap",
+    "Heap Backing Filesystem: tmpfs (0x1021994)",
+    "Min Capacity: 64M",
+    "Initial Capacity: 64M",
+    "Max Capacity: 480M",
+    "Soft Max Capacity: 432M",
+    "Page Size Medium: Range [2M, 8M]",
+    "Pre-touch: Disabled",
+    "Available space on backing filesystem: N/A",
+    "Uncommit: Enabled",
+    "Uncommit Delay: 300s",
+    "GC Workers for Old Generation: 3 (dynamic)",
+    "GC Workers for Young Generation: 3 (dynamic)",
+    "GC Workers Max: 3 (dynamic)",
+    "Runtime Workers: 4"
+  ],
+  "rows": {
+    "total": 201633,
+    "real": 1633,
+    "synthetic": 200000
+  },
+  "s1": {
+    "users": 50,
+    "thinkMs": 1000,
+    "warmupSeconds": 60,
+    "measuredSeconds": 180,
+    "requests": 8917,
+    "errors": 0,
+    "rps": 36.85,
+    "p50Ms": 8,
+    "p95Ms": 19,
+    "p99Ms": 45,
+    "maxMs": 157,
+    "cpuSeconds": 52.4,
+    "gcPauses": {
+      "count": 118,
+      "p50Ms": 0.013,
+      "p99Ms": 0.293,
+      "maxMs": 0.441,
+      "totalMs": 3.207
+    }
+  },
+  "replay": {
+    "events": 201738,
+    "seconds": 309,
+    "eventsPerSecond": 652.8,
+    "cpuSeconds": 167,
+    "gcPauses": {
+      "count": 1143,
+      "p50Ms": 0.013,
+      "p99Ms": 0.353,
+      "maxMs": 162.672,
+      "totalMs": 404.742
+    }
+  },
+  "gcPausesWholeRun": {
+    "count": 1299,
+    "p50Ms": 0.013,
+    "p99Ms": 0.353,
+    "maxMs": 162.672,
+    "totalMs": 408.620
+  },
+  "memory": {
+    "rssPeakMiBAfterS1": 658,
+    "rssPeakMiBAfterReplay": 659,
+    "cgroupPeakMiB": 640,
+    "dockerStatsPeakMiBS1": 640,
+    "dockerStatsPeakMiBReplay": 640
+  },
+  "oomKilled": false,
+  "restarts": 0,
+  "hostThreads": 12
+}

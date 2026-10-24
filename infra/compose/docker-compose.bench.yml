@@ -34,5 +34,7 @@ services:
       # conexoes do pool de busca (ADR-0010, "Tamanho do pool"); `make bench-pool` varia este valor entre 10, 20 e 40
       RADAR_SEARCH_POOL_SIZE: ${BENCH_SEARCH_POOL:-10}
       # as opcoes da imagem (Dockerfile; o AOT cache precisa do -Xms) mais as do benchmark, por exemplo a
-      # gravacao JFR do perfil da JVM (scripts/jfr/)
-      JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=75 -Xms64m -XX:+ExitOnOutOfMemoryError ${BENCH_JAVA_OPTS:-}
+      # gravacao JFR do perfil da JVM (scripts/jfr/); BENCH_GC_OPTS troca o coletor (scripts/profile.sh)
+      JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=75 -Xms64m -XX:+ExitOnOutOfMemoryError ${BENCH_GC_OPTS:--XX:+UseG1GC} ${BENCH_JAVA_OPTS:-}
+    # BENCH_APP_MEM varia o limite so no perfil de GC (scripts/profile.sh)
+    mem_limit: ${BENCH_APP_MEM:-640m}

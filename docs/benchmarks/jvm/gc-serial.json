@@ -1,0 +1,77 @@
+{
+  "gc": "serial",
+  "flag": "-XX:+UseSerialGC",
+  "appMemLimit": "640m",
+  "date": "2026-10-23",
+  "commit": "4f9274269482ed17d149309cc63c7a8189bcfa13",
+  "jvm": "openjdk version \"25.0.4.1\" 2026-08-18 LTS",
+  "gcInit": [
+    "CardTable entry size: 512",
+    "Version: 25.0.4.1+1-LTS (release)",
+    "CPUs: 12 total, 12 available",
+    "Memory: 640M",
+    "Large Page Support: Disabled",
+    "NUMA Support: Disabled",
+    "Compressed Oops: Enabled (32-bit)",
+    "Heap Min Capacity: 64M",
+    "Heap Initial Capacity: 64M",
+    "Heap Max Capacity: 480M",
+    "Pre-touch: Disabled"
+  ],
+  "rows": {
+    "total": 201633,
+    "real": 1633,
+    "synthetic": 200000
+  },
+  "s1": {
+    "users": 50,
+    "thinkMs": 1000,
+    "warmupSeconds": 60,
+    "measuredSeconds": 180,
+    "requests": 8918,
+    "errors": 0,
+    "rps": 36.7,
+    "p50Ms": 7,
+    "p95Ms": 18,
+    "p99Ms": 24,
+    "maxMs": 45,
+    "cpuSeconds": 47.5,
+    "gcPauses": {
+      "count": 146,
+      "p50Ms": 2.880,
+      "p99Ms": 12.180,
+      "maxMs": 12.622,
+      "totalMs": 464.780
+    }
+  },
+  "replay": {
+    "events": 201738,
+    "seconds": 306.1,
+    "eventsPerSecond": 659.1,
+    "cpuSeconds": 147.5,
+    "gcPauses": {
+      "count": 656,
+      "p50Ms": 2.749,
+      "p99Ms": 26.893,
+      "maxMs": 466.845,
+      "totalMs": 3010.089
+    }
+  },
+  "gcPausesWholeRun": {
+    "count": 835,
+    "p50Ms": 2.804,
+    "p99Ms": 26.893,
+    "maxMs": 466.845,
+    "totalMs": 3986.252
+  },
+  "memory": {
+    "rssPeakMiBAfterS1": 473,
+    "rssPeakMiBAfterReplay": 653,
+    "cgroupPeakMiB": 640,
+    "dockerStatsPeakMiBS1": 501,
+    "dockerStatsPeakMiBReplay": 640
+  },
+  "oomKilled": false,
+  "restarts": 0,
+  "hostThreads": 12
+}

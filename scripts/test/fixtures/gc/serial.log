@@ -1,0 +1,6 @@
+[2026-10-23T12:00:00.100+0000][info][gc,init] Version: 25.0.5+8-LTS (release)
+[2026-10-23T12:00:00.101+0000][info][gc,init] Using Serial
+[2026-10-23T12:00:01.000+0000][info][gc          ] GC(0) Pause Young (Allocation Failure) 17M->4M(61M) 10.000ms
+[2026-10-23T12:00:02.000+0000][info][gc          ] GC(1) Pause Young (Allocation Failure) 20M->5M(61M) 20.000ms
+[2026-10-23T12:00:03.000+0000][info][gc          ] GC(2) Pause Full (Allocation Failure) 50M->9M(61M) 100.000ms
+[2026-10-23T12:00:04.000+0000][info][gc,heap     ] GC(2) DefNew total 18M, used 1M

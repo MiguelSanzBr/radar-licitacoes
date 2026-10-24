@@ -1,9 +1,9 @@
 # ADR-0020: concorrência na coleta
 
-- Status: proposta (virtual threads na coleta implementadas no PR 6.1; GC e profile seguem pendentes)
+- Status: proposta (virtual threads na coleta no PR 6.1, perfil da JVM no PR 6.3 e coletor de lixo no PR 6.2, todos implementados)
 - Data: 2026-10-17
 
-Esta ADR cobre a concorrência da coleta: `StructuredTaskScope` (decidido) e virtual threads com bulkhead (PR 6.1, abaixo). As partes de GC (G1 ou ZGC) e de otimização guiada por profile são acrescentadas na M6 (PR 6.2 e 6.3), com dados.
+Esta ADR cobre a concorrência da coleta: `StructuredTaskScope` (decidido) e virtual threads com bulkhead (PR 6.1, abaixo). As partes de GC (Serial, G1 ou ZGC) e de otimização guiada por profile foram acrescentadas na M6 (PR 6.2 e 6.3), com dados.
 
 ## Contexto
 
@@ -62,3 +62,26 @@ Perfil JFR da JVM durante o S1 do benchmark da busca (1,2 milhão de linhas, 50 
 - **As threads virtuais mostram o que as amostras de CPU escondem.** As requisições do Tomcat rodam em threads virtuais (PR 6.1): uma thread virtual que espera o socket sai do carrier, e o `jdk.ExecutionSample` não a vê. O perfil usa `jdk.SocketRead` para a espera, pesado pela duração.
 - **Não há ponto quente na JVM.** O ponto quente era o SQL (ordenar 400 mil linhas por `ts_rank_cd`), corrigido no banco. Por isso esta PR não traz um microbenchmark JMH: não há trecho Java que o justifique, e a regressão é guardada pelo plano (`SearchRankCandidatesIT`) e não pelo relógio. Se um perfil futuro achar um ponto quente na JVM, o JMH entra com ele.
 - **Ferramenta.** JFR do próprio JDK 25 e `scripts/jfr/FlameGraph.java` (arquivo único que lê a gravação e escreve o SVG); async-profiler não foi usado porque não há download fixado offline.
+
+## Coletor de lixo (PR 6.2)
+
+**Decisão: G1, fixado em `JAVA_TOOL_OPTIONS` da imagem (`-XX:+UseG1GC`), sob o `mem_limit` de 640 MB do compose.** Antes, o app rodava Serial sem que ninguém tivesse escolhido: sob 1792 MB de memória a ergonomia da JVM cai no Serial, e o G1 só entra acima disso. Fixar a opção impede que trocar o limite do container mude o coletor em silêncio.
+
+Medição (`make profile GC=serial|g1|zgc`, `docs/benchmarks/jvm/gc.md`): 201.633 linhas (200 mil sintéticas rotuladas mais o dia real), Gatling S1 com 50 usuários (1 min de aquecimento e 3 min medidos) e replay de 201.738 eventos, a mesma massa e o mesmo container de 640 MB para os três.
+
+| | Serial | G1 | ZGC (geracional) |
+| --- | ---: | ---: | ---: |
+| S1 p99 (ms) | 24 | 27 | 45 |
+| S1 pausa máx (ms) | 12,6 | 13,9 | 0,44 |
+| Replay vazão (eventos/s) | 659 | 724 | 653 |
+| Replay pausa máx (ms) | 466,8 | 11,9 | 162,7 |
+| CPU no S1 (s em 4 min) | 47,5 | 57,4 | 52,4 |
+| RSS de pico após o replay (MiB) | 653 | 592 | 659 |
+
+- **O Serial para por quase meio segundo** (GC completo sob pressão de alocação, 467 ms; 8 GCs completos na execução). O G1 não fez GC completo e ficou em 14 ms no máximo.
+- **O ZGC não tem folga em 640 MB:** RSS e `docker stats` no limite, 442 paradas por alocação, p99 de 45 ms no S1 e uma pausa de 163 ms no replay. Com 1 GB as pausas somem (0,29 ms no máximo) e o p99 iguala o do G1, ao custo de uma JVM de 1 GB.
+- **O S1 quase não vê o coletor:** a busca é espera do Postgres (PR 6.3), e o rps e os percentis ficam dentro do ruído de uma execução.
+
+**Custo aceito:** o G1 gasta cerca de 21% mais CPU que o Serial (57,4 contra 47,5 s no S1) e 17 MiB a mais de RSS no S1.
+
+**Revisão:** com o limite do app em 1 GB ou mais e p99 como requisito, medir o ZGC geracional de novo; com CPU escassa (por exemplo 0,5 vCPU), medir o Serial de novo. O AOT cache não depende do coletor: o `RadarImageIT` confere o uso do cache com a imagem em G1.

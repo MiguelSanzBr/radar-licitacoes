@@ -92,6 +92,7 @@ self_test() {
   cp "$root/scripts/test/fixtures/bench/gatling/s1.stats.json" "$tmp/novo/gatling/"
   "$0" collect "$tmp/novo" >/dev/null
   "$0" readme
+  # shellcheck disable=SC2016 # as crases fazem parte do texto procurado
   grep -q '^| S2 filtered search (medido em 2026-01-02, commit `abcdef0`) |' "$tmp/README.md" || { echo "self-test: o S2 anterior nao foi mantido" >&2; return 1; }
   grep -q '^| S1 text search | 50 |' "$tmp/README.md" || { echo "self-test: o S1 novo ficou com origem" >&2; return 1; }
   "$0" check >/dev/null

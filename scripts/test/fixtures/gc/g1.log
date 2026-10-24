@@ -1,0 +1,5 @@
+[2026-10-23T12:00:00.100+0000][info][gc,init] Using G1
+[2026-10-23T12:00:01.000+0000][info][gc          ] GC(0) Pause Young (Normal) (G1 Evacuation Pause) 24M->4M(64M) 3.000ms
+[2026-10-23T12:00:01.001+0000][info][gc,phases   ] GC(0)   Pre Evacuate Collection Set: 0.1ms
+[2026-10-23T12:00:02.000+0000][info][gc          ] GC(1) Pause Remark 30M->30M(64M) 1.500ms
+[2026-10-23T12:00:02.500+0000][info][gc          ] GC(1) Concurrent Mark Cycle 40.000ms

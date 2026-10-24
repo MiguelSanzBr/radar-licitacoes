@@ -1,0 +1,7 @@
+[2026-10-23T12:00:00.100+0000][info][gc,init] Using The Z Garbage Collector
+[2026-10-23T12:00:00.101+0000][info][gc,init] ZGC Workers: 3
+[2026-10-23T12:00:01.000+0000][info][gc,phases   ] GC(0) y: Pause Mark Start 0.010ms
+[2026-10-23T12:00:01.100+0000][info][gc,phases   ] GC(0) y: Pause Mark End 0.020ms
+[2026-10-23T12:00:01.200+0000][info][gc,phases   ] GC(0) y: Pause Relocate Start 0.030ms
+[2026-10-23T12:00:01.300+0000][info][gc,phases   ] GC(0) y: Concurrent Mark 5.000ms
+[2026-10-23T12:00:01.400+0000][info][gc          ] GC(0) Garbage Collection (Warmup) 10M(2%)->4M(1%)

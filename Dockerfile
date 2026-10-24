@@ -67,9 +67,11 @@ RUN java -XX:AOTCacheOutput=/app/app.aot -Dspring.context.exit=onRefresh \
 ENV SPRING_PROFILES_INCLUDE=json
 # -Xms: o AOT cache carrega os objetos arquivados no heap inicial, que por padrao e 1/64 da
 # memoria do container (10 MB sob o mem_limit de 640m do compose) e nao os comporta: a JVM
-# aborta com "archived heap objects cannot be loaded". O coletor nao importa (cache treinado
-# em G1 carrega sob Serial); o piso de 64 MB so reserva endereco, nao ocupa RAM.
-ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=75 -Xms64m -XX:+ExitOnOutOfMemoryError"
+# aborta com "archived heap objects cannot be loaded". O piso de 64 MB so reserva endereco,
+# nao ocupa RAM. O coletor e fixado (G1, medido em docs/benchmarks/jvm/gc.md, ADR-0020): sem a
+# opcao a ergonomia escolheria o Serial sob 1792 MB de memoria e o G1 acima disso, e trocar o
+# limite do container mudaria o coletor sem aviso. O cache treinado sem esta opcao carrega sob G1.
+ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=75 -Xms64m -XX:+UseG1GC -XX:+ExitOnOutOfMemoryError"
 USER 10001:10001
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=3s --start-period=30s --retries=3 \

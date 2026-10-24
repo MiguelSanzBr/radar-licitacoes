@@ -189,9 +189,15 @@ docs-check:
 	scripts/render-metrics.sh self-test
 	scripts/render-metrics.sh check
 
-slo profile:
+slo:
 	@echo "$@: not implemented yet" >&2
 	@exit 1
+
+# Mesma carga (200 mil linhas sinteticas mais o dia real, Gatling S1 e replay) sob cada coletor de lixo (PR 6.2,
+# docs/benchmarks/jvm/gc.md): `make profile GC=serial|g1|zgc|all`. A pilha fica no ar entre as execucoes (a massa leva
+# minutos para carregar): CLEAN=1 make down ao fim. Precisa de `make image`, e de uns 4,5 GB de RAM livres na primeira vez.
+profile:
+	scripts/profile.sh $(GC)
 
 # Ambiente local completo (ADR-0022): cria .env e segredos se faltarem, constroi a imagem se nao
 # existir e sobe tudo esperando os healthchecks. Camada 3: PROFILE=layer3 make up.
@@ -252,7 +258,7 @@ BATS_IMAGE := bats/bats:1.12.0@sha256:0257e4f5326dd37046e94d4b8ce07c293447be80a9
 
 test-scripts:
 	docker run --rm -v "$(CURDIR):$(CURDIR)" -w "$(CURDIR)" $(SHELLCHECK_IMAGE) scripts/deploy-lib.sh scripts/deploy.sh scripts/rollback.sh scripts/smoke.sh scripts/schemas-register.sh \
-	  scripts/bench.sh scripts/bench-terms.sh scripts/gatling-stats.sh scripts/render-metrics.sh scripts/explain/run.sh scripts/explain/summarize.sh
+	  scripts/bench.sh scripts/bench-terms.sh scripts/gatling-stats.sh scripts/profile.sh scripts/gc-pauses.sh scripts/render-metrics.sh scripts/explain/run.sh scripts/explain/summarize.sh
 	docker run --rm -v "$(CURDIR):$(CURDIR)" -w "$(CURDIR)" $(BATS_IMAGE) scripts/test
 
 # Reconstroi o modelo de leitura do offset 0 do topico (ADR-0010): dispara o replay do operador e
