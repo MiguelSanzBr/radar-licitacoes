@@ -30,12 +30,18 @@ import tools.jackson.databind.node.ObjectNode;
 
 /**
  * Runs the measurement schedule. Every request passes through one {@link RateGate}; jobs are
- * interleaved round-robin in the base slots, and the one-off S3 ramp takes over the gate while it
- * runs. Stops at the first 429 or 403, after recording it.
+ * interleaved round-robin in the base slots, and the one-off S3 ramp, only when enabled, takes over
+ * the gate while it runs. Stops at the first 429 or 403, after recording it.
  */
 public final class Prober {
 
-  public record Config(String baseUrl, Duration duration, ZoneId zone) {}
+  /** {@code ramp} adds the one-off S3 rate ramp, which pushes the rate up to 4 req/s: opt-in. */
+  public record Config(String baseUrl, Duration duration, ZoneId zone, boolean ramp) {
+
+    public Config(String baseUrl, Duration duration, ZoneId zone) {
+      this(baseUrl, duration, zone, false);
+    }
+  }
 
   /** Adds the job-specific fields to a request record and may enqueue follow-up requests. */
   @FunctionalInterface
@@ -55,7 +61,8 @@ public final class Prober {
 
   private record Trigger(Instant at, Runnable action) {}
 
-  static final Duration BASE_INTERVAL = Duration.ofSeconds(2);
+  // why: PNCP answered 429 at 0.5 req/s (ADR-0005, ADR-0017); 0.2 req/s is the rate of the app
+  static final Duration BASE_INTERVAL = Duration.ofSeconds(5);
   private static final int MAX_UPDATE_PAGES = 40;
   private static final int RAMP_STEPS = 8;
   private static final Duration HOUR = Duration.ofHours(1);
@@ -118,7 +125,9 @@ public final class Prober {
     ring.addAll(List.of(this::sample, robots(), deep(1), updates(1, false), volume()));
     at(start.plus(HOUR), () -> ring.add(deep(2)));
     at(start.plus(HOUR), () -> ring.add(updates(2, true)));
-    at(rampStart(), this::ramp);
+    if (config.ramp()) {
+      at(rampStart(), this::ramp);
+    }
     while (stop.get() == 0 && clock.instant().isBefore(end)) {
       Req req = nextRequest();
       gate.acquire();

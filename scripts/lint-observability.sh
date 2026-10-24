@@ -87,12 +87,12 @@ python3 -I -c "$DASHBOARD_POLICY" "$DASH_DIR"
 
 # Todo runbook_url das regras precisa de uma ancora <a id="..."> em docs/runbook.md
 missing=0
-for anchor in $(sed -n 's|.*runbook_url: docs/runbook.md#||p' "$PROM_DIR/rules/slo.yml" | sort -u); do
+while IFS= read -r anchor; do
   if ! grep -q "<a id=\"$anchor\"></a>" "$ROOT/docs/runbook.md"; then
     echo "runbook: ancora ausente em docs/runbook.md: $anchor" >&2
     missing=1
   fi
-done
+done < <(sed -n 's|.*runbook_url: docs/runbook.md#||p' "$PROM_DIR/rules/slo.yml" | sort -u)
 [ "$missing" -eq 0 ]
 echo "runbook: ok"
 run_promtool check config /etc/prometheus/prometheus.yml

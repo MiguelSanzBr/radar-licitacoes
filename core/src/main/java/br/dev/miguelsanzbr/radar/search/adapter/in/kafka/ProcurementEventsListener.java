@@ -15,7 +15,7 @@ import org.springframework.kafka.support.Acknowledgment;
 /**
  * Consumes the procurement topic for the search read model. The record is acknowledged only after
  * the projection committed. A failure leaves it unacknowledged and goes to the container's error
- * handler (bounded retries, then logged and skipped until the dead-letter topic arrives).
+ * handler (bounded retries, then the record goes to the dead-letter topic).
  */
 class ProcurementEventsListener {
 

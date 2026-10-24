@@ -46,7 +46,7 @@ enum Cli {
       default -> {
         err.println(
             "uso: pncp-probe run|report [--duration=PT24H] [--out=DIR] [--base-url=URL]"
-                + " [--zone=ZONA] [--in=DIR] [--to=ARQUIVO.md]");
+                + " [--zone=ZONA] [--ramp=true] [--in=DIR] [--to=ARQUIVO.md]");
         yield 1;
       }
     };
@@ -68,7 +68,10 @@ enum Cli {
       Prober prober =
           new Prober(
               new Prober.Config(
-                  options.getOrDefault("base-url", "https://pncp.gov.br"), duration, zone),
+                  options.getOrDefault("base-url", "https://pncp.gov.br"),
+                  duration,
+                  zone,
+                  Boolean.parseBoolean(options.get("ramp"))),
               HttpTransport.standard(),
               clock,
               Sleeper.system(),

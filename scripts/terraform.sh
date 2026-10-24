@@ -33,7 +33,12 @@ plan() {
   NET="radar-tf-$$"
   LS="radar-localstack-$$"
   TMP=$(mktemp -d)
-  trap "docker rm -f $LS >/dev/null 2>&1 || true; docker network rm $NET >/dev/null 2>&1 || true; rm -rf $TMP" EXIT
+  cleanup() {
+    docker rm -f "$LS" >/dev/null 2>&1 || true
+    docker network rm "$NET" >/dev/null 2>&1 || true
+    rm -rf "$TMP"
+  }
+  trap cleanup EXIT
 
   # Copia o módulo sem .terraform e põe o override de LocalStack só na cópia temporária.
   mkdir "$TMP/terraform"

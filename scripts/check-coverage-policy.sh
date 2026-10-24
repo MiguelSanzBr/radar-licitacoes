@@ -71,6 +71,7 @@ self_case() {
   dir=$(mktemp -d)
   mkdir -p "$dir/docs"
   printf '| padrão | motivo |\n|---|---|\n' > "$dir/docs/coverage-exclusions.md"
+  # shellcheck disable=SC2016 # os acentos graves sao literais do Markdown
   [[ -n "$listed" ]] && printf '| `%s` | gerado |\n' "$listed" >> "$dir/docs/coverage-exclusions.md"
   printf '<project><build><plugins>%s</plugins></build></project>\n' "$plugin" > "$dir/pom.xml"
   git -C "$dir" init -q && git -C "$dir" add -A

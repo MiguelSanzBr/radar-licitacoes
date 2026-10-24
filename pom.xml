@@ -148,8 +148,8 @@
         <!--
           Gate de cobertura: LINE e BRANCH em 100% no bundle. prepare-agent injeta o agente em
           surefire e failsafe (propriedade argLine) e os dois gravam no mesmo jacoco.exec, entao
-          unidade e integracao contam juntas. A verificacao e por modulo; o report-aggregate e o
-          check agregado entram junto com o segundo modulo.
+          unidade e integracao contam juntas. A verificacao e por modulo: cada modulo com codigo de
+          producao precisa do proprio jacoco.exec e fecha os 100% sozinho.
         -->
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>

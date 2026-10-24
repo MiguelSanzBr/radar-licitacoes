@@ -11,6 +11,7 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Consumer;
 import org.junit.jupiter.api.Test;
 
@@ -105,38 +106,65 @@ class ReplayUseCaseTest {
         }
       };
 
+  private boolean lockTaken;
+
+  /** Granted unless another instance holds it; records when it is released. */
+  private final ReplayLock lock =
+      () -> {
+        if (lockTaken) {
+          return Optional.empty();
+        }
+        lockTaken = true;
+        calls.add("lock");
+        return Optional.of(
+            () -> {
+              lockTaken = false;
+              calls.add("unlock");
+            });
+      };
+
   private ReplayUseCase useCase() {
     return new ReplayUseCase(
-        new ProcurementProjector(store, new NoMetrics(), Clock.systemUTC()), live, log, clock);
+        new ProcurementProjector(store, new NoMetrics(), Clock.systemUTC()),
+        live,
+        log,
+        clock,
+        lock);
+  }
+
+  private ReplayReport replay() {
+    return useCase().claim().orElseThrow().run();
   }
 
   @Test
   void stopsTheLiveListenerReadsBeforeWipingThenProjectsAndRestarts() {
-    useCase().replay();
+    replay();
 
     assertThat(calls)
-        .containsExactly("stop", "snapshot", "reset", "read", "project 2", "close", "start");
+        .containsExactly(
+            "lock", "stop", "snapshot", "reset", "read", "project 2", "close", "start", "unlock");
   }
 
   @Test
   void aListenerThatWasNotRunningIsLeftStopped() {
     liveWasRunning = false;
 
-    useCase().replay();
+    replay();
 
-    assertThat(calls).containsExactly("snapshot", "reset", "read", "project 2", "close");
+    assertThat(calls)
+        .containsExactly("lock", "snapshot", "reset", "read", "project 2", "close", "unlock");
   }
 
   @Test
   void projectsInBatchesOf500() {
-    useCase().replay();
+    replay();
 
     assertThat(batchSizes).containsExactly(500);
   }
 
   @Test
   void reportsTheRecordsReadAndTheElapsedTime() {
-    var report = useCase().replay();
+    var report = replay();
 
     assertThat(report.events()).isEqualTo(7);
     assertThat(report.startedAt()).isEqualTo(START);
@@ -149,20 +177,21 @@ class ReplayUseCaseTest {
   void aFailureStillClosesTheSnapshotAndRestartsTheLiveListener() {
     readFailure = new IllegalStateException("broker gone");
 
-    assertThatThrownBy(() -> useCase().replay())
+    assertThatThrownBy(ReplayUseCaseTest.this::replay)
         .isInstanceOf(IllegalStateException.class)
         .hasMessage("broker gone");
 
-    assertThat(calls).containsExactly("stop", "snapshot", "reset", "read", "close", "start");
+    assertThat(calls)
+        .containsExactly("lock", "stop", "snapshot", "reset", "read", "close", "start", "unlock");
   }
 
   @Test
   void aListenerThatFailsToStopIsStillRestartedAndNothingIsWiped() {
     stopFailure = new IllegalStateException("stuck");
 
-    assertThatThrownBy(() -> useCase().replay()).hasMessage("stuck");
+    assertThatThrownBy(ReplayUseCaseTest.this::replay).hasMessage("stuck");
 
-    assertThat(calls).containsExactly("stop", "start");
+    assertThat(calls).containsExactly("lock", "stop", "start", "unlock");
   }
 
   @Test
@@ -175,11 +204,34 @@ class ReplayUseCaseTest {
               calls.add("snapshot");
               throw new IllegalStateException("no broker");
             },
-            clock);
+            clock,
+            lock);
 
-    assertThatThrownBy(failing::replay).hasMessage("no broker");
+    assertThatThrownBy(() -> failing.claim().orElseThrow().run()).hasMessage("no broker");
 
-    assertThat(calls).containsExactly("stop", "snapshot", "start");
+    assertThat(calls).containsExactly("lock", "stop", "snapshot", "start", "unlock");
+  }
+
+  @Test
+  void whileAnotherInstanceHoldsTheLockThereIsNothingToRun() {
+    lockTaken = true;
+
+    assertThat(useCase().claim()).isEmpty();
+
+    assertThat(calls).isEmpty();
+  }
+
+  @Test
+  void theLockIsTakenOnClaimAndHeldUntilTheRunEnds() {
+    var claim = useCase().claim().orElseThrow();
+
+    assertThat(calls).containsExactly("lock");
+    assertThat(useCase().claim()).isEmpty();
+
+    claim.run();
+
+    assertThat(calls).endsWith("start", "unlock");
+    assertThat(useCase().claim()).isPresent();
   }
 
   private static final class NoMetrics implements ProjectionMetrics {

@@ -25,7 +25,9 @@ PF_PID=
 LOGS_PID=
 cleanup() {
   status=$?
-  for pid in "$PF_PID" "$LOGS_PID"; do [ -n "$pid" ] && kill "$pid" 2>/dev/null || true; done
+  for pid in "$PF_PID" "$LOGS_PID"; do
+    if [ -n "$pid" ]; then kill "$pid" 2>/dev/null || true; fi
+  done
   if [ "$status" -ne 0 ]; then
     k get pods -o wide || true
     k logs -l "$LABEL" --tail=80 || true

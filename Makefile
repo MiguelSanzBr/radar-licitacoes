@@ -1,4 +1,4 @@
-.PHONY: verify chaos cdc-test avro-test messaging-test schemas-register compat mutation check-coverage-policy lint-openapi audit-repo tf-fmt tf-validate tf-lint tf-plan up down logs seed e2e replay bench bench-pool docs-check slo synth probe deploy rollback test-scripts profile image image-size image-scan image-test lint-observability probe-report backfill helm-lint helm-smoke sbom sbom-scan secrets-scan e2e-ui e2e-split image-split readme-gif
+.PHONY: verify chaos cdc-test avro-test messaging-test schemas-register compat mutation check-coverage-policy lint-openapi audit-repo tf-fmt tf-validate tf-lint tf-plan up down logs seed e2e replay bench bench-pool docs-check slo synth probe deploy rollback lint-scripts test-scripts profile image image-size image-scan image-test lint-observability probe-report backfill helm-lint helm-smoke sbom sbom-scan secrets-scan e2e-ui e2e-split image-split readme-gif
 
 verify:
 	./mvnw verify
@@ -137,18 +137,20 @@ tf-plan:
 	scripts/terraform.sh plan
 
 # Sonda do PNCP: `make probe` roda em segundo plano (PROBE_DURATION, PROBE_OUT sobrescrevem os padroes).
-# Precisa de JDK 25 no PATH ou em JAVA_HOME.
+# Precisa de JDK 25 no PATH ou em JAVA_HOME. So roda com PROBE_CONFIRM=1: o PNCP ja respondeu 429 a 0,5 req/s (ADR-0005, ADR-0017).
+# A rampa de taxa (S3) fica desligada; PROBE_ARGS=--ramp=true a liga.
 PROBE_DURATION ?= PT24H
 PROBE_OUT ?= tools/pncp-probe/out
 PROBE_JAR := tools/pncp-probe/target/pncp-probe.jar
 PROBE_JAVA := $(if $(JAVA_HOME),$(JAVA_HOME)/bin/java,java)
 
 probe:
+	@scripts/probe-guard.sh
 	@if [ -f $(PROBE_OUT)/probe.pid ] && kill -0 $$(cat $(PROBE_OUT)/probe.pid) 2>/dev/null; then \
 		echo "probe: ja em execucao (PID $$(cat $(PROBE_OUT)/probe.pid))" >&2; exit 1; fi
 	./mvnw -q -pl tools/pncp-probe -am package -DskipTests
 	mkdir -p $(PROBE_OUT)
-	nohup $(PROBE_JAVA) -jar $(PROBE_JAR) run --duration=$(PROBE_DURATION) --out=$(PROBE_OUT) >> $(PROBE_OUT)/probe.log 2>&1 & echo $$! > $(PROBE_OUT)/probe.pid
+	nohup $(PROBE_JAVA) -jar $(PROBE_JAR) run --duration=$(PROBE_DURATION) --out=$(PROBE_OUT) $(PROBE_ARGS) >> $(PROBE_OUT)/probe.log 2>&1 & echo $$! > $(PROBE_OUT)/probe.pid
 	@echo "probe: PID $$(cat $(PROBE_OUT)/probe.pid), log em $(PROBE_OUT)/probe.log"
 
 probe-report:
@@ -267,9 +269,11 @@ rollback:
 SHELLCHECK_IMAGE := koalaman/shellcheck:v0.10.0@sha256:2097951f02e735b613f4a34de20c40f937a6c8f18ecb170612c88c34517221fb
 BATS_IMAGE := bats/bats:1.12.0@sha256:0257e4f5326dd37046e94d4b8ce07c293447be80a9db6d6dfff1d50d07617e2e
 
-test-scripts:
-	docker run --rm -v "$(CURDIR):$(CURDIR)" -w "$(CURDIR)" $(SHELLCHECK_IMAGE) scripts/deploy-lib.sh scripts/deploy.sh scripts/rollback.sh scripts/smoke.sh scripts/schemas-register.sh \
-	  scripts/bench.sh scripts/bench-terms.sh scripts/slo.sh scripts/gatling-stats.sh scripts/profile.sh scripts/gc-pauses.sh scripts/render-metrics.sh scripts/explain/run.sh scripts/explain/summarize.sh
+# Shellcheck de todo scripts/**/*.sh (um script novo entra sozinho) e os testes bats.
+lint-scripts:
+	docker run --rm -v "$(CURDIR):$(CURDIR)" -w "$(CURDIR)" $(SHELLCHECK_IMAGE) $$(find scripts -name '*.sh' | sort)
+
+test-scripts: lint-scripts
 	docker run --rm -v "$(CURDIR):$(CURDIR)" -w "$(CURDIR)" $(BATS_IMAGE) scripts/test
 
 # Reconstroi o modelo de leitura do offset 0 do topico (ADR-0010): dispara o replay do operador e

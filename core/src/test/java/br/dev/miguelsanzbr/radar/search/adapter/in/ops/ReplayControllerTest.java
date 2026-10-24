@@ -1,7 +1,7 @@
 package br.dev.miguelsanzbr.radar.search.adapter.in.ops;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -12,6 +12,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import br.dev.miguelsanzbr.radar.search.application.ReplayReport;
 import br.dev.miguelsanzbr.radar.search.application.ReplayUseCase;
 import java.time.Instant;
+import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
@@ -26,6 +27,23 @@ class ReplayControllerTest {
   private final ReplayUseCase useCase = mock();
   private final MockMvc mvc =
       MockMvcBuilders.standaloneSetup(new ReplayController(useCase)).build();
+
+  private static ReplayUseCase.Claim waitingFor(CountDownLatch release) {
+    return () -> {
+      try {
+        release.await(5, TimeUnit.SECONDS);
+      } catch (InterruptedException e) {
+        throw new IllegalStateException(e);
+      }
+      return REPORT;
+    };
+  }
+
+  private static ReplayUseCase.Claim failingWith(RuntimeException failure) {
+    return () -> {
+      throw failure;
+    };
+  }
 
   private String last() throws Exception {
     return mvc.perform(get("/ops/replay/last")).andReturn().getResponse().getContentAsString();
@@ -48,14 +66,22 @@ class ReplayControllerTest {
 
   @Test
   void acceptsAtOnceRunsOnAnotherThreadAndReportsDoneWithTheReport() throws Exception {
-    when(useCase.replay()).thenReturn(REPORT);
+    var thread = new java.util.concurrent.atomic.AtomicReference<Thread>();
+    when(useCase.claim())
+        .thenReturn(
+            Optional.of(
+                () -> {
+                  thread.set(Thread.currentThread());
+                  return REPORT;
+                }));
 
     mvc.perform(post("/ops/replay"))
         .andExpect(status().isAccepted())
         .andExpect(jsonPath("$.status").value("ACCEPTED"));
-    verify(useCase, timeout(2000)).replay();
+    verify(useCase).claim();
     awaitStatus("DONE");
 
+    assertThat(thread.get()).isNotSameAs(Thread.currentThread());
     mvc.perform(get("/ops/replay/last"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status").value("DONE"))
@@ -70,12 +96,7 @@ class ReplayControllerTest {
   @Test
   void whileOneRunsItIsReportedRunningAndASecondIsRefused() throws Exception {
     var release = new CountDownLatch(1);
-    when(useCase.replay())
-        .thenAnswer(
-            call -> {
-              release.await(5, TimeUnit.SECONDS);
-              return REPORT;
-            });
+    when(useCase.claim()).thenReturn(Optional.of(waitingFor(release)));
 
     mvc.perform(post("/ops/replay")).andExpect(status().isAccepted());
 
@@ -92,15 +113,22 @@ class ReplayControllerTest {
   }
 
   @Test
+  void whileAnotherInstanceReplaysThePostIsRefusedAndNothingRuns() throws Exception {
+    when(useCase.claim()).thenReturn(Optional.empty());
+
+    mvc.perform(post("/ops/replay"))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.detail").value("a replay is already running on another instance"));
+
+    mvc.perform(get("/ops/replay/last")).andExpect(status().isNotFound());
+  }
+
+  @Test
   void aNewReplayHidesThePreviousReport() throws Exception {
     var release = new CountDownLatch(1);
-    when(useCase.replay())
-        .thenReturn(REPORT)
-        .thenAnswer(
-            call -> {
-              release.await(5, TimeUnit.SECONDS);
-              return REPORT;
-            });
+    when(useCase.claim())
+        .thenReturn(Optional.of(() -> REPORT))
+        .thenReturn(Optional.of(waitingFor(release)));
 
     mvc.perform(post("/ops/replay")).andExpect(status().isAccepted());
     awaitStatus("DONE");
@@ -116,13 +144,9 @@ class ReplayControllerTest {
   @Test
   void aFailedReplayIsReportedWithItsErrorAndFreesTheSlot() throws Exception {
     var release = new CountDownLatch(1);
-    when(useCase.replay())
-        .thenThrow(new IllegalStateException("broker gone"))
-        .thenAnswer(
-            call -> {
-              release.await(5, TimeUnit.SECONDS);
-              return REPORT;
-            });
+    when(useCase.claim())
+        .thenReturn(Optional.of(failingWith(new IllegalStateException("broker gone"))))
+        .thenReturn(Optional.of(waitingFor(release)));
 
     mvc.perform(post("/ops/replay")).andExpect(status().isAccepted());
     awaitStatus("FAILED");
@@ -143,13 +167,13 @@ class ReplayControllerTest {
   @Test
   void anErrorIsReportedFailedToo() throws Exception {
     var release = new CountDownLatch(1);
-    when(useCase.replay())
-        .thenThrow(new AssertionError("x"))
-        .thenAnswer(
-            call -> {
-              release.await(5, TimeUnit.SECONDS);
-              return REPORT;
-            });
+    when(useCase.claim())
+        .thenReturn(
+            Optional.of(
+                () -> {
+                  throw new AssertionError("x");
+                }))
+        .thenReturn(Optional.of(waitingFor(release)));
 
     mvc.perform(post("/ops/replay")).andExpect(status().isAccepted());
     awaitStatus("FAILED");
@@ -162,7 +186,7 @@ class ReplayControllerTest {
 
   @Test
   void aFailureWithoutAMessageIsNamedByItsClass() throws Exception {
-    when(useCase.replay()).thenThrow(new IllegalStateException());
+    when(useCase.claim()).thenReturn(Optional.of(failingWith(new IllegalStateException())));
 
     mvc.perform(post("/ops/replay")).andExpect(status().isAccepted());
     awaitStatus("FAILED");

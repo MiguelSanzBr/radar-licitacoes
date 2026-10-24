@@ -29,7 +29,7 @@ BEGIN
     SELECT array_agg(id), sum(rank) INTO exact_ids, exact_sum FROM (
       SELECT numero_controle_pncp AS id, ts_rank_cd(search_vector, q)::float8 AS rank
       FROM search.procurement_search_view WHERE search_vector @@ q ORDER BY 2 DESC, 1 DESC LIMIT 20) e;
-    FOREACH n IN ARRAY ARRAY[$(echo "$caps" | sed 's/ /,/g')] LOOP
+    FOREACH n IN ARRAY ARRAY[${caps// /,}] LOOP
       SELECT array_agg(id), sum(rank) INTO bounded_ids, bounded_sum FROM (
         SELECT id, rank FROM (
           SELECT numero_controle_pncp AS id, ts_rank_cd(search_vector, q)::float8 AS rank

@@ -264,7 +264,7 @@ class ProjectionReplayIT {
     assertThat(count("procurement_search_view")).isEqualTo(AGGREGATES);
     assertThat(registry.getListenerContainer(ProcurementEventsListener.ID).isRunning()).isTrue();
 
-    var report = replay.replay();
+    var report = replay.claim().orElseThrow().run();
 
     var after = dump();
     assertThat(after).isEqualTo(before);

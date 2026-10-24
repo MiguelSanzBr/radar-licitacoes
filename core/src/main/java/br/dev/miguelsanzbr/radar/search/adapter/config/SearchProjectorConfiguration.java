@@ -6,6 +6,7 @@ import br.dev.miguelsanzbr.radar.search.application.LiveProjection;
 import br.dev.miguelsanzbr.radar.search.application.ProcurementProjector;
 import br.dev.miguelsanzbr.radar.search.application.ProjectionMetrics;
 import br.dev.miguelsanzbr.radar.search.application.ProjectionStore;
+import br.dev.miguelsanzbr.radar.search.application.ReplayLock;
 import br.dev.miguelsanzbr.radar.search.application.ReplayUseCase;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Clock;
@@ -29,7 +30,11 @@ class SearchProjectorConfiguration {
 
   @Bean
   ReplayUseCase replayUseCase(
-      ProcurementProjector projector, LiveProjection live, EventLog log, Clock clock) {
-    return new ReplayUseCase(projector, live, log, clock);
+      ProcurementProjector projector,
+      LiveProjection live,
+      EventLog log,
+      Clock clock,
+      ReplayLock lock) {
+    return new ReplayUseCase(projector, live, log, clock, lock);
   }
 }

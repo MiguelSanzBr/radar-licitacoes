@@ -198,6 +198,49 @@ $COMPOSE exec kafka /opt/kafka/bin/kafka-consumer-groups.sh --bootstrap-server l
 
 **Escalonamento.** Pendentes crescendo por mais de 30 minutos: time de alertas.
 
+<a id="outbox-envenenado"></a>
+
+## Outbox envenenado (`OutboxPoisonPending`)
+
+**Sintoma.** `outbox_poison_pending` maior que 0 por 5 minutos: há linhas em `outbox.outbox_event` que o relay tentou `radar.outbox.max-attempts` vezes (10) e largou.
+
+**Impacto.** O evento daquele agregado não chega ao Kafka: a busca e os alertas ficam sem ele até alguém liberar a linha. A fila dos outros agregados anda, por isso `OutboxOldestAgeHigh` pode não disparar. Não há perda, a linha continua no banco.
+
+**Diagnóstico.**
+
+1. Dashboard "Radar: outbox e Kafka", painel "Poison messages por segundo".
+2. As linhas e a causa:
+
+```
+$PSQL -c "SELECT id, aggregate_id, event_type, attempts, left(last_error, 200) AS erro
+  FROM outbox.outbox_event WHERE published_at IS NULL AND attempts >= 10 ORDER BY id"
+```
+
+**Ação.** Corrija a causa que o `last_error` mostra (schema recusado, payload inválido, tópico ausente) e reimplante se for código. Depois libere as linhas: `UPDATE outbox.outbox_event SET attempts = 0 WHERE published_at IS NULL AND attempts >= 10`. O relay as publica no próximo ciclo. Se a causa é o schema, veja "Schema recusado" em "Trocar o formato dos eventos entre JSON e Avro".
+
+**Escalonamento.** A causa não é clara ou as linhas voltam a ficar poison depois de liberadas: time do outbox.
+
+<a id="mensagens-na-dlq"></a>
+
+## Mensagens na DLQ (`DlqMessages`)
+
+**Sintoma.** `dlq_messages_total` aumentou nos últimos 15 minutos: um consumidor desistiu de um registro e o enviou para `radar.procurement.v1.dlq` ou `radar.alert.v1.dlq`. O rótulo `topic` diz qual.
+
+**Impacto.** O registro não foi projetado (busca) ou casado (alertas), ou o e-mail não saiu. Nada se perde: a mensagem está no tópico da DLQ e em `ops.dlq_message`. O alerta dispara uma vez por rajada: depois de 15 minutos sem registro novo ele se resolve, mas as mensagens seguem pendentes até o reprocessamento.
+
+**Diagnóstico.**
+
+1. Painel de saúde (`/ops/painel`), linha "Fila de mensagens mortas", ou o dashboard "Radar: alertas" ("Mensagens na DLQ por segundo por tópico").
+2. As mensagens pendentes e a causa:
+
+```
+$PSQL -c "SELECT id, topic, consumer_group, error_class, left(error_message, 80) AS erro, recorded_at FROM ops.dlq_message WHERE reprocessed_at IS NULL ORDER BY id"
+```
+
+**Ação.** Corrija a causa e reenvie as mensagens como em "Reprocessar a DLQ" (seção de rotinas). Uma mensagem malformada volta à DLQ: nesse caso corrija o dado ou o código antes.
+
+**Escalonamento.** Muitas mensagens em pouco tempo ou o mesmo `error_class` em todas: time dono do consumidor (`consumer_group`).
+
 <a id="alvo-fora"></a>
 
 ## Alvo fora (`RadarTargetDown`)

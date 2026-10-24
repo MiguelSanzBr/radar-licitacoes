@@ -30,11 +30,15 @@ class ProberTest {
   }
 
   private static Outcome run(Instant start, String duration, Transport transport) {
+    return run(start, duration, transport, false);
+  }
+
+  private static Outcome run(Instant start, String duration, Transport transport, boolean ramp) {
     FakeTime time = new FakeTime(start);
     List<ObjectNode> records = new ArrayList<>();
     Prober prober =
         new Prober(
-            new Prober.Config("https://pncp.test", Duration.parse(duration), SP),
+            new Prober.Config("https://pncp.test", Duration.parse(duration), SP, ramp),
             transport,
             time,
             time,
@@ -63,18 +67,19 @@ class ProberTest {
   }
 
   @Test
-  void baseCadenceIsOneRequestEveryTwoSecondsAndEveryRecordIsComplete() {
+  void baseCadenceIsOneRequestEveryFiveSecondsAndEveryRecordIsComplete() {
     Outcome out = run(TEN, "PT30S", new FakeApi());
 
     assertThat(out.exit()).isZero();
-    assertThat(out.records()).hasSize(16);
+    assertThat(out.records()).hasSize(7);
     for (int i = 1; i < out.records().size(); i++) {
       assertThat(Duration.between(ts(out.records().get(i - 1)), ts(out.records().get(i))))
-          .isEqualTo(Duration.ofSeconds(2));
+          .isEqualTo(Duration.ofSeconds(5));
     }
     assertThat(out.records().get(0).path("ts").asString()).isEqualTo("2026-10-22T10:00:00-03:00");
     assertThat(out.records().stream().limit(5).map(r -> r.path("job").asString()))
         .containsExactly("S1", "S9", "S4", "S5", "S7");
+    assertThat(Prober.BASE_INTERVAL).isEqualTo(Duration.ofSeconds(5));
     for (ObjectNode r : out.records()) {
       assertThat(r.propertyNames())
           .contains(
@@ -123,7 +128,7 @@ class ProberTest {
   void samplerWindowForUpdatesIsTheLastHourAcrossMidnight() {
     Instant justAfterMidnight = Instant.parse("2026-10-22T03:30:00Z");
 
-    Outcome out = run(justAfterMidnight, "PT10S", new FakeApi());
+    Outcome out = run(justAfterMidnight, "PT30S", new FakeApi());
 
     assertThat(out.job("S1").get(1).path("url").asString())
         .contains("dataInicial=20261021&dataFinal=20261022");
@@ -178,7 +183,7 @@ class ProberTest {
     Outcome out = run(TEN, "PT20S", url -> FakeApi.json(500, "{}"));
 
     assertThat(out.exit()).isZero();
-    assertThat(out.records()).hasSize(11);
+    assertThat(out.records()).hasSize(5);
   }
 
   @Test
@@ -190,7 +195,7 @@ class ProberTest {
     Outcome out = run(TEN, "PT10S", url -> timeout);
 
     assertThat(out.exit()).isZero();
-    assertThat(out.records()).hasSize(6);
+    assertThat(out.records()).hasSize(3);
     assertThat(out.records())
         .allSatisfy(
             r -> {
@@ -387,7 +392,7 @@ class ProberTest {
   void rampRunsOnceAtThreeAmLocalInEightStepsAndNeverAboveFourPerSecond() {
     Instant start = Instant.parse("2026-10-22T05:59:00Z");
 
-    Outcome out = run(start, "PT4M", new FakeApi());
+    Outcome out = run(start, "PT4M", new FakeApi(), true);
     List<ObjectNode> s3 = out.job("S3");
 
     assertThat(s3).hasSize(136);
@@ -407,15 +412,24 @@ class ProberTest {
   }
 
   @Test
+  void theRampIsOffByDefaultSoTheRateNeverRisesAboveTheBaseInterval() {
+    Outcome out = run(Instant.parse("2026-10-22T05:59:00Z"), "PT4M", new FakeApi());
+
+    assertThat(out.job("S3")).isEmpty();
+    assertThat(maxPerSecond(out.records())).isEqualTo(1);
+    assertThat(out.records()).hasSize(49);
+  }
+
+  @Test
   void rampStartsOnTimeWhenTheRunStartsExactlyAtThreeAm() {
-    Outcome out = run(Instant.parse("2026-10-22T06:00:00Z"), "PT2M", new FakeApi());
+    Outcome out = run(Instant.parse("2026-10-22T06:00:00Z"), "PT2M", new FakeApi(), true);
 
     assertThat(out.job("S3")).hasSize(136);
   }
 
   @Test
   void rampIsNotExecutedWhenTheNextThreeAmIsBeyondTheDuration() {
-    Outcome out = run(Instant.parse("2026-10-22T07:00:00Z"), "PT10H", new FakeApi());
+    Outcome out = run(Instant.parse("2026-10-22T07:00:00Z"), "PT10H", new FakeApi(), true);
 
     assertThat(out.job("S3")).isEmpty();
   }
@@ -424,7 +438,7 @@ class ProberTest {
   void rampWaitsForTheNextDayAndRunsOnlyOnceInA24HourRun() {
     Instant start = Instant.parse("2026-10-22T07:00:00Z");
 
-    Outcome out = run(start, "PT24H", new FakeApi());
+    Outcome out = run(start, "PT24H", new FakeApi(), true);
     List<ObjectNode> s3 = out.job("S3");
 
     assertThat(s3).hasSize(136);
@@ -447,7 +461,7 @@ class ProberTest {
 
     int exit =
         new Prober(
-                new Prober.Config("https://pncp.test", Duration.ofMinutes(5), SP),
+                new Prober.Config("https://pncp.test", Duration.ofMinutes(5), SP, true),
                 limited,
                 time,
                 time,
@@ -479,14 +493,14 @@ class ProberTest {
 
     prober.run();
 
-    assertThat(prober.requests()).isEqualTo(6);
+    assertThat(prober.requests()).isEqualTo(3);
   }
 
   @Test
   void windowsUseTheStartInstantTruncatedToMilliseconds() {
     Instant start = Instant.parse("2026-10-22T13:00:00.123456789Z");
 
-    List<ObjectNode> s5 = run(start, "PT10S", new FakeApi()).job("S5");
+    List<ObjectNode> s5 = run(start, "PT20S", new FakeApi()).job("S5");
 
     assertThat(s5.get(0).path("windowStart").asString()).isEqualTo("2026-10-22T08:00:00.123-03:00");
     assertThat(s5.get(0).path("windowEnd").asString()).isEqualTo("2026-10-22T09:00:00.123-03:00");
@@ -502,7 +516,7 @@ class ProberTest {
 
     assertThat(out.exit()).isZero();
     assertThat(out.job("S9").get(0).path("status").asInt()).isEqualTo(status);
-    assertThat(out.records()).hasSize(11);
+    assertThat(out.records()).hasSize(5);
   }
 
   @Test

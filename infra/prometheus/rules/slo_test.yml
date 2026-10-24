@@ -424,3 +424,62 @@ tests:
       - eval_time: 70m
         alertname: PncpBloqueadoPorMuito
         exp_alerts: []
+      - eval_time: 70m
+        alertname: OutboxPoisonPending
+        exp_alerts: []
+      - eval_time: 70m
+        alertname: DlqMessages
+        exp_alerts: []
+
+  - name: evento do outbox parado em poison por mais de 5 min dispara alerta
+    interval: 1m
+    input_series:
+      - series: 'outbox_poison_pending{application="radar"}'
+        values: '0x30 2x90'
+    alert_rule_test:
+      - eval_time: 33m
+        alertname: OutboxPoisonPending
+        exp_alerts: []
+      - eval_time: 70m
+        alertname: OutboxPoisonPending
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+            exp_annotations:
+              summary: "Eventos do outbox parados como poison: a publicação desistiu deles e eles não saem sozinhos"
+              runbook_url: docs/runbook.md#outbox-envenenado
+
+  - name: outbox sem poison não dispara alerta
+    interval: 1m
+    input_series:
+      - series: 'outbox_poison_pending{application="radar"}'
+        values: '0x120'
+    alert_rule_test:
+      - eval_time: 70m
+        alertname: OutboxPoisonPending
+        exp_alerts: []
+
+  - name: mensagem nova na DLQ dispara alerta e sem mensagem nova não dispara
+    interval: 1m
+    input_series:
+      - series: 'dlq_messages_total{application="radar",topic="radar.procurement.v1.dlq"}'
+        values: '0x30 1x90'
+      - series: 'dlq_messages_total{application="radar",topic="radar.alert.v1.dlq"}'
+        values: '0x120'
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: DlqMessages
+        exp_alerts: []
+      - eval_time: 31m
+        alertname: DlqMessages
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              application: radar
+              topic: radar.procurement.v1.dlq
+            exp_annotations:
+              summary: "Mensagens novas na fila de mensagens mortas: o consumidor desistiu de registros que precisam de reprocessamento"
+              runbook_url: docs/runbook.md#mensagens-na-dlq
+      - eval_time: 70m
+        alertname: DlqMessages
+        exp_alerts: []

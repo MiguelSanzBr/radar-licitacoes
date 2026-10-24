@@ -140,7 +140,7 @@ class ReportTest {
   void rateDecisionKeepsTheBaseRateWhenTheFirstStepAlreadyErred() {
     String md = Report.render(rows(s3(0, 0.5, 503)), DAY);
 
-    assertThat(md).contains("Erro de taxa já no primeiro degrau: manter 0,5 req/s");
+    assertThat(md).contains("Erro de taxa já no primeiro degrau: manter 0,2 req/s");
   }
 
   @Test
@@ -582,7 +582,7 @@ class ReportTest {
     assertThat(Report.render(fixture(), DAY))
         .contains(
             "- Backfill: janela noturna (0h às 6h), páginas de 50, um dia por vez: cerca de 4 páginas"
-                + " por dia de modalidade 6, 8 s por dia a 0,5 req/s, 2700 dias por noite");
+                + " por dia de modalidade 6, 20 s por dia a 0,2 req/s, 1080 dias por noite");
     assertThat(Report.render(List.of(), DAY)).contains("- Backfill: sem dados de S7");
   }
 
@@ -659,7 +659,7 @@ class ReportTest {
         Report.render(rows(line("S7", "/p", 429, ",\"day\":\"20260922\",\"modalidade\":6")), DAY);
 
     assertThat(md)
-        .contains("houve bloqueio (HTTP 429 ou 403) a 0,5 req/s; usar 0,2 req/s")
+        .contains("houve bloqueio (HTTP 429 ou 403) a 0,2 req/s; usar 0,1 req/s")
         .doesNotContain("1,0 req/s");
   }
 

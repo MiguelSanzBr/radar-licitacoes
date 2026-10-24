@@ -407,7 +407,7 @@ enum Report {
             ? "houve erro de taxa na rampa, maior taxa sem erro %s req/s, usar %s req/s (50%%)"
                 .formatted(num(highestOk.getAsDouble()), num(highestOk.getAsDouble() / 2))
             : "Erro de taxa já no primeiro degrau: manter "
-                + num(0.5)
+                + num(1000.0 / Prober.BASE_INTERVAL.toMillis())
                 + " req/s (base da sonda) e investigar")
         + timeouts;
   }
@@ -947,10 +947,11 @@ enum Report {
         s7.isEmpty()
             ? "sem dados de S7: manter janela noturna (0h às 6h), páginas de 50, um dia por vez (padrão do plano)"
             : ("janela noturna (0h às 6h), páginas de 50, um dia por vez: cerca de %d páginas por dia de"
-                    + " modalidade 6, %d s por dia a 0,5 req/s, %d dias por noite")
+                    + " modalidade 6, %d s por dia a %s req/s, %d dias por noite")
                 .formatted(
                     pagesPerDay,
                     pagesPerDay * Prober.BASE_INTERVAL.toSeconds(),
+                    num(1000.0 / Prober.BASE_INTERVAL.toMillis()),
                     Duration.ofHours(6).toSeconds()
                         / (pagesPerDay * Prober.BASE_INTERVAL.toSeconds()));
     String optional =

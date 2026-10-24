@@ -47,7 +47,7 @@ Uma tabela não é uma dependência Java, então o Modulith não vê essas consu
 
 - Reprocessar recoloca a mensagem no fim da partição, depois de eventos mais novos da mesma chave. Os consumidores precisam tolerar fora de ordem: o projetor descarta versão antiga (`source_version`) e adia o que chega antes do `Discovered`, e o matcher deduplica pela chave primária de `alert_delivery`. O teste de ordenação do 8.4 deve incluir um reprocesso no meio.
 - A publicação na DLQ é síncrona dentro do tratador de erros: o consumidor espera o aceite do broker, então um consumidor que falha muito reduz a própria vazão. O 8.4 não mediu esse custo: o teste de carga com falhas continua pendente, e a decisão do alerta de DLQ também. A falha durante a saída de um consumidor (a publicação na DLQ pode ser refeita; o inbox absorve a duplicata) fica coberta pelos testes dos tratadores, não pelo teste de rebalance.
-- O alerta de DLQ (`rate(dlq_messages_total[5m]) > 0`) ainda não existe em `slo.yml`; o painel já fica `DEGRADED`. A regra segue pendente (o 8.4 não gerou dados de carga com falhas).
+- O alerta de DLQ existe em `slo.yml` como `DlqMessages` (`increase(dlq_messages_total[15m]) > 0`, severidade `warning`), junto com `OutboxPoisonPending` para o outbox; o painel também fica `DEGRADED`. O limite zero é deliberado: toda mensagem na DLQ pede uma ação do operador. O custo de uma rajada de falhas continua sem medida (o 8.4 não gerou dados de carga com falhas).
 
 ## Rebalance, backpressure e ordem
 

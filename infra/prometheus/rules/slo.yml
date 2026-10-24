@@ -173,3 +173,20 @@ groups:
         annotations:
           summary: "O PNCP segue bloqueando o cliente há mais de 2 h: a coleta está parada"
           runbook_url: docs/runbook.md#pncp-bloqueado
+      # Evento parado: o outbox desistiu da linha (poison) ou o consumidor mandou o registro para a DLQ.
+      # Nenhum dos dois se resolve sozinho, e o SLO de frescor nao os enxerga (a fila segue andando).
+      - alert: OutboxPoisonPending
+        expr: max(outbox_poison_pending) > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Eventos do outbox parados como poison: a publicação desistiu deles e eles não saem sozinhos"
+          runbook_url: docs/runbook.md#outbox-envenenado
+      - alert: DlqMessages
+        expr: increase(dlq_messages_total[15m]) > 0
+        labels:
+          severity: warning
+        annotations:
+          summary: "Mensagens novas na fila de mensagens mortas: o consumidor desistiu de registros que precisam de reprocessamento"
+          runbook_url: docs/runbook.md#mensagens-na-dlq
