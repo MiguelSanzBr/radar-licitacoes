@@ -58,9 +58,9 @@
     <gatling.version>3.15.1</gatling.version>
     <gatling-maven-plugin.version>4.21.12</gatling-maven-plugin.version>
 
-    <!-- why: testes com @Tag("bench") medem tempo, @Tag("chaos") derruba infraestrutura, @Tag("cdc") sobe tres contêineres e uma imagem de 2,4 GB @Tag("avro") sobe o Apicurio, @Tag("messaging") projeta 10 mil eventos entre consumidores que entram e saem e @Tag("e2e") abre um navegador: ficam fora do verify; -Pbench, -Pchaos, -Pcdc, -Pavro e -Pmessaging trocam os dois filtros -->
+    <!-- why: testes com @Tag("bench") medem tempo, @Tag("chaos") derruba infraestrutura, @Tag("cdc") sobe tres contêineres e uma imagem de 2,4 GB @Tag("avro") sobe o Apicurio, @Tag("messaging") projeta 10 mil eventos entre consumidores que entram e saem e @Tag("e2e") abre um navegador e @Tag("readme-capture") grava as telas do README: ficam fora do verify; -Pbench, -Pchaos, -Pcdc, -Pavro e -Pmessaging trocam os dois filtros -->
     <test.groups></test.groups>
-    <test.excluded.groups>bench,chaos,compat,cdc,avro,messaging,e2e</test.excluded.groups>
+    <test.excluded.groups>bench,chaos,compat,cdc,avro,messaging,e2e,readme-capture</test.excluded.groups>
 
     <!-- why: o JaCoCo prepende o agente a este valor; o perfil jfr acrescenta flags via @{argLine} -->
     <argLine></argLine>
@@ -226,6 +226,7 @@
               <param>avro</param>
               <param>messaging</param>
               <param>e2e</param>
+              <param>readme-capture</param>
             </excludedGroups>
           </configuration>
         </plugin>
@@ -325,6 +326,35 @@
       </modules>
       <properties>
         <test.groups>e2e</test.groups>
+        <test.excluded.groups></test.excluded.groups>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <!-- O agente continua ligado (o enforcer exige jacoco.exec); so o gate de 100% sai. -->
+            <groupId>org.jacoco</groupId>
+            <artifactId>jacoco-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>check</id>
+                <configuration>
+                  <skip>true</skip>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <!--
+        ./mvnw -Preadme-capture verify -pl core -am -Dit.test=ReadmeCaptureIT (make readme-gif): roda so o teste com
+        @Tag("readme-capture"), que grava as telas do README em core/target/readme-capture. Fora do verify padrao
+        e sem o gate de cobertura.
+      -->
+      <id>readme-capture</id>
+      <properties>
+        <test.groups>readme-capture</test.groups>
         <test.excluded.groups></test.excluded.groups>
       </properties>
       <build>

@@ -1,4 +1,4 @@
-.PHONY: verify chaos cdc-test avro-test messaging-test schemas-register compat mutation check-coverage-policy lint-openapi audit-repo tf-fmt tf-validate tf-lint tf-plan up down logs seed e2e replay bench bench-pool docs-check slo synth probe deploy rollback test-scripts profile image image-size image-scan image-test lint-observability probe-report backfill helm-lint helm-smoke sbom sbom-scan secrets-scan e2e-ui e2e-split image-split
+.PHONY: verify chaos cdc-test avro-test messaging-test schemas-register compat mutation check-coverage-policy lint-openapi audit-repo tf-fmt tf-validate tf-lint tf-plan up down logs seed e2e replay bench bench-pool docs-check slo synth probe deploy rollback test-scripts profile image image-size image-scan image-test lint-observability probe-report backfill helm-lint helm-smoke sbom sbom-scan secrets-scan e2e-ui e2e-split image-split readme-gif
 
 verify:
 	./mvnw verify
@@ -243,6 +243,13 @@ e2e:
 # para ~/.cache/ms-playwright na primeira vez. PLAYWRIGHT_SKIP=1 pula o teste.
 e2e-ui:
 	./mvnw -q -Pe2e verify -pl core -am -Dtest=NoSuch -Dit.test=SearchUiE2EIT -Dsurefire.failIfNoSpecifiedTests=false
+
+# O GIF do README (docs/img/interface.gif): o teste ReadmeCaptureIT carrega o dia real de infra/compose/seed, percorre a
+# interface no Chromium em 1280x800 e grava um PNG por passo em core/target/readme-capture; o ImageMagick (convert) monta o GIF.
+readme-gif:
+	./mvnw -q -Preadme-capture verify -pl core -am -Dtest=NoSuch -Dit.test=ReadmeCaptureIT -Dsurefire.failIfNoSpecifiedTests=false -Dfailsafe.failIfNoSpecifiedTests=false
+	mkdir -p docs/img
+	convert -delay 150 -loop 0 -resize 960x core/target/readme-capture/*.png -colors 128 -layers Optimize docs/img/interface.gif
 
 # O mesmo fluxo com ingestor e search-api no lugar do app (ADR-0028); precisa de make image-split e das portas livres.
 e2e-split:

@@ -50,7 +50,9 @@ make probe-report   # gera docs/benchmarks/probe/<data>.md a partir do JSONL gra
 
 Busca em `/` (texto, UF, modalidade e "somente com propostas abertas"), detalhe em `/licitacoes/{id}` com o histórico de situação e o link para o edital no PNCP. As páginas são renderizadas no servidor com Thymeleaf e atualizadas com htmx servido pela própria aplicação (ADR-0014).
 
-Captura gerada no PR 7.2.
+![Busca e detalhe de licitações](docs/img/interface.gif)
+
+A captura mostra dados reais do PNCP, os editais da modalidade 6 publicados em 2026-10-21 (o dia versionado em `infra/compose/seed`, coletado em 2026-10-22). `make readme-gif` roda o teste de captura e a regera (precisa do ImageMagick).
 
 `make e2e-ui` roda o teste da interface num Chromium (Playwright) contra a aplicação em processo com Postgres de teste; baixa o navegador na primeira vez e `PLAYWRIGHT_SKIP=1` pula o teste.
 
