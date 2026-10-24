@@ -14,6 +14,12 @@
 #   BENCH_JAVA_OPTS=            opcoes extras da JVM da aplicacao (ex.: gravacao JFR, docs/benchmarks/jvm/)
 #   BENCH_MIN_FREE_MB=6144      RAM livre exigida para comecar
 #   BENCH_DATE=NOME             nome da pasta de saida em docs/benchmarks/search (padrao: a data de hoje, AAAA-MM-DD)
+#   BENCH_POOL_SIZES="10 20 40" modo make bench-pool (PR 2.8, docs/benchmarks/db/hikari.md): carrega a massa uma vez e, para cada
+#                               tamanho do pool de busca, reinicia so a aplicacao e roda os cenarios (padrao s1 s2 s5, sem EXPLAIN),
+#                               gravando em docs/benchmarks/db/hikari/pool-N: Gatling, metricas do Hikari, pg_stat_activity e
+#                               pg_stat_statements. Nao toca em docs/benchmarks/latest.json nem no README.
+#   BENCH_POOL_DIR=PASTA        pasta de saida do modo acima (padrao docs/benchmarks/db/hikari); com BENCH_REUSE=1 e BENCH_THINK_MS=0
+#                               a rodada de saturacao reaproveita a massa ja carregada
 set -euo pipefail
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
@@ -21,8 +27,14 @@ cd "$root"
 
 date="${BENCH_DATE:-$(date +%F)}"
 dir="docs/benchmarks/search/$date"
-rows_target="${BENCH_ROWS:-1200000}"
+pool_sizes="${BENCH_POOL_SIZES:-}"
 scenarios="${BENCH_SCENARIOS:-s1 s2 s3 s4 s5 s6}"
+if [ -n "$pool_sizes" ]; then
+  dir="${BENCH_POOL_DIR:-docs/benchmarks/db/hikari}"
+  scenarios="${BENCH_SCENARIOS:-s1 s2 s5}"
+  BENCH_EXPLAIN="${BENCH_EXPLAIN:-0}"
+fi
+rows_target="${BENCH_ROWS:-1200000}"
 think_ms="${BENCH_THINK_MS:-1000}"
 warmup_s="${BENCH_WARMUP_S:-60}"
 measured_s="${BENCH_MEASURED_S:-180}"
@@ -39,8 +51,10 @@ sql() { $COMPOSE exec -T postgres psql -U radar -d radar -X -qAt -v ON_ERROR_STO
 has() { [[ " $scenarios " == *" $1 "* ]]; }
 
 watchdog_pid=""
+sampler_pid=""
 cleanup() {
   [ -z "$watchdog_pid" ] || kill "$watchdog_pid" 2>/dev/null || true
+  [ -z "$sampler_pid" ] || kill "$sampler_pid" 2>/dev/null || true
   if [ "${BENCH_KEEP:-0}" != 1 ]; then
     log "derrubando a pilha (make down)"
     make down >/dev/null 2>&1 || true
@@ -71,6 +85,7 @@ fi
 ) &
 watchdog_pid=$!
 
+base="$dir"
 mkdir -p "$dir/explain" "$dir/gatling" perf/target/bench
 
 # --- 1. pilha e ambiente ----------------------------------------------------------------------------
@@ -178,16 +193,53 @@ cache_counts() { # imprime "hits misses" lidos do contador da propria aplicacao
          END { printf "%d %d\n", h, m }'
 }
 
+pool_metrics() { # imprime "epoch max active pending usage_n usage_sum acquire_n acquire_sum" do pool de busca, lidos do Prometheus da aplicacao
+  curl -fsS -H "Authorization: Bearer $(scripts/ops-token.sh)" "$app/actuator/prometheus" |
+    awk -v now="$(date +%s)" '/^hikaricp_connections_[a-z_]+\{/ && /pool="search"/ { name = $1; sub(/\{.*/, "", name); v[name] = $NF }
+      END { printf "%s %d %d %d %d %.6f %d %.6f\n", now, v["hikaricp_connections_max"], v["hikaricp_connections_active"], v["hikaricp_connections_pending"],
+            v["hikaricp_connections_usage_seconds_count"], v["hikaricp_connections_usage_seconds_sum"],
+            v["hikaricp_connections_acquire_seconds_count"], v["hikaricp_connections_acquire_seconds_sum"] }'
+}
+
+sample_pool() { # $1 = arquivo: a cada 5 s, pool_metrics mais "conexoes do papel da busca no Postgres, quantas ativas"
+  while sleep 5; do
+    echo "$(pool_metrics 2>/dev/null || true) $(sql -c "SELECT count(*) || ' ' || count(*) FILTER (WHERE state = 'active') FROM pg_stat_activity WHERE datname = 'radar' AND usename = 'radar_read_writer'" 2>/dev/null | tr -d '\n')" >>"$1"
+  done
+}
+
+pool_summary() { # $1 = amostras, $2 = epoch do fim do aquecimento; JSON da fase medida (media e maximo por amostra, tempos medios por uso e por espera em ms)
+  awk -v from="$2" 'NF == 10 && $1 >= from {
+      n++; max = $2; act += $3; if ($3 > amax) amax = $3; pend += $4; if ($4 > pmax) pmax = $4
+      if (n == 1) { u0 = $5; us0 = $6; a0 = $7; as0 = $8 } u1 = $5; us1 = $6; a1 = $7; as1 = $8
+      pgc += $9; if ($9 > pgmax) pgmax = $9; pga += $10; if ($10 > pgamax) pgamax = $10 }
+    END { if (n == 0) { print "{}"; exit }
+      printf "{\"samples\": %d, \"poolMax\": %d, \"activeAvg\": %.1f, \"activeMax\": %d, \"pendingAvg\": %.2f, \"pendingMax\": %d, ", n, max, act / n, amax, pend / n, pmax
+      printf "\"usageMeanMs\": %.2f, \"acquireMeanMs\": %.2f, ", (u1 > u0 ? (us1 - us0) / (u1 - u0) * 1000 : 0), (a1 > a0 ? (as1 - as0) / (a1 - a0) * 1000 : 0)
+      printf "\"pgConnectionsAvg\": %.1f, \"pgConnectionsMax\": %d, \"pgActiveAvg\": %.1f, \"pgActiveMax\": %d}\n", pgc / n, pgmax, pga / n, pgamax }' "$1" | jq .
+}
+
 run_gatling() { # $1 = id (s1..s6)
-  local id="$1" users_var="BENCH_USERS_${1^^}" users
+  local id="$1" users_var="BENCH_USERS_${1^^}" users started
   users="${!users_var:-${planned[$id]}}"
   log "Gatling ${id^^}: $users usuarios, ${warmup_s}s de aquecimento e ${measured_s}s medidos"
+  started="$(date +%s)"
+  if [ -n "$pool_sizes" ]; then
+    mkdir -p "$dir/pool"
+    : >"$dir/pool/$id.samples"
+    sample_pool "$dir/pool/$id.samples" &
+    sampler_pid=$!
+  fi
   ./mvnw -q -Pperf -pl perf test-compile gatling:test \
     "-Dgatling.simulationClass=br.dev.miguelsanzbr.radar.perf.${class[$id]}" \
     "-Dbench.users.$id=$users" "-Dbench.think-ms=$think_ms" \
     "-Dbench.warmup-seconds=$warmup_s" "-Dbench.measured-seconds=$measured_s" \
     "-Dbench.base-url=$app" "-Dbench.ids-file=$root/perf/target/bench/ids.csv" >"perf/target/bench/$id.log" 2>&1 ||
     { tail -30 "perf/target/bench/$id.log" >&2; log "Gatling ${id^^} falhou"; exit 1; }
+  if [ -n "$sampler_pid" ]; then
+    kill "$sampler_pid" 2>/dev/null || true
+    sampler_pid=""
+    pool_summary "$dir/pool/$id.samples" $((started + warmup_s)) >"$dir/pool/$id.json"
+  fi
   local results
   # shellcheck disable=SC2012 # os nomes sao do Gatling: letras, digitos e hifen
   results="$(ls -dt perf/target/gatling/"$(tr '[:upper:]' '[:lower:]' <<<"${class[$id]}")"-* | head -1)"
@@ -202,32 +254,62 @@ run_gatling() { # $1 = id (s1..s6)
   fi
 }
 
-if has s1; then sql -c 'SELECT pg_stat_statements_reset()' >/dev/null; fi
-for id in $scenarios; do
-  if [ "$id" = s5 ]; then
-    sql -c "COPY (SELECT replace(numero_controle_pncp, '/', '-') FROM search.procurement_detail_view ORDER BY random() LIMIT 20000) TO STDOUT" >perf/target/bench/ids.csv
-    read -r hits0 misses0 < <(cache_counts)
-  fi
-  run_gatling "$id"
-  if [ "$id" = s5 ]; then
-    read -r hits1 misses1 < <(cache_counts)
-    jq -n --argjson h $((hits1 - hits0)) --argjson m $((misses1 - misses0)) \
-      '{hits: $h, misses: $m, hitRatio: (if $h + $m == 0 then 0 else $h / ($h + $m) end)}' >"$dir/gatling/s5.cache.json"
-  fi
-done
+run_scenarios() {
+  if has s1; then sql -c 'SELECT pg_stat_statements_reset()' >/dev/null; fi
+  for id in $scenarios; do
+    if [ "$id" = s5 ]; then
+      sql -c "COPY (SELECT replace(numero_controle_pncp, '/', '-') FROM search.procurement_detail_view ORDER BY random() LIMIT 20000) TO STDOUT" >perf/target/bench/ids.csv
+      read -r hits0 misses0 < <(cache_counts)
+    fi
+    run_gatling "$id"
+    if [ "$id" = s5 ]; then
+      read -r hits1 misses1 < <(cache_counts)
+      jq -n --argjson h $((hits1 - hits0)) --argjson m $((misses1 - misses0)) \
+        '{hits: $h, misses: $m, hitRatio: (if $h + $m == 0 then 0 else $h / ($h + $m) end)}' >"$dir/gatling/s5.cache.json"
+    fi
+  done
+}
 
-if has s6; then
+write_pgss() { # $1 = o que o reset e a leitura cobrem
   log "pg_stat_statements"
   {
     echo "# pg_stat_statements: as 10 consultas que mais gastaram tempo"
     echo
-    echo "Zerado antes do S1 e lido depois do S6; os EXPLAIN rodam antes do reset e não entram. Tempos em ms."
+    echo "$1 Os EXPLAIN rodam antes do reset e não entram. Tempos em ms."
     echo
     echo "| Consulta | Chamadas | Total (ms) | Média (ms) | Máximo (ms) | Linhas |"
     echo "| --- | ---: | ---: | ---: | ---: | ---: |"
     sql -c "SELECT '| ' || left(regexp_replace(query, '[|[:space:]]+', ' ', 'g'), 110) || ' | ' || calls || ' | ' || round(total_exec_time::numeric, 0) || ' | ' || round(mean_exec_time::numeric, 2) || ' | ' || round(max_exec_time::numeric, 1) || ' | ' || rows || ' |'
       FROM pg_stat_statements WHERE dbid = (SELECT oid FROM pg_database WHERE datname = 'radar') ORDER BY total_exec_time DESC LIMIT 10"
   } >"$dir/pg_stat_statements.md"
+}
+
+if [ -z "$pool_sizes" ]; then
+  run_scenarios
+  if has s6; then write_pgss "Zerado antes do S1 e lido depois do S6;"; fi
+else
+  for size in $pool_sizes; do
+    dir="$base/pool-$size"
+    [ ! -d "$dir" ] || dir="$dir-rerun"
+    mkdir -p "$dir/gatling"
+    log "pool de busca com $size conexoes: reiniciando so a aplicacao e esvaziando o cache do detalhe"
+    BENCH_SEARCH_POOL="$size" $COMPOSE up -d --no-deps --force-recreate --wait app
+    $COMPOSE exec -T redis redis-cli FLUSHALL >/dev/null
+    # o Hikari so abre o pool (e so registra as metricas) na primeira conexao: uma busca simples o inicia antes da conferencia
+    curl -fsS "$app/api/v1/procurements?limit=1" >/dev/null
+    read -r _ max _ < <(pool_metrics)
+    [ "$max" = "$size" ] || { log "o pool de busca tem $max conexoes, nao $size"; exit 1; }
+    run_scenarios
+    write_pgss "Zerado antes do S1 e lido depois do último cenário, com o pool de busca em $size conexões."
+  done
+  dir="$base"
+  jq -n --arg date "$(date +%F)" --arg commit "$(git rev-parse HEAD)" --arg host "$host" --arg pg "$pg_version" \
+    --arg sizes "$pool_sizes" --arg scenarios "$scenarios" --argjson real "$real" --argjson synthetic "$synthetic" \
+    --argjson think "$think_ms" --argjson warmup "$warmup_s" --argjson measured "$measured_s" \
+    '{date: $date, commit: $commit, host: $host, postgres: $pg, poolSizes: ($sizes | split(" ")), scenarios: ($scenarios | split(" ")),
+      rows: {total: ($real + $synthetic), real: $real, synthetic: $synthetic}, thinkMs: $think, warmupSeconds: $warmup, measuredSeconds: $measured}' >"$dir/run.json"
+  log "pronto: $dir"
+  exit 0
 fi
 
 # --- 5. metricas ----------------------------------------------------------------------------------------

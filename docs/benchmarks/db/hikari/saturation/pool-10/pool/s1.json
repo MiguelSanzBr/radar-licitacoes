@@ -1,0 +1,14 @@
+{
+  "samples": 18,
+  "poolMax": 10,
+  "activeAvg": 10.0,
+  "activeMax": 10,
+  "pendingAvg": 37.56,
+  "pendingMax": 40,
+  "usageMeanMs": 50.19,
+  "acquireMeanMs": 198.62,
+  "pgConnectionsAvg": 10.0,
+  "pgConnectionsMax": 10,
+  "pgActiveAvg": 9.7,
+  "pgActiveMax": 10
+}

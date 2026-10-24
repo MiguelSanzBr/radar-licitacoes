@@ -19,6 +19,7 @@ Auditoria de `core/src/main/resources/application*.properties`, de `infra/compos
 | URL, usuário e senha do banco | `SPRING_DATASOURCE_URL`, `_USERNAME`, `_PASSWORD` | nenhum | senha: sim (compose: arquivo `db_password`; Helm: Secret) |
 | Senha do papel `radar_read_writer` (Flyway V6 e fonte de dados da busca) | `RADAR_READ_WRITER_PASSWORD` | `radar_rw_dev` fora da imagem; nenhum no perfil `json` | sim |
 | URL e usuário da fonte de dados da busca | `RADAR_SEARCH_DATASOURCE_URL`, `_USERNAME` | vazio (mesmo banco) e `radar_read_writer` | não |
+| Conexões dos pools do Hikari: escrita (JPA, coleta, outbox, alertas) e busca (leituras públicas e projetor), medidos em `docs/benchmarks/db/hikari.md` (ADR-0010, "Tamanho do pool"); cada instância abre os dois, então some ao `max_connections` do Postgres | `RADAR_DB_POOL_SIZE`, `RADAR_SEARCH_POOL_SIZE` | `10` e `10` | não |
 | Tempo máximo de uma consulta pública da busca | `RADAR_SEARCH_STATEMENT_TIMEOUT` | `3s` | não |
 | Candidatos do ranking da busca textual: as N licitações mais recentes que casam são ranqueadas e paginadas (ADR-0011); maior N dá mais relevância e mais custo por busca | `RADAR_SEARCH_RANK_CANDIDATES` | `2000` (mínimo 1) | não |
 | Kafka | `SPRING_KAFKA_BOOTSTRAP_SERVERS` | `localhost:9092` (padrão do Boot) | não |

@@ -1,0 +1,30 @@
+[
+  {
+    "name": "S2 filtered search (warmup)",
+    "requests": 2967,
+    "ok": 2967,
+    "errors": 0,
+    "rps": 12.26,
+    "min": 0,
+    "p50": 6,
+    "p75": 9,
+    "p95": 24,
+    "p99": 57,
+    "max": 631,
+    "mean": 10
+  },
+  {
+    "name": "S2 filtered search",
+    "requests": 8928,
+    "ok": 8928,
+    "errors": 0,
+    "rps": 36.89,
+    "min": 0,
+    "p50": 6,
+    "p75": 8,
+    "p95": 20,
+    "p99": 43,
+    "max": 62,
+    "mean": 8
+  }
+]

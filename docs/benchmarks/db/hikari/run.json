@@ -1,0 +1,24 @@
+{
+  "date": "2026-10-23",
+  "commit": "e19a55db979b1020e65a730671ad7513f9e885b4",
+  "host": "AMD Ryzen 5 5600GT with Radeon Graphics, 12 threads, 11,6 GiB de RAM",
+  "postgres": "Postgres 18.6",
+  "poolSizes": [
+    "10",
+    "20",
+    "40"
+  ],
+  "scenarios": [
+    "s1",
+    "s2",
+    "s5"
+  ],
+  "rows": {
+    "total": 1200000,
+    "real": 1633,
+    "synthetic": 1198367
+  },
+  "thinkMs": 1000,
+  "warmupSeconds": 60,
+  "measuredSeconds": 180
+}

@@ -38,6 +38,7 @@ class SearchJooqConfiguration {
             .password(properties.password())
             .build();
     dataSource.setPoolName("search");
+    dataSource.setMaximumPoolSize(properties.maximumPoolSize());
     // why: the driver prepares a statement on the server after five runs and Postgres may then keep
     // one generic plan for it. The text search needs the plan of the term it carries: GIN for a
     // rare term, publication order for a common one (ADR-0011, "Perfil e otimização")

@@ -1,0 +1,30 @@
+[
+  {
+    "name": "S5 detail (warmup)",
+    "requests": 5985,
+    "ok": 5985,
+    "errors": 0,
+    "rps": 24.73,
+    "min": 0,
+    "p50": 2,
+    "p75": 3,
+    "p95": 9,
+    "p99": 76,
+    "max": 650,
+    "mean": 7
+  },
+  {
+    "name": "S5 detail",
+    "requests": 17975,
+    "ok": 17975,
+    "errors": 0,
+    "rps": 74.28,
+    "min": 0,
+    "p50": 1,
+    "p75": 1,
+    "p95": 2,
+    "p99": 4,
+    "max": 39,
+    "mean": 1
+  }
+]

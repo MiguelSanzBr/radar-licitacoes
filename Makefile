@@ -1,4 +1,4 @@
-.PHONY: verify chaos cdc-test avro-test messaging-test schemas-register compat mutation check-coverage-policy lint-openapi audit-repo tf-fmt tf-validate tf-lint tf-plan up down logs seed e2e replay bench docs-check slo synth probe deploy rollback test-scripts profile image image-size image-scan image-test lint-observability probe-report backfill helm-lint helm-smoke sbom sbom-scan secrets-scan e2e-ui e2e-split image-split
+.PHONY: verify chaos cdc-test avro-test messaging-test schemas-register compat mutation check-coverage-policy lint-openapi audit-repo tf-fmt tf-validate tf-lint tf-plan up down logs seed e2e replay bench bench-pool docs-check slo synth probe deploy rollback test-scripts profile image image-size image-scan image-test lint-observability probe-report backfill helm-lint helm-smoke sbom sbom-scan secrets-scan e2e-ui e2e-split image-split
 
 verify:
 	./mvnw verify
@@ -178,6 +178,11 @@ synth:
 # leva cerca de uma hora. Variaveis BENCH_* em scripts/bench.sh (BENCH_ROWS, BENCH_SCENARIOS, BENCH_USERS_S1, ...).
 bench:
 	scripts/bench.sh
+
+# Tamanho do pool de busca por medida (PR 2.8, docs/benchmarks/db/hikari.md): carrega a massa uma vez e repete S1, S2 e S5
+# com 10, 20 e 40 conexoes, reiniciando so a aplicacao. Mesmos pre-requisitos do `make bench`; leva uma hora e meia.
+bench-pool:
+	BENCH_POOL_SIZES="$(or $(BENCH_POOL_SIZES),10 20 40)" scripts/bench.sh
 
 # O bloco de numeros do README tem de ser o que docs/benchmarks/latest.json gera (scripts/render-metrics.sh readme corrige).
 docs-check:

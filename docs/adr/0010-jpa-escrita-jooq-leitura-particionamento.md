@@ -119,3 +119,18 @@ Decisão da PR 2.8, acrescentada a esta ADR porque o que se escolhe é o nível 
 Alternativa rejeitada: SERIALIZABLE como nível padrão ou na entrega de alertas. Ele dá a garantia sem pedir restrição, mas cobra com falhas `40001` certas sob sobreposição (um escritor recusado em todas as 200 corridas) e exige retry com pausa; onde a unicidade cabe em uma restrição, a restrição é mais barata e mais simples. O nível fica reservado para regras que uma restrição não expressa.
 
 Prova: `LostUpdateIT`, `NonRepeatableReadIT` e `SerializableDeliveryIT`, e `docs/benchmarks/db/isolation.md`.
+
+## Tamanho do pool
+
+Decisão da PR 2.8, medida em `docs/benchmarks/db/hikari.md`. A aplicação tem dois pools do Hikari, e cada um tem o tamanho pela própria variável:
+
+| Pool | Quem usa | Variável | Tamanho | Base |
+|---|---|---|---|---|
+| escrita (`dataSource`, JPA e JDBC) | coleta, outbox, alertas, painel de operação | `RADAR_DB_POOL_SIZE` | 10 | raciocínio sobre a carga, **não medido** |
+| busca (`searchDataSource`, nome `search`) | leituras públicas (S1 a S6) e projetor | `RADAR_SEARCH_POOL_SIZE` | 10 | medido com 4, 8, 10, 20 e 40 |
+
+Medida (1,2 milhão de linhas, sintéticas em sua maior parte, Gatling S1, S2 e S5): na carga do plano (50 usuários com pausa de 1 s) o pico foi de 5 conexões ativas e a fila do pool ficou em 0 nos tamanhos 10, 20 e 40, sem diferença de latência. Sem pausa, com 50 consultas sempre em voo, a vazão sobe até 8 a 10 conexões (S1 74 req/s) e cai depois (65 req/s com 40), com p95 de 816 ms em 10 e 1.234 ms em 40: o tempo que cada consulta segura a conexão cresce quase na proporção do pool, porque o Postgres já está com a CPU cheia. A fórmula do guia do Hikari (núcleos × 2 + discos) dá 13 nesta máquina; o joelho medido ficou em 8 a 10, porque aplicação e gerador de carga dividem a mesma CPU.
+
+Escolha: 10 nos dois. Cada instância usa até 20 conexões do `max_connections=100` do Postgres, então cabem 4 instâncias com folga para o Debezium. O sinal para rever o tamanho é `hikaricp_connections_pending` acima de 0 de forma sustentada com CPU livre no banco; subir o pool sem CPU livre só alonga a cauda.
+
+Alternativa rejeitada: pool grande "para garantir" (20 ou 40). Sob carga que mantém mais consultas em voo que o banco processa de fato, o pool maior troca fila no Hikari por fila dentro do Postgres, com a mesma vazão ou menor e a cauda pior.
