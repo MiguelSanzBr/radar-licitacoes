@@ -149,7 +149,7 @@ services:
       retries: 20
       start_period: 10s
 
-  app:
+  app: &radar-app
     image: radar-licitacoes:${RADAR_TAG:-local}  # RADAR_TAG vem do ambiente (make exporta)
     pull_policy: never
     depends_on:
@@ -168,7 +168,7 @@ services:
         target: spring.flyway.placeholders.readWriterPassword
       - source: read_writer_password
         target: radar.search.datasource.password
-    environment:
+    environment: &radar-env
       SPRING_APPLICATION_NAME: radar-licitacoes
       SPRING_CONFIG_IMPORT: optional:configtree:/run/secrets/
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/radar
@@ -206,6 +206,37 @@ services:
       timeout: 3s
       retries: 10
       start_period: 40s
+
+  # Perfil split (ADR-0028): a mesma plataforma em dois servicos, no lugar do monolito. `make up PROFILE=split` sobe estes
+  # dois e o make passa --scale app=0 (o `app` nao tem perfil, para o resto das ferramentas continuar vendo o monolito).
+  # Herdam do `app` o ambiente, os segredos e as dependencias; o ingestor e dono das migrations, entao a search-api espera por ele.
+  ingestor:
+    <<: *radar-app
+    image: radar-licitacoes-ingestor:${RADAR_TAG:-local}
+    profiles: [split]
+    environment:
+      <<: *radar-env
+      SPRING_APPLICATION_NAME: radar-ingestor
+    ports: ["127.0.0.1:8082:8080"]
+    # 512m deixava o pico do cgroup (481 MiB, com cache de pagina) a 6% do limite; medido em docs/benchmarks/compose-memory.md
+    mem_limit: 576m
+
+  search-api:
+    <<: *radar-app
+    image: radar-licitacoes-search-api:${RADAR_TAG:-local}
+    profiles: [split]
+    depends_on:
+      ingestor: {condition: service_healthy}
+      postgres: {condition: service_healthy}
+      kafka: {condition: service_healthy}
+      redis: {condition: service_healthy}
+      keycloak: {condition: service_healthy}
+      otel-lgtm: {condition: service_healthy}
+    environment:
+      <<: *radar-env
+      SPRING_APPLICATION_NAME: radar-search-api
+    ports: ["127.0.0.1:8080:8080"]
+    mem_limit: 640m
 
   apicurio:
     # Camada 3 (ADR-0024): o registro de schemas sobe so com `--profile layer3` e a aplicacao so o usa com RADAR_MESSAGING_FORMAT=avro.

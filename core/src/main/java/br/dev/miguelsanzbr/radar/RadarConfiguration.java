@@ -9,10 +9,13 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 
-/** Application-wide infrastructure beans shared by every context. */
+/**
+ * Application-wide infrastructure beans shared by every context; public so the apps import it
+ * (ADR-0028).
+ */
 @Configuration(proxyBeanMethods = false)
 @EnableScheduling
-class RadarConfiguration {
+public class RadarConfiguration {
 
   @Bean
   Clock clock() {

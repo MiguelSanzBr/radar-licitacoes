@@ -20,7 +20,7 @@ make seed    # dispara em segundo plano o carregamento de 1 dia de dados reais d
 make down    # para o ambiente (CLEAN=1 make down também apaga os volumes)
 ```
 
-`make logs` acompanha os logs (`SERVICE=app` para um só). `PROFILE=layer3 make up` sobe também o Apicurio; com `make schemas-register` e `RADAR_MESSAGING_FORMAT=avro` os eventos passam a sair em Avro (ADR-0024, `docs/benchmarks/schema/evolution.md`). `PROFILE=cdc make up` troca o relay por polling pelo Debezium (ADR-0018, `docs/benchmarks/cdc/polling-vs-debezium.md`).
+`make logs` acompanha os logs (`SERVICE=app` para um só). `PROFILE=layer3 make up` sobe também o Apicurio; com `make schemas-register` e `RADAR_MESSAGING_FORMAT=avro` os eventos passam a sair em Avro (ADR-0024, `docs/benchmarks/schema/evolution.md`). `PROFILE=cdc make up` troca o relay por polling pelo Debezium (ADR-0018, `docs/benchmarks/cdc/polling-vs-debezium.md`). `PROFILE=split make up` troca o monólito por dois serviços, `ingestor` (coleta e relay, porta 8082) e `search-api` (busca, alertas, identidade e operação, porta 8080), a partir de `make image-split` (ADR-0028); `make e2e-split` roda o fluxo ponta a ponta nessa forma. Nesse perfil a coleta é do ingestor: `RADAR_APP_URL=http://localhost:8082 make seed` (ou `make backfill`); ao trocar de perfil rode `make down` antes.
 
 | O quê | URL | Acesso |
 | --- | --- | --- |

@@ -1,4 +1,4 @@
-.PHONY: verify chaos cdc-test avro-test messaging-test schemas-register compat mutation check-coverage-policy lint-openapi audit-repo tf-fmt tf-validate tf-lint tf-plan up down logs seed e2e replay bench docs-check slo synth probe deploy rollback test-scripts profile image image-size image-scan image-test lint-observability probe-report backfill helm-lint helm-smoke sbom sbom-scan secrets-scan e2e-ui
+.PHONY: verify chaos cdc-test avro-test messaging-test schemas-register compat mutation check-coverage-policy lint-openapi audit-repo tf-fmt tf-validate tf-lint tf-plan up down logs seed e2e replay bench docs-check slo synth probe deploy rollback test-scripts profile image image-size image-scan image-test lint-observability probe-report backfill helm-lint helm-smoke sbom sbom-scan secrets-scan e2e-ui e2e-split image-split
 
 verify:
 	./mvnw verify
@@ -37,6 +37,12 @@ TRIVY_IMAGE := aquasec/trivy:0.76.0@sha256:2416d1f74045b57274df1a340eee6b510cacd
 image:
 	./mvnw -q compile -pl core -am -DskipTests
 	docker build -t radar-licitacoes:$(RADAR_TAG) .
+
+# Uma imagem por app (ADR-0028), do mesmo Dockerfile: radar-licitacoes-ingestor e radar-licitacoes-search-api.
+image-split:
+	./mvnw -q compile -pl apps/ingestor,apps/search-api -am -DskipTests || exit 1
+	docker build --build-arg MODULE=apps/ingestor -t radar-licitacoes-ingestor:$(RADAR_TAG) . || exit 1
+	docker build --build-arg MODULE=apps/search-api -t radar-licitacoes-search-api:$(RADAR_TAG) .
 
 image-size:
 	scripts/image-size.sh
@@ -185,15 +191,21 @@ slo profile:
 # Ambiente local completo (ADR-0022): cria .env e segredos se faltarem, constroi a imagem se nao
 # existir e sobe tudo esperando os healthchecks. Camada 3: PROFILE=layer3 make up.
 # CDC (ADR-0018): PROFILE=cdc make up sobe o Debezium e poe a aplicacao em modo cdc (o relay sai).
+# Dois servicos (ADR-0028): PROFILE=split make up sobe ingestor (8082) e search-api (8080) no lugar do monolito
+# (--scale app=0: o `app` fica sem perfil de proposito, para o resto das ferramentas continuar vendo o monolito). Nao combina com cdc.
+# Ao trocar de perfil (monolito <-> split) rode `make down` antes: as duas formas usam as mesmas portas e o mesmo banco.
 # RADAR_TAG e a unica fonte da tag: o make exporta e o compose e o e2e leem do ambiente.
 export RADAR_TAG ?= local
 export RADAR_OUTBOX_MODE ?= $(if $(filter cdc,$(PROFILE)),cdc,polling)
 COMPOSE = docker compose -f infra/compose/docker-compose.yml
 
+SPLIT = $(filter split,$(PROFILE))
+IMAGES = $(if $(SPLIT),radar-licitacoes-ingestor:$(RADAR_TAG) radar-licitacoes-search-api:$(RADAR_TAG),radar-licitacoes:$(RADAR_TAG))
+
 up:
 	scripts/compose-init.sh
-	docker image inspect radar-licitacoes:$(RADAR_TAG) >/dev/null 2>&1 || $(MAKE) image
-	$(COMPOSE) $(if $(PROFILE),--profile $(PROFILE)) up -d --wait
+	for image in $(IMAGES); do docker image inspect $$image >/dev/null 2>&1 || { $(MAKE) $(if $(SPLIT),image-split,image); break; }; done
+	$(COMPOSE) $(if $(PROFILE),--profile $(PROFILE)) up -d --wait $(if $(SPLIT),--scale app=0)
 
 # Para tudo, inclusive os servicos de perfil (apicurio); apaga os volumes somente com CLEAN=1.
 down:
@@ -216,6 +228,10 @@ e2e:
 # para ~/.cache/ms-playwright na primeira vez. PLAYWRIGHT_SKIP=1 pula o teste.
 e2e-ui:
 	./mvnw -q -Pe2e verify -pl core -am -Dtest=NoSuch -Dit.test=SearchUiE2EIT -Dsurefire.failIfNoSpecifiedTests=false
+
+# O mesmo fluxo com ingestor e search-api no lugar do app (ADR-0028); precisa de make image-split e das portas livres.
+e2e-split:
+	./mvnw -q -Pe2e verify -pl e2e -am -Dit.test=SplitStackE2EIT -Dsurefire.failIfNoSpecifiedTests=false -Dfailsafe.failIfNoSpecifiedTests=false
 
 # Deploy por tag e volta ao anterior (ADR-0022, secao Deploy e rollback). O CI roda os mesmos comandos:
 # RADAR_REGISTRY (ghcr.io/<dono>/radar-licitacoes) faz o pull; sem ele, usa a imagem local radar-licitacoes:TAG.
@@ -254,5 +270,6 @@ replay:
 	echo "replay: ainda rodando apos $(REPLAY_WAIT)s; veja make logs SERVICE=app" >&2; exit 1
 
 # Uso: make backfill FROM=2026-10-01 TO=2026-10-31 [MODALITY=6]; force=true ignora a janela noturna.
+# No perfil split a coleta e do ingestor: RADAR_APP_URL=http://localhost:8082 make backfill (idem make seed).
 backfill:
-	curl -fsS -X POST -H "Authorization: Bearer $$(scripts/ops-token.sh)" "http://localhost:8080/ops/backfill?from=$(FROM)&to=$(TO)&modality=$${MODALITY:-6}&force=true"
+	curl -fsS -X POST -H "Authorization: Bearer $$(scripts/ops-token.sh)" "$${RADAR_APP_URL:-http://localhost:8080}/ops/backfill?from=$(FROM)&to=$(TO)&modality=$${MODALITY:-6}&force=true"

@@ -17,7 +17,7 @@ import org.springframework.orm.jpa.JpaTransactionManager;
  * which makes Boot back off from its own, so the primary ones are declared here the way Boot would.
  */
 @Configuration(proxyBeanMethods = false)
-class PrimaryPersistenceConfiguration {
+public class PrimaryPersistenceConfiguration {
 
   /**
    * Boot publishes {@link JdbcConnectionDetails} only together with its own data source, so when

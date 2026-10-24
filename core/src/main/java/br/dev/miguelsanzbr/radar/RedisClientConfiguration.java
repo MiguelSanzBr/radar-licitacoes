@@ -7,7 +7,7 @@ import org.springframework.context.annotation.Configuration;
 
 /** The Redis client shared by the rate limit and the detail cache (ADR-0027). */
 @Configuration(proxyBeanMethods = false)
-class RedisClientConfiguration {
+public class RedisClientConfiguration {
 
   /**
    * Redis down must not make every read wait for the command timeout: once the client sees the

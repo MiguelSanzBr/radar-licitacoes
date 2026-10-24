@@ -16,4 +16,5 @@ scrape_configs:
     #   type: Bearer
     #   credentials_file: /etc/prometheus/operator-token
     static_configs:
+      # perfil split (ADR-0028): no lugar de app:8080, troque por ingestor:8080 e search-api:8080
       - targets: ['app:8080']

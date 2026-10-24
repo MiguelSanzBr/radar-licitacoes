@@ -12,13 +12,15 @@ RUN find . -type f ! -name pom.xml ! -name mvnw ! -path './.mvn/*' -delete \
  && find . -type d -empty -delete
 
 FROM eclipse-temurin:25-jdk-alpine@sha256:1e20ead9eec7234db293f1913438090d533ed47c0b9e12dc8c7627a802a44ed6 AS build
+# Modulo que vira a imagem: core (monolito) ou apps/ingestor, apps/search-api (ADR-0028). Todos geram um jar *-exec.
+ARG MODULE=core
 WORKDIR /src
 COPY --from=poms /src ./
 RUN --mount=type=cache,target=/root/.m2 ./mvnw -B -q dependency:go-offline
 # O modelo jOOQ (core/target/generated-sources/jooq) vem do contexto: gerado no host por `make image`.
 COPY . .
-RUN --mount=type=cache,target=/root/.m2 ./mvnw -B -q -DskipTests -Djooq.codegen.skip=true package -pl core -am \
- && set -- core/target/core-*.jar && [ "$#" -eq 1 ] && mv "$1" /app.jar
+RUN --mount=type=cache,target=/root/.m2 ./mvnw -B -q -DskipTests -Djooq.codegen.skip=true package -pl "${MODULE}" -am \
+ && set -- "${MODULE}"/target/*-exec.jar && [ "$#" -eq 1 ] && mv "$1" /app.jar
 
 # Sem --launcher: o jar extraido lista as bibliotecas no Class-Path, o que deixa o AOT cache
 # arquivar tambem as classes das dependencias (com o launcher elas ficam fora do cache).
@@ -31,6 +33,7 @@ RUN java -Djarmode=tools -jar app.jar extract --layers --destination /x/out
 # aparecem por reflexao ou por configuracao (TLS, locale pt-BR, charsets, JMX, ferramentas de profiling).
 FROM eclipse-temurin:25-jdk-alpine@sha256:1e20ead9eec7234db293f1913438090d533ed47c0b9e12dc8c7627a802a44ed6 AS jre
 COPY --from=extract /x/out/dependencies/ /app/
+COPY --from=extract /x/out/snapshot-dependencies/ /app/
 COPY --from=extract /x/out/application/ /app/
 RUN mods="$(jdeps --ignore-missing-deps --multi-release 25 --print-module-deps \
       --class-path '/app/lib/*' /app/app.jar)" \
