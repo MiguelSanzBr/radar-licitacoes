@@ -16,3 +16,8 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    groups:
+      # init e analyze do CodeQL precisam da mesma versao no mesmo PR
+      codeql-action:
+        patterns:
+          - github/codeql-action*

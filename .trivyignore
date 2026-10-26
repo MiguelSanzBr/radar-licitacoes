@@ -1,0 +1,7 @@
+# Excecoes do Trivy, so para a imagem de build eclipse-temurin (make image-scan); a imagem final
+# roda sem ignore. Motivo, dono e expiracao em cada entrada (docs/security/scans.md).
+
+# brotli-libs 1.2.0-r1 na eclipse-temurin:25-jdk-alpine. A imagem so compila: o brotli nao vai
+# para a imagem final. Correcao em 1.2.1-r0, falta a Temurin publicar a imagem nova; ao sair,
+# subir o digest no Dockerfile e apagar esta linha. Dono: Miguel Sanz.
+CVE-2026-111497 exp:2026-11-30

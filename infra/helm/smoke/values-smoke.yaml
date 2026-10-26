@@ -5,6 +5,16 @@ image:
 config:
   SPRING_KAFKA_ADMIN_FAIL_FAST: "false"
   SPRING_KAFKA_ADMIN_AUTO_CREATE: "false"
+  # sem broker, os consumidores nao sobem (o DNS de kafka:9092 nao resolve) e o relay nao publica
+  RADAR_SEARCH_PROJECTOR_ENABLED: "false"
+  RADAR_ALERTS_MATCHER_ENABLED: "false"
+  RADAR_ALERTS_NOTIFIER_ENABLED: "false"
+  RADAR_OPS_DLQRECORDER_ENABLED: "false"
+  RADAR_OUTBOX_RELAYENABLED: "false"
+  # sem PNCP no smoke: uma coleta em andamento segura o taskScheduler e estoura o tempo de saida
+  RADAR_INGEST_INCREMENTAL_ENABLED: "false"
+  RADAR_INGEST_CLOSEEXPIRED_ENABLED: "false"
+  RADAR_INGEST_PARTITIONS_ENABLED: "false"
 secret:
   create: true
   values:

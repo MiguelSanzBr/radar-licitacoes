@@ -56,15 +56,17 @@ image-test:
 # do runtime jlink (ver ADR-0022): a mitigacao e acompanhar os avisos do Temurin e subir o digest.
 JDK_BUILD_IMAGE = $(shell sed -n 's/^FROM \(eclipse-temurin[^ ]*\) AS build$$/\1/p' Dockerfile)
 
-TRIVY = docker run --rm -v "$$HOME/.cache/trivy":/root/.cache/trivy $(TRIVY_IMAGE)
 TRIVY_FLAGS = --severity CRITICAL,HIGH --ignore-unfixed --exit-code 1 --skip-version-check
 
+# So a imagem de build le o .trivyignore (docs/security/scans.md); a imagem final roda sem ignore.
 image-scan:
 	@tar="$$(mktemp -u).tar"; trap 'rm -f "$$tar"' EXIT; \
 	docker save -o "$$tar" radar-licitacoes:local; \
 	docker run --rm -v "$$tar":/image.tar:ro -v "$$HOME/.cache/trivy":/root/.cache/trivy $(TRIVY_IMAGE) \
 	  image --input /image.tar $(TRIVY_FLAGS) && \
-	$(TRIVY) image $(JDK_BUILD_IMAGE) $(TRIVY_FLAGS)
+	docker run --rm -v "$$HOME/.cache/trivy":/root/.cache/trivy \
+	  -v "$(CURDIR)/.trivyignore":/.trivyignore:ro $(TRIVY_IMAGE) \
+	  image $(JDK_BUILD_IMAGE) $(TRIVY_FLAGS) --ignorefile /.trivyignore
 
 # Varreduras de cadeia de suprimento e segredos (docs/security/scans.md). Imagens fixadas por digest.
 GRYPE_IMAGE := anchore/grype:v0.121.0@sha256:621d56d1d68106b787022c81546f7e0a36202a25d1239f0c20195fab8c16f7ea
