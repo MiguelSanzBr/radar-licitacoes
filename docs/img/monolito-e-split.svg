@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 520" width="1200" height="520" role="img" aria-labelledby="t d">
+<title id="t">Monólito e forma dividida</title>
+<desc id="d">À esquerda, make up sobe um processo com todos os módulos. À direita, PROFILE=split sobe o ingestor, com coleta e relay, e a search-api, com busca, alertas e identidade, os dois sobre o mesmo Postgres e o mesmo Kafka.</desc>
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#64748b"/></marker></defs>
+<rect x="1" y="1" width="1198" height="518" rx="14" fill="#ffffff" stroke="#e2e8f0" stroke-width="2"/>
+<line x1="600" y1="30" x2="600" y2="490" stroke="#e2e8f0" stroke-width="2"/>
+<text x="40" y="52" font-family="Arial, Helvetica, 'Liberation Sans', sans-serif" font-size="20" font-weight="700" fill="#0f172a" text-anchor="start">make up</text>
+<text x="40" y="76" font-family="Arial, Helvetica, 'Liberation Sans', sans-serif" font-size="14" font-weight="400" fill="#475569" text-anchor="start">Um processo com todos os módulos. É o padrão de desenvolvimento e de teste.</text>
+<rect x="40" y="100" width="520" height="270" rx="10" fill="#f8fafc" stroke="#2563eb" stroke-width="1.6"/>
+<text x="60" y="130" font-family="Arial, Helvetica, 'Liberation Sans', sans-serif" font-size="16" font-weight="700" fill="#0f172a" text-anchor="start">app, porta 8080</text>
+<rect x="60" y="150" width="150" height="34" rx="10" fill="#eff6ff" stroke="#93c5fd" stroke-width="1.6"/><text x="135.0" y="172" font-family="Arial, Helvetica, 'Liberation Sans', sans-serif" font-size="14" font-weight="700" fill="#1e3a8a" text-anchor="middle">ingest</text>
+<rect x="225" y="150" width="150" height="34" rx="10" fill="#eff6ff" stroke="#93c5fd" stroke-width="1.6"/><text x="300.0" y="172" font-family="Arial, Helvetica, 'Liberation Sans', sans-serif" font-size="14" font-weight="700" fill="#1e3a8a" text-anchor="middle">outbox</text>
+<rect x="390" y="150" width="150" height="34" rx="10" fill="#eff6ff" stroke="#93c5fd" stroke-width="1.6"/><text x="465.0" y="172" font-family="Arial, Helvetica, 'Liberation Sans', sans-serif" font-size="14" font-weight="700" fill="#1e3a8a" text-anchor="middle">search</text>
+<rect x="60" y="204" width="150" height="34" rx="10" fill="#eff6ff" stroke="#93c5fd" stroke-width="1.6"/><text x="135.0" y="226" font-family="Arial, Helvetica, 'Liberation Sans', sans-serif" font-size="14" font-weight="700" fill="#1e3a8a" text-anchor="middle">alerts</text>
+<rect x="225" y="204" width="150" height="34" rx="10" fill="#eff6ff" stroke="#93c5fd" stroke-width="1.6"/><text x="300.0" y="226" font-family="Arial, Helvetica, 'Liberation Sans', sans-serif" font-size="14" font-weight="700" fill="#1e3a8a" text-anchor="middle">identity</text>
+<rect x="390" y="204" width="150" height="34" rx="10" fill="#eff6ff" stroke="#93c5fd" stroke-width="1.6"/><text x="465.0" y="226" font-family="Arial, Helvetica, 'Liberation Sans', sans-serif" font-size="14" font-weight="700" fill="#1e3a8a" text-anchor="middle">ops</text>
+<text x="60" y="300" font-family="Arial, Helvetica, 'Liberation Sans', sans-serif" font-size="13" font-weight="400" fill="#64748b" text-anchor="start">Coleta, relay, projetor, alertas e API no mesmo processo.</text>
+<text x="60" y="320" font-family="Arial, Helvetica, 'Liberation Sans', sans-serif" font-size="13" font-weight="400" fill="#64748b" text-anchor="start">Os módulos já conversam por evento, mesmo aqui.</text>
+<rect x="100" y="424" width="180" height="64" rx="10" fill="#f0fdfa" stroke="#0f766e" stroke-width="1.6"/><text x="190.0" y="451" font-family="Arial, Helvetica, 'Liberation Sans', sans-serif" font-size="15" font-weight="700" fill="#0f172a" text-anchor="middle">PostgreSQL</text><text x="190.0" y="471" font-family="Arial, Helvetica, 'Liberation Sans', sans-serif" font-size="12" font-weight="400" fill="#475569" text-anchor="middle">migrations no app</text>
+<rect x="320" y="424" width="180" height="64" rx="10" fill="#fff7ed" stroke="#c2410c" stroke-width="1.6"/><text x="410.0" y="451" font-family="Arial, Helvetica, 'Liberation Sans', sans-serif" font-size="15" font-weight="700" fill="#0f172a" text-anchor="middle">Kafka</text><text x="410.0" y="471" font-family="Arial, Helvetica, 'Liberation Sans', sans-serif" font-size="12" font-weight="400" fill="#475569" text-anchor="middle">eventos entre módulos</text>
+<line x1="190" y1="372" x2="190" y2="421" stroke="#64748b" stroke-width="1.6" marker-end="url(#a)"/>
+<line x1="410" y1="372" x2="410" y2="421" stroke="#64748b" stroke-width="1.6" marker-end="url(#a)"/>
+<text x="640" y="52" font-family="Arial, Helvetica, 'Liberation Sans', sans-serif" font-size="20" font-weight="700" fill="#0f172a" text-anchor="start">PROFILE=split make up</text>
+<text x="640" y="76" font-family="Arial, Helvetica, 'Liberation Sans', sans-serif" font-size="14" font-weight="400" fill="#475569" text-anchor="start">Os mesmos módulos em dois processos; só o ingestor publica (ADR-0028).</text>
+<rect x="640" y="100" width="160" height="270" rx="10" fill="#f8fafc" stroke="#2563eb" stroke-width="1.6"/>
+<text x="720" y="128" font-family="Arial, Helvetica, 'Liberation Sans', sans-serif" font-size="16" font-weight="700" fill="#0f172a" text-anchor="middle">ingestor</text>
+<text x="720" y="147" font-family="Arial, Helvetica, 'Liberation Sans', sans-serif" font-size="12" font-weight="400" fill="#475569" text-anchor="middle">porta 8082</text>
+<rect x="655" y="162" width="130" height="34" rx="10" fill="#eff6ff" stroke="#93c5fd" stroke-width="1.6"/><text x="720.0" y="184" font-family="Arial, Helvetica, 'Liberation Sans', sans-serif" font-size="14" font-weight="700" fill="#1e3a8a" text-anchor="middle">ingest</text>
+<rect x="655" y="206" width="130" height="34" rx="10" fill="#eff6ff" stroke="#93c5fd" stroke-width="1.6"/><text x="720.0" y="228" font-family="Arial, Helvetica, 'Liberation Sans', sans-serif" font-size="14" font-weight="700" fill="#1e3a8a" text-anchor="middle">outbox (relay)</text>
+<rect x="655" y="250" width="130" height="34" rx="10" fill="#eff6ff" stroke="#93c5fd" stroke-width="1.6"/><text x="720.0" y="272" font-family="Arial, Helvetica, 'Liberation Sans', sans-serif" font-size="14" font-weight="700" fill="#1e3a8a" text-anchor="middle">ops</text>
+<text x="720" y="320" font-family="Arial, Helvetica, 'Liberation Sans', sans-serif" font-size="12" font-weight="700" fill="#64748b" text-anchor="middle">dono do Flyway</text>
+<rect x="1000" y="100" width="160" height="270" rx="10" fill="#f8fafc" stroke="#2563eb" stroke-width="1.6"/>
+<text x="1080" y="128" font-family="Arial, Helvetica, 'Liberation Sans', sans-serif" font-size="16" font-weight="700" fill="#0f172a" text-anchor="middle">search-api</text>
+<text x="1080" y="147" font-family="Arial, Helvetica, 'Liberation Sans', sans-serif" font-size="12" font-weight="400" fill="#475569" text-anchor="middle">porta 8080</text>
+<rect x="1015" y="162" width="130" height="34" rx="10" fill="#eff6ff" stroke="#93c5fd" stroke-width="1.6"/><text x="1080.0" y="184" font-family="Arial, Helvetica, 'Liberation Sans', sans-serif" font-size="14" font-weight="700" fill="#1e3a8a" text-anchor="middle">search</text>
+<rect x="1015" y="200" width="130" height="34" rx="10" fill="#eff6ff" stroke="#93c5fd" stroke-width="1.6"/><text x="1080.0" y="222" font-family="Arial, Helvetica, 'Liberation Sans', sans-serif" font-size="14" font-weight="700" fill="#1e3a8a" text-anchor="middle">alerts</text>
+<rect x="1015" y="238" width="130" height="34" rx="10" fill="#eff6ff" stroke="#93c5fd" stroke-width="1.6"/><text x="1080.0" y="260" font-family="Arial, Helvetica, 'Liberation Sans', sans-serif" font-size="14" font-weight="700" fill="#1e3a8a" text-anchor="middle">identity</text>
+<rect x="1015" y="276" width="130" height="34" rx="10" fill="#eff6ff" stroke="#93c5fd" stroke-width="1.6"/><text x="1080.0" y="298" font-family="Arial, Helvetica, 'Liberation Sans', sans-serif" font-size="14" font-weight="700" fill="#1e3a8a" text-anchor="middle">outbox (grava)</text>
+<rect x="1015" y="314" width="130" height="34" rx="10" fill="#eff6ff" stroke="#93c5fd" stroke-width="1.6"/><text x="1080.0" y="336" font-family="Arial, Helvetica, 'Liberation Sans', sans-serif" font-size="14" font-weight="700" fill="#1e3a8a" text-anchor="middle">ops</text>
+<rect x="860" y="176" width="80" height="64" rx="10" fill="#fff7ed" stroke="#c2410c" stroke-width="1.6"/>
+<text x="900" y="203" font-family="Arial, Helvetica, 'Liberation Sans', sans-serif" font-size="15" font-weight="700" fill="#0f172a" text-anchor="middle">Kafka</text>
+<text x="900" y="222" font-family="Arial, Helvetica, 'Liberation Sans', sans-serif" font-size="12" font-weight="400" fill="#475569" text-anchor="middle">2 tópicos</text>
+<line x1="802" y1="208" x2="857" y2="208" stroke="#64748b" stroke-width="1.6" marker-end="url(#a)"/>
+<text x="830" y="198" font-family="Arial, Helvetica, 'Liberation Sans', sans-serif" font-size="13" font-weight="400" fill="#334155" text-anchor="middle">publica</text>
+<line x1="942" y1="208" x2="997" y2="208" stroke="#64748b" stroke-width="1.6" marker-end="url(#a)"/>
+<text x="970" y="198" font-family="Arial, Helvetica, 'Liberation Sans', sans-serif" font-size="13" font-weight="400" fill="#334155" text-anchor="middle">consome</text>
+<rect x="760" y="424" width="280" height="64" rx="10" fill="#f0fdfa" stroke="#0f766e" stroke-width="1.6"/><text x="900.0" y="451" font-family="Arial, Helvetica, 'Liberation Sans', sans-serif" font-size="15" font-weight="700" fill="#0f172a" text-anchor="middle">PostgreSQL</text><text x="900.0" y="471" font-family="Arial, Helvetica, 'Liberation Sans', sans-serif" font-size="12" font-weight="400" fill="#475569" text-anchor="middle">um schema por módulo, mesmo banco</text>
+<line x1="720" y1="372" x2="800" y2="421" stroke="#64748b" stroke-width="1.6" marker-end="url(#a)"/>
+<line x1="1080" y1="372" x2="1000" y2="421" stroke="#64748b" stroke-width="1.6" marker-end="url(#a)"/>
+<text x="900" y="402" font-family="Arial, Helvetica, 'Liberation Sans', sans-serif" font-size="13" font-weight="400" fill="#334155" text-anchor="middle">os dois leem e gravam no mesmo banco</text>
+</svg>

@@ -1,0 +1,133 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 30 1200 690" width="1200" height="690" role="img" aria-labelledby="title desc">
+  <title id="title">Visão geral da arquitetura do Radar de Licitações</title>
+  <desc id="desc">Fornecedor e operador usam a aplicação, um monólito modular com os módulos ingest, outbox, search, alerts, identity e ops. A aplicação coleta do PNCP, autentica no Keycloak, envia e-mail pelo Mailpit, exporta telemetria para o otel-lgtm e usa PostgreSQL, Kafka e Redis.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#64748b"/>
+    </marker>
+    <style>
+      text { font-family: Arial, Helvetica, 'Liberation Sans', sans-serif; }
+      .h { font-size: 17px; font-weight: 700; fill: #0f172a; }
+      .m { font-size: 16px; font-weight: 700; fill: #1e3a8a; }
+      .s { font-size: 13px; fill: #475569; }
+      .e { font-size: 13px; fill: #334155; }
+      .edge { stroke: #64748b; stroke-width: 1.6; fill: none; marker-end: url(#arrow); }
+      .both { marker-start: url(#arrow); }
+    </style>
+  </defs>
+
+  <rect x="1" y="31" width="1198" height="688" rx="14" fill="#ffffff" stroke="#e2e8f0" stroke-width="2"/>
+
+  <!-- Pessoas -->
+  <g>
+    <rect x="30" y="170" width="180" height="84" rx="10" fill="#f1f5f9" stroke="#334155" stroke-width="1.5"/>
+    <text class="h" x="120" y="204" text-anchor="middle">Fornecedor</text>
+    <text class="s" x="120" y="226" text-anchor="middle">busca e salva buscas</text>
+    <rect x="30" y="400" width="180" height="84" rx="10" fill="#f1f5f9" stroke="#334155" stroke-width="1.5"/>
+    <text class="h" x="120" y="434" text-anchor="middle">Operador</text>
+    <text class="s" x="120" y="456" text-anchor="middle">coleta, DLQ e flags</text>
+  </g>
+
+  <!-- Aplicação -->
+  <rect x="270" y="80" width="600" height="450" rx="14" fill="#f8fafc" stroke="#2563eb" stroke-width="2"/>
+  <text class="h" x="295" y="113">Aplicação: monólito modular</text>
+  <text class="s" x="295" y="135">Spring Boot 4.1, Spring Modulith 2.1, Java 25. Um processo, módulos verificados no build.</text>
+
+  <g>
+    <rect x="295" y="160" width="175" height="100" rx="10" fill="#eff6ff" stroke="#93c5fd"/>
+    <text class="m" x="310" y="189">ingest</text>
+    <text class="s" x="310" y="212">coleta do PNCP,</text>
+    <text class="s" x="310" y="230">histórico e eventos</text>
+
+    <rect x="482" y="160" width="175" height="100" rx="10" fill="#eff6ff" stroke="#93c5fd"/>
+    <text class="m" x="497" y="189">outbox</text>
+    <text class="s" x="497" y="212">relay que publica</text>
+    <text class="s" x="497" y="230">os eventos no Kafka</text>
+
+    <rect x="669" y="160" width="175" height="100" rx="10" fill="#eff6ff" stroke="#93c5fd"/>
+    <text class="m" x="684" y="189">search</text>
+    <text class="s" x="684" y="212">projeção, busca textual,</text>
+    <text class="s" x="684" y="230">API REST e páginas</text>
+
+    <rect x="295" y="275" width="175" height="100" rx="10" fill="#eff6ff" stroke="#93c5fd"/>
+    <text class="m" x="310" y="304">alerts</text>
+    <text class="s" x="310" y="327">busca reversa, e-mail</text>
+    <text class="s" x="310" y="345">e resumo diário</text>
+
+    <rect x="482" y="275" width="175" height="100" rx="10" fill="#eff6ff" stroke="#93c5fd"/>
+    <text class="m" x="497" y="304">identity</text>
+    <text class="s" x="497" y="327">papéis, chaves de API</text>
+    <text class="s" x="497" y="345">e limite de requisições</text>
+
+    <rect x="669" y="275" width="175" height="100" rx="10" fill="#eff6ff" stroke="#93c5fd"/>
+    <text class="m" x="684" y="304">ops</text>
+    <text class="s" x="684" y="327">painel de saúde,</text>
+    <text class="s" x="684" y="345">DLQ e feature flags</text>
+
+    <rect x="295" y="390" width="549" height="64" rx="10" fill="#ffffff" stroke="#cbd5e1" stroke-dasharray="5 4"/>
+    <text class="s" x="310" y="418"><tspan font-weight="700" fill="#1e3a8a">api</tspan> contrato OpenAPI<tspan dx="22" font-weight="700" fill="#1e3a8a">shared</tspan> tipos comuns e envelope</text>
+    <text class="s" x="310" y="438"><tspan font-weight="700" fill="#1e3a8a">observability</tspan> métricas, traces e logs com correlação</text>
+
+    <text class="e" x="295" y="490">Os módulos falam por evento ou pela API pública de cada um.</text>
+    <text class="e" x="295" y="508">Cada módulo tem seu schema no Postgres.</text>
+  </g>
+
+  <!-- Externos -->
+  <g>
+    <rect x="950" y="80" width="220" height="80" rx="10" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.5"/>
+    <text class="h" x="1060" y="113" text-anchor="middle">PNCP</text>
+    <text class="s" x="1060" y="135" text-anchor="middle">API pública, fonte oficial</text>
+
+    <rect x="950" y="200" width="220" height="80" rx="10" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.5"/>
+    <text class="h" x="1060" y="233" text-anchor="middle">Keycloak</text>
+    <text class="s" x="1060" y="255" text-anchor="middle">login OIDC, JWT e papéis</text>
+
+    <rect x="950" y="320" width="220" height="80" rx="10" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.5"/>
+    <text class="h" x="1060" y="353" text-anchor="middle">Mailpit (SMTP)</text>
+    <text class="s" x="1060" y="375" text-anchor="middle">recebe os e-mails</text>
+
+    <rect x="950" y="440" width="220" height="80" rx="10" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.5"/>
+    <text class="h" x="1060" y="473" text-anchor="middle">otel-lgtm</text>
+    <text class="s" x="1060" y="495" text-anchor="middle">Grafana, métricas e traces</text>
+  </g>
+
+  <!-- Dados -->
+  <g>
+    <path d="M300,602 a75,12 0 0,1 150,0 v70 a75,12 0 0,1 -150,0 z" fill="#f0fdfa" stroke="#0f766e" stroke-width="1.5"/>
+    <path d="M300,602 a75,12 0 0,0 150,0" fill="none" stroke="#0f766e" stroke-width="1.5"/>
+    <text class="h" x="375" y="640" text-anchor="middle">PostgreSQL 18</text>
+    <text class="s" x="375" y="662" text-anchor="middle">fonte da verdade</text>
+
+    <rect x="490" y="592" width="200" height="92" rx="10" fill="#fff7ed" stroke="#c2410c" stroke-width="1.5"/>
+    <text class="h" x="590" y="624" text-anchor="middle">Kafka</text>
+    <text class="s" x="590" y="646" text-anchor="middle">radar.procurement.v1</text>
+    <text class="s" x="590" y="664" text-anchor="middle">radar.alert.v1 e DLQs</text>
+
+    <path d="M730,602 a70,12 0 0,1 140,0 v70 a70,12 0 0,1 -140,0 z" fill="#fef2f2" stroke="#b91c1c" stroke-width="1.5"/>
+    <path d="M730,602 a70,12 0 0,0 140,0" fill="none" stroke="#b91c1c" stroke-width="1.5"/>
+    <text class="h" x="800" y="640" text-anchor="middle">Redis</text>
+    <text class="s" x="800" y="662" text-anchor="middle">limite e cache</text>
+  </g>
+
+  <!-- Setas -->
+  <path class="edge" d="M210,212 H268"/>
+  <text class="e" x="216" y="198">HTTPS</text>
+  <path class="edge" d="M210,442 H268"/>
+  <text class="e" x="216" y="428">/ops</text>
+
+  <path class="edge" d="M872,120 H948"/>
+  <text class="e" x="878" y="108">coleta</text>
+  <path class="edge" d="M872,240 H948"/>
+  <text class="e" x="878" y="228">OIDC</text>
+  <path class="edge" d="M872,360 H948"/>
+  <text class="e" x="878" y="348">SMTP</text>
+  <path class="edge" d="M872,480 H948"/>
+  <text class="e" x="878" y="468">OTLP</text>
+
+  <path class="edge both" d="M375,532 V588"/>
+  <text class="e" x="383" y="565">JDBC: JPA, jOOQ e SQL</text>
+  <path class="edge both" d="M590,532 V590"/>
+  <text class="e" x="598" y="565">publica e consome</text>
+  <path class="edge" d="M800,532 V588"/>
+  <text class="e" x="808" y="565">contadores e cache</text>
+</svg>
