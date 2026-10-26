@@ -45,7 +45,7 @@
     <!-- why: the image build has no Docker daemon, so it skips codegen and compiles the sources generated on the host (make image) -->
     <jooq.codegen.skip>false</jooq.codegen.skip>
     <!-- why: 3.x moved to Jackson 3 and breaks openapi-request-validator 3.0.0, which still calls the Jackson 2 API of 2.x -->
-    <json-schema-validator.version>2.0.1</json-schema-validator.version>
+    <json-schema-validator.version>3.0.8</json-schema-validator.version>
     <jqwik.version>1.10.2</jqwik.version>
     <archunit.version>1.5.1</archunit.version>
     <wiremock.version>3.13.2</wiremock.version>
