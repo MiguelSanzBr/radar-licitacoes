@@ -90,7 +90,7 @@ secrets-scan:
 	  $(GITLEAKS_IMAGE) git --config .gitleaks.toml --log-opts=--all --redact --exit-code 1 --log-level warn --verbose "$(CURDIR)"
 	docker run --rm -u "$$(id -u):$$(id -g)" -e HOME=/tmp \
 	  -v "$(CURDIR):$(CURDIR)" -w "$(CURDIR)" \
-	  $(GITLEAKS_IMAGE) dir --config .gitleaks.toml --redact --exit-code 1 --log-level warn --verbose "$(CURDIR)"
+	  $(GITLEAKS_IMAGE) dir --config .gitleaks.toml --redact --exit-code 1 --log-level warn --verbose .
 
 mutation:
 	./mvnw -Pmutation verify

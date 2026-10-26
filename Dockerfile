@@ -58,7 +58,10 @@ COPY --from=extract /x/out/application/ ./
 # O perfil aot-train (application-aot-train.properties) e de producao e deve desligar datasource,
 # Flyway e Kafka no startup; o PR que trouxer o datasource acrescenta as exclusoes ali. O perfil
 # noop e so de teste.
-RUN java -XX:AOTCacheOutput=/app/app.aot -Dspring.context.exit=onRefresh \
+# O BuildKit com tracing (runner do GitHub) injeta OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=unix://...
+# nos RUN; o Spring Boot le essas variaveis e o exportador recusa o endereco, entao saem antes.
+RUN unset $(env | sed -n 's/^\(OTEL_[A-Za-z0-9_]*\)=.*/\1/p') \
+ && java -XX:AOTCacheOutput=/app/app.aot -Dspring.context.exit=onRefresh \
       -Dspring.profiles.active=aot-train -jar /app/app.jar \
  && chmod 0644 /app/app.aot
 

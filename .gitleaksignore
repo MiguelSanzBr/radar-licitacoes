@@ -1,0 +1,31 @@
+# Falsos positivos do Gitleaks, um fingerprint por ocorrência (docs/security/scans.md).
+# Nenhum é segredo real:
+# - scripts/slo.sh: admin:admin, login padrão do Grafana local do docker compose.
+# - docs/benchmarks/**/explain: texto de plano EXPLAIN do Postgres ("Sort Key: ...").
+# - core/src/test: chaves de API e JWT falsos das fixtures de teste.
+
+# Histórico (gitleaks git): commit:arquivo:regra:linha
+1bd946a6ea78be023fec75eade7f882078dbb4d1:core/src/test/java/br/dev/miguelsanzbr/radar/identity/adapter/in/web/ApiKeysControllerTest.java:generic-api-key:44
+1bd946a6ea78be023fec75eade7f882078dbb4d1:core/src/test/java/br/dev/miguelsanzbr/radar/identity/adapter/in/web/RateLimitFilterTest.java:generic-api-key:106
+1bd946a6ea78be023fec75eade7f882078dbb4d1:core/src/test/java/br/dev/miguelsanzbr/radar/identity/SecurityConfigTest.java:generic-api-key:157
+1bd946a6ea78be023fec75eade7f882078dbb4d1:core/src/test/java/br/dev/miguelsanzbr/radar/identity/SecurityConfigTest.java:generic-api-key:160
+2ce350f6dc4bc1fec24562866e66e7602aeab52e:docs/benchmarks/search/2026-10-23-pr63/explain/nocap/s1-text-common.after.txt:generic-api-key:16
+2ce350f6dc4bc1fec24562866e66e7602aeab52e:docs/benchmarks/search/2026-10-23-pr63/explain/nocap/s1-text-rare.after.txt:generic-api-key:16
+2ce350f6dc4bc1fec24562866e66e7602aeab52e:docs/benchmarks/search/2026-10-23-pr63/explain/nocap/s2-text-filters.after.txt:generic-api-key:16
+2ce350f6dc4bc1fec24562866e66e7602aeab52e:docs/benchmarks/search/2026-10-23-pr63/explain/s1-text-rare.after.txt:generic-api-key:16
+2ce350f6dc4bc1fec24562866e66e7602aeab52e:docs/benchmarks/search/2026-10-23-pr63/explain/s2-text-filters.after.txt:generic-api-key:16
+441ba197e33b546607d394e85120e33b39e8d4c9:scripts/slo.sh:curl-auth-user:167
+913c3a0b3254dfe654d860293662e51530f3b903:core/src/test/java/br/dev/miguelsanzbr/radar/identity/adapter/in/web/SecretsInLogsIT.java:jwt:38
+
+# Árvore de trabalho (gitleaks dir, caminho relativo): arquivo:regra:linha
+core/src/test/java/br/dev/miguelsanzbr/radar/identity/adapter/in/web/ApiKeysControllerTest.java:generic-api-key:46
+core/src/test/java/br/dev/miguelsanzbr/radar/identity/adapter/in/web/RateLimitFilterTest.java:generic-api-key:106
+core/src/test/java/br/dev/miguelsanzbr/radar/identity/adapter/in/web/SecretsInLogsIT.java:jwt:38
+core/src/test/java/br/dev/miguelsanzbr/radar/identity/SecurityConfigTest.java:generic-api-key:177
+core/src/test/java/br/dev/miguelsanzbr/radar/identity/SecurityConfigTest.java:generic-api-key:180
+docs/benchmarks/search/2026-10-23-pr63/explain/nocap/s1-text-common.after.txt:generic-api-key:16
+docs/benchmarks/search/2026-10-23-pr63/explain/nocap/s1-text-rare.after.txt:generic-api-key:16
+docs/benchmarks/search/2026-10-23-pr63/explain/nocap/s2-text-filters.after.txt:generic-api-key:16
+docs/benchmarks/search/2026-10-23-pr63/explain/s1-text-rare.after.txt:generic-api-key:16
+docs/benchmarks/search/2026-10-23-pr63/explain/s2-text-filters.after.txt:generic-api-key:16
+scripts/slo.sh:curl-auth-user:167

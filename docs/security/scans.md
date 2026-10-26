@@ -44,12 +44,14 @@ Um ignore deve ser exceção rara. Ele precisa de comentário com motivo, dono e
   regexes = ['''valor-exato-de-dev''']
   ```
 
+- Gitleaks, falso positivo pontual (texto que só parece segredo, como um plano EXPLAIN ou uma chave falsa de teste): fingerprint em `.gitleaksignore`, com o motivo num comentário. O fingerprint vale para uma ocorrência só, então um segredo novo no mesmo arquivo continua sendo pego. O histórico usa `commit:arquivo:regra:linha` e a árvore de trabalho usa `arquivo:regra:linha`, com caminho relativo (por isso o `make secrets-scan` passa `.` ao `gitleaks dir`). Se a linha mudar, o fingerprint da árvore precisa ser atualizado. Para gerar os fingerprints, rode o Gitleaks com `--report-format json` e copie o campo `Fingerprint`.
+
 Nunca use allowlist para segredo real. Um valor real que vazou deve ser revogado e removido do histórico, não só ignorado.
 
 ## Resultado atual (2026-10-22)
 
 - SBOM: 166 componentes, CycloneDX 1.6.
 - Grype `v0.121.0`: nenhum aviso. `make sbom-scan` passa sem ignore. O `lz4-java` estava em 1.11.2 (HIGH `GHSA-mcr4-qmvw-px4g`, MEDIUM `GHSA-gm45-99xc-r7wv`, LOW `GHSA-343h-94h5-c4wr`); o `pom.xml` agora fixa `at.yawk.lz4:lz4-java` em 1.11.4 no `dependencyManagement`, com comentário para remover quando o Kafka gerenciado trouxer 1.11.4 ou mais.
-- Gitleaks `v8.30.1` com as regras padrão: nenhum vazamento no histórico nem na árvore de trabalho. Nenhuma allowlist foi necessária.
+- Gitleaks `v8.30.1` com as regras padrão: nenhum segredo real no histórico nem na árvore de trabalho. Em 2026-10-26, 11 falsos positivos no histórico e 11 na árvore foram para o `.gitleaksignore`: o `admin:admin` do Grafana local em `scripts/slo.sh`, texto de EXPLAIN em `docs/benchmarks/` e chaves e JWT falsos dos testes de `identity`. Nenhuma allowlist no `.gitleaks.toml`.
 - Verificação negativa: uma chave AWS falsa colocada na árvore de trabalho faz `make secrets-scan` falhar. A mesma varredura do histórico detecta um segredo que foi removido num commit posterior.
 - Trivy: sem mudança neste PR. `--exit-code 1`, `--severity CRITICAL,HIGH` e `--ignore-unfixed` já estão no `Makefile`. Em 2026-10-22, `make image` e `make image-scan` passaram localmente (exit 0), com `lz4-java-1.11.4.jar` sem vulnerabilidades.
