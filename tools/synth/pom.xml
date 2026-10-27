@@ -71,6 +71,16 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-failsafe-plugin</artifactId>
       </plugin>
+      <plugin>
+        <groupId>org.pitest</groupId>
+        <artifactId>pitest-maven</artifactId>
+        <configuration>
+          <excludedClasses>
+            <!-- so o CopyLoaderIT exercita o COPY no Postgres; ver docs/coverage-exclusions.md -->
+            <param>br.dev.miguelsanzbr.radar.synth.CopyLoader*</param>
+          </excludedClasses>
+        </configuration>
+      </plugin>
       <!-- Sem Spring: jar executavel por shade, no lugar do repackage do Boot. -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>

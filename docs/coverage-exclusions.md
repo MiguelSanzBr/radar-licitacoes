@@ -20,6 +20,7 @@ Toda `<exclude>` em `pom.xml` precisa constar nesta tabela, com o motivo. O scri
 | `br.dev.miguelsanzbr.radar.outbox.OutboxCleanup*` | PIT: limpeza do outbox por SQL, testada só por IT. |
 | `br.dev.miguelsanzbr.radar.outbox.OutboxGauges*` | PIT: métricas lidas do banco, testadas só por IT. |
 | `br.dev.miguelsanzbr.radar.outbox.ReplicationSlotGauge*` | PIT: métrica do slot de replicação, testada só por IT. |
+| `br.dev.miguelsanzbr.radar.synth.CopyLoader*` | PIT: carga do gerador sintético por `COPY` no Postgres (`tools/synth`), testada só por IT. |
 | `*IT` | PIT (`excludedTestClasses`): os ITs ficam fora do PIT pelo tempo; seguem no `verify` e no JaCoCo. |
 
 ## Filtros do SpotBugs
