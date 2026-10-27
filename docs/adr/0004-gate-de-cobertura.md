@@ -28,6 +28,7 @@ Um número de cobertura só tem valor se não puder ser contornado. Exclusões a
 - Os PRs ficam mais lentos, porque todo código novo precisa de teste no mesmo PR. O TDD visível (teste primeiro) reduz o retrabalho.
 - O job `verify` fica mais pesado. Os containers são compartilhados por JVM (singleton) para conter o custo no CI.
 - Mudar o limiar do PIT é um PR de `chore` com justificativa, não uma decisão silenciosa.
+- O PIT roda só com testes de unidade (2026-10-26): com os ITs o job `mutation` não terminava no CI. Os adaptadores que só os ITs exercitam ficam fora do PIT e seguem no JaCoCo; a lista está em `docs/coverage-exclusions.md`.
 
 ## Prova
 

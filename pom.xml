@@ -216,8 +216,13 @@
           </dependencies>
           <configuration>
             <mutationThreshold>85</mutationThreshold>
-            <coverageThreshold>100</coverageThreshold>
+            <!-- sem coverageThreshold: o PIT roda sem os ITs; os 100% de linha e ramo sao do JaCoCo -->
             <timestampedReports>false</timestampedReports>
+            <!-- why: com os ITs (Testcontainers e contexto Spring) cada mutante leva minutos e o job
+                 do CI nao termina; os ITs seguem no verify e no gate de cobertura do JaCoCo -->
+            <excludedTestClasses>
+              <param>*IT</param>
+            </excludedTestClasses>
             <excludedGroups>
               <param>bench</param>
               <param>chaos</param>

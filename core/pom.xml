@@ -385,6 +385,17 @@
         <configuration>
           <excludedClasses>
             <param>br.dev.miguelsanzbr.radar.api.generated.*</param>
+            <!-- so os ITs exercitam estes adaptadores (banco, Redis); ver docs/coverage-exclusions.md -->
+            <param>br.dev.miguelsanzbr.radar.*.adapter.out.jdbc.*</param>
+            <param>br.dev.miguelsanzbr.radar.*.adapter.out.jpa.*</param>
+            <param>br.dev.miguelsanzbr.radar.*.adapter.out.jooq.*</param>
+            <param>br.dev.miguelsanzbr.radar.identity.adapter.out.redis.*</param>
+            <param>br.dev.miguelsanzbr.radar.identity.adapter.config.RateLimitConfiguration*</param>
+            <param>br.dev.miguelsanzbr.radar.search.adapter.in.bench.*</param>
+            <param>br.dev.miguelsanzbr.radar.outbox.OutboxRelay*</param>
+            <param>br.dev.miguelsanzbr.radar.outbox.OutboxCleanup*</param>
+            <param>br.dev.miguelsanzbr.radar.outbox.OutboxGauges*</param>
+            <param>br.dev.miguelsanzbr.radar.outbox.ReplicationSlotGauge*</param>
           </excludedClasses>
         </configuration>
       </plugin>
