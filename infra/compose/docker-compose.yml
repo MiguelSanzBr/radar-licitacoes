@@ -268,7 +268,7 @@ services:
   debezium:
     # Alternativa ao relay (ADR-0018): sobe so com `PROFILE=cdc make up`, que tambem poe a aplicacao em modo cdc.
     # Kafka Connect standalone com o conector Postgres; a senha vem do segredo, nao de variavel.
-    image: quay.io/debezium/connect:3.6.3.Final@sha256:ebce73ac34e4f688cdbbc46713020794fe876c260cbf5063c66e2b0f6a5b6ef5
+    image: quay.io/debezium/connect:3.7.0.Final@sha256:8dc50babf4f92744459f955504b54b5589836939263fa2fbc58cb67a115eda3b
     profiles: [cdc]
     entrypoint: ["/kafka/bin/connect-standalone.sh"]
     command: ["/config/worker.properties", "/config/connector.properties"]
