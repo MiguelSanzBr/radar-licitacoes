@@ -136,6 +136,7 @@ EOF
 
   [ "$status" -ne 0 ]
   [[ "$output" == *"voltando ao deploy anterior"* ]]
+  grep -q 'compose .*logs .*app' "$CALLS_LOG"
   grep -q 'RADAR_TAG=rollback' "$CALLS_LOG"
   grep -qx 'tag=old' "$STATE_DIR/.deployed"
 }

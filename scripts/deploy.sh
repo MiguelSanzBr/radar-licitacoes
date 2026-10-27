@@ -36,6 +36,8 @@ if compose_up "$tag" && "$ROOT/scripts/smoke.sh"; then
 fi
 
 echo "deploy: $tag falhou" >&2
+# O log do app vai junto: o rollback recria o container e apaga o motivo da falha.
+"$DOCKER" compose -f "$COMPOSE_FILE" logs --no-color --tail 200 app >&2 || true
 if [ -f "$PREVIOUS" ]; then
   echo "deploy: voltando ao deploy anterior" >&2
   "$ROOT/scripts/rollback.sh"
