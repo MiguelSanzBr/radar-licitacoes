@@ -55,7 +55,7 @@
     <!-- why: a mesma linha 3.x do registry do compose (infra/compose/docker-compose.yml, perfil layer3) -->
     <apicurio.version>3.3.3</apicurio.version>
     <playwright.version>1.64.0</playwright.version>
-    <gatling.version>3.15.1</gatling.version>
+    <gatling.version>3.16.0</gatling.version>
     <gatling-maven-plugin.version>4.21.12</gatling-maven-plugin.version>
 
     <!-- why: testes com @Tag("bench") medem tempo, @Tag("chaos") derruba infraestrutura, @Tag("cdc") sobe tres contêineres e uma imagem de 2,4 GB @Tag("avro") sobe o Apicurio, @Tag("messaging") projeta 10 mil eventos entre consumidores que entram e saem e @Tag("e2e") abre um navegador e @Tag("readme-capture") grava as telas do README: ficam fora do verify; -Pbench, -Pchaos, -Pcdc, -Pavro e -Pmessaging trocam os dois filtros -->
