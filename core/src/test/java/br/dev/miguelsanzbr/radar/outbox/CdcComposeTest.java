@@ -47,7 +47,7 @@ class CdcComposeTest {
 
     assertThat(debezium.get("profiles")).isEqualTo(List.of("cdc"));
     assertThat(String.valueOf(debezium.get("image")))
-        .matches("quay\\.io/debezium/connect:3\\.6\\.\\d+\\.Final@sha256:[0-9a-f]{64}");
+        .matches("quay\\.io/debezium/connect:3\\.7\\.\\d+\\.Final@sha256:[0-9a-f]{64}");
     assertThat(debezium.get("secrets")).isEqualTo(List.of("db_password"));
     assertThat(((Map<?, ?>) debezium.get("environment")).keySet())
         .allSatisfy(
