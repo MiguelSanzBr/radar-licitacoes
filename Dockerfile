@@ -60,8 +60,11 @@ COPY --from=extract /x/out/application/ ./
 # noop e so de teste.
 # O BuildKit com tracing (runner do GitHub) injeta OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=unix://...
 # nos RUN; o Spring Boot le essas variaveis e o exportador recusa o endereco, entao saem antes.
+# Sem AOTAdapterCaching/AOTStubCaching: o cache guardaria codigo nativo da CPU do build, e um host
+# sem as mesmas instrucoes cai com SIGILL no start (visto no deploy do CI). Classes e heap seguem no cache.
 RUN unset $(env | sed -n 's/^\(OTEL_[A-Za-z0-9_]*\)=.*/\1/p') \
  && java -XX:AOTCacheOutput=/app/app.aot -Dspring.context.exit=onRefresh \
+      -XX:+UnlockDiagnosticVMOptions -XX:-AOTAdapterCaching -XX:-AOTStubCaching \
       -Dspring.profiles.active=aot-train -jar /app/app.jar \
  && chmod 0644 /app/app.aot
 
