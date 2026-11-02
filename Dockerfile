@@ -5,13 +5,13 @@
 # musl (Alpine), requisito para o jlink e para o AOT cache.
 
 # Apenas wrapper e poms de todos os modulos: a camada so muda quando uma dependencia muda.
-FROM eclipse-temurin:25-jdk-alpine@sha256:1e20ead9eec7234db293f1913438090d533ed47c0b9e12dc8c7627a802a44ed6 AS poms
+FROM eclipse-temurin:25-jdk-alpine@sha256:425f0b733cb23843bd78dbe5552513976d0cf12b9722752c48a5161cf5cd2f32 AS poms
 WORKDIR /src
 COPY . .
 RUN find . -type f ! -name pom.xml ! -name mvnw ! -path './.mvn/*' -delete \
  && find . -type d -empty -delete
 
-FROM eclipse-temurin:25-jdk-alpine@sha256:1e20ead9eec7234db293f1913438090d533ed47c0b9e12dc8c7627a802a44ed6 AS build
+FROM eclipse-temurin:25-jdk-alpine@sha256:425f0b733cb23843bd78dbe5552513976d0cf12b9722752c48a5161cf5cd2f32 AS build
 # Modulo que vira a imagem: core (monolito) ou apps/ingestor, apps/search-api (ADR-0028). Todos geram um jar *-exec.
 ARG MODULE=core
 WORKDIR /src
@@ -24,14 +24,14 @@ RUN --mount=type=cache,target=/root/.m2 ./mvnw -B -q -DskipTests -Djooq.codegen.
 
 # Sem --launcher: o jar extraido lista as bibliotecas no Class-Path, o que deixa o AOT cache
 # arquivar tambem as classes das dependencias (com o launcher elas ficam fora do cache).
-FROM eclipse-temurin:25-jdk-alpine@sha256:1e20ead9eec7234db293f1913438090d533ed47c0b9e12dc8c7627a802a44ed6 AS extract
+FROM eclipse-temurin:25-jdk-alpine@sha256:425f0b733cb23843bd78dbe5552513976d0cf12b9722752c48a5161cf5cd2f32 AS extract
 WORKDIR /x
 COPY --from=build /app.jar app.jar
 RUN java -Djarmode=tools -jar app.jar extract --layers --destination /x/out
 
 # JRE sob medida: modulos calculados pelo jdeps sobre o jar e as bibliotecas, mais os que so
 # aparecem por reflexao ou por configuracao (TLS, locale pt-BR, charsets, JMX, ferramentas de profiling).
-FROM eclipse-temurin:25-jdk-alpine@sha256:1e20ead9eec7234db293f1913438090d533ed47c0b9e12dc8c7627a802a44ed6 AS jre
+FROM eclipse-temurin:25-jdk-alpine@sha256:425f0b733cb23843bd78dbe5552513976d0cf12b9722752c48a5161cf5cd2f32 AS jre
 COPY --from=extract /x/out/dependencies/ /app/
 COPY --from=extract /x/out/snapshot-dependencies/ /app/
 COPY --from=extract /x/out/application/ /app/
