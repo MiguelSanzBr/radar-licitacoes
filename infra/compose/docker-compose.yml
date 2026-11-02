@@ -62,7 +62,7 @@ services:
     # Contador do limite de requisicoes da API publica (ADR-0027); sem persistencia de proposito: perder o estado so devolve o balde cheio.
     # volatile-ttl: toda chave da aplicacao tem TTL, entao com a memoria cheia o Redis descarta as que expiram primeiro
     # (o padrao noeviction recusaria a escrita e o limite passaria a abrir para todos).
-    image: redis:8.8-alpine@sha256:dc95ea2fcf5d5c4253be0f967c28143d0f625846197eed2fd32c748eb99abfca
+    image: redis:8.10-alpine@sha256:21090af93f8324db2f0f0f4f38a7c60369d47d917e000c3423d89d2ae2883537
     command: ["redis-server", "--save", "", "--maxmemory", "64mb", "--maxmemory-policy", "volatile-ttl"]
     mem_limit: 96m
     healthcheck:
