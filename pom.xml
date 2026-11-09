@@ -53,7 +53,7 @@
     <openapi-generator.version>7.26.0</openapi-generator.version>
     <openapi-request-validator.version>3.0.0</openapi-request-validator.version>
     <!-- why: a mesma linha 3.x do registry do compose (infra/compose/docker-compose.yml, perfil layer3) -->
-    <apicurio.version>3.3.3</apicurio.version>
+    <apicurio.version>3.3.4</apicurio.version>
     <playwright.version>1.64.0</playwright.version>
     <gatling.version>3.16.0</gatling.version>
     <gatling-maven-plugin.version>4.21.12</gatling-maven-plugin.version>
