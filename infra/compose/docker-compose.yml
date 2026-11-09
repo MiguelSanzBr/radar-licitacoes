@@ -113,7 +113,7 @@ services:
     # Grafana, Prometheus, Loki, Tempo, Pyroscope e o coletor OTLP numa imagem. A aplicacao envia
     # metricas, traces e logs por OTLP (porta 4318); nao ha scrape. Os dashboards de infra/grafana
     # entram pelo provisionamento e usam o datasource Prometheus da imagem (uid prometheus).
-    image: grafana/otel-lgtm:0.38.0@sha256:75cdf892daffadf3763ef61c16a6d7f8586216fce0b40bba7874a0b053121084
+    image: grafana/otel-lgtm:0.40.0@sha256:72e05804790e6e0d8c0b70a6d5ff1f721ef7b203463374631e99aa3429bd0cf6
     volumes:
       - ../grafana/dashboards:/var/lib/grafana/dashboards:ro
       - ../grafana/provisioning/dashboards/radar.yml:/otel-lgtm/grafana/conf/provisioning/dashboards/radar.yaml:ro
