@@ -43,7 +43,7 @@ RUN mods="$(jdeps --ignore-missing-deps --multi-release 25 --print-module-deps \
  && jlink --add-modules "${mods},${extra}" \
       --strip-debug --no-man-pages --no-header-files --compress zip-9 --output /jre
 
-FROM alpine:3.24@sha256:be2656061b536c1883c4034790e21d0a09c5aaaf51968b89368a3c0371ea2c9a AS runtime
+FROM alpine:3.24@sha256:f59abe656b692d901e184be3445e084786602108599d2a51d229c0f5a48c71bf AS runtime
 RUN addgroup -g 10001 radar && adduser -D -u 10001 -G radar -H -s /sbin/nologin radar
 ENV JAVA_HOME=/opt/jre PATH=/opt/jre/bin:$PATH
 COPY --from=jre /jre /opt/jre
